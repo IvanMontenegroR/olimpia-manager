@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import visual from "@/data/clubes_visual.json";
 
 type Estilo = {
@@ -14,19 +15,22 @@ export const estiloClub = (id: string): Estilo =>
   ((visual as Record<string, unknown>)[id] as Estilo) ?? NEUTRO;
 
 /**
- * Escudo del club. Usa el archivo de `public/escudos/<id>.png` cuando existe;
- * si no, cae a un monograma con los colores del club. El fallback no es un
- * parche: nueve de los doce clubes no van a tener escudo cargado.
+ * Escudo del club. Basta con dejar el archivo en `public/escudos/<id>.png` y
+ * aparece solo; si no está, cae a un monograma con los colores del club. El
+ * fallback no es un parche provisorio: nueve de los doce clubes no van a tener
+ * escudo cargado.
  */
 export default function Escudo({
   id, nombre, tam = 28,
 }: { id: string; nombre: string; tam?: number }) {
   const e = estiloClub(id);
+  const [sinArchivo, setSinArchivo] = useState(false);
   const inicial = nombre.replace(/^(Club|Sportivo|Deportivo)\s+/i, "").charAt(0).toUpperCase();
 
-  if (e.escudo) {
+  if (!sinArchivo) {
     return (
       <img src={`escudos/${id}.png`} alt={nombre} width={tam} height={tam}
+           onError={() => setSinArchivo(true)}
            style={{ width: tam, height: tam, objectFit: "contain" }} />
     );
   }
