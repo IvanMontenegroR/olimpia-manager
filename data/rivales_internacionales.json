@@ -1,0 +1,168 @@
+[
+ {
+  "id": "vasco_da_gama",
+  "nombre": "Vasco da Gama",
+  "pais": "BRA",
+  "ciudad": "Río de Janeiro",
+  "estadio": "São Januário",
+  "km_desde_asuncion": 2100,
+  "altura_m": 10,
+  "fuerza": 68,
+  "ambiente_hostil": "alto"
+ },
+ {
+  "id": "botafogo",
+  "nombre": "Botafogo",
+  "pais": "BRA",
+  "ciudad": "Río de Janeiro",
+  "estadio": "Nilton Santos",
+  "km_desde_asuncion": 2100,
+  "altura_m": 10,
+  "fuerza": 72,
+  "ambiente_hostil": "alto"
+ },
+ {
+  "id": "atletico_mineiro",
+  "nombre": "Atlético Mineiro",
+  "pais": "BRA",
+  "ciudad": "Belo Horizonte",
+  "estadio": "Arena MRV",
+  "km_desde_asuncion": 1900,
+  "altura_m": 850,
+  "fuerza": 73,
+  "ambiente_hostil": "alto"
+ },
+ {
+  "id": "sao_paulo",
+  "nombre": "São Paulo",
+  "pais": "BRA",
+  "ciudad": "São Paulo",
+  "estadio": "Morumbis",
+  "km_desde_asuncion": 1000,
+  "altura_m": 760,
+  "fuerza": 72,
+  "ambiente_hostil": "alto"
+ },
+ {
+  "id": "santos",
+  "nombre": "Santos",
+  "pais": "BRA",
+  "ciudad": "Santos",
+  "estadio": "Vila Belmiro",
+  "km_desde_asuncion": 1300,
+  "altura_m": 5,
+  "fuerza": 68,
+  "ambiente_hostil": "alto"
+ },
+ {
+  "id": "bragantino",
+  "nombre": "Red Bull Bragantino",
+  "pais": "BRA",
+  "ciudad": "Bragança Paulista",
+  "estadio": "Nabi Abi Chedid",
+  "km_desde_asuncion": 1200,
+  "altura_m": 800,
+  "fuerza": 66,
+  "ambiente_hostil": "medio"
+ },
+ {
+  "id": "river_plate",
+  "nombre": "River Plate",
+  "pais": "ARG",
+  "ciudad": "Buenos Aires",
+  "estadio": "Monumental",
+  "km_desde_asuncion": 1030,
+  "altura_m": 25,
+  "fuerza": 74,
+  "ambiente_hostil": "alto"
+ },
+ {
+  "id": "boca_juniors",
+  "nombre": "Boca Juniors",
+  "pais": "ARG",
+  "ciudad": "Buenos Aires",
+  "estadio": "La Bombonera",
+  "km_desde_asuncion": 1030,
+  "altura_m": 25,
+  "fuerza": 72,
+  "ambiente_hostil": "alto"
+ },
+ {
+  "id": "tigre",
+  "nombre": "Tigre",
+  "pais": "ARG",
+  "ciudad": "Victoria",
+  "estadio": "José Dellagiovanna",
+  "km_desde_asuncion": 1030,
+  "altura_m": 10,
+  "fuerza": 60,
+  "ambiente_hostil": "medio"
+ },
+ {
+  "id": "bolivar",
+  "nombre": "Bolívar",
+  "pais": "BOL",
+  "ciudad": "La Paz",
+  "estadio": "Hernando Siles",
+  "km_desde_asuncion": 1900,
+  "altura_m": 3640,
+  "fuerza": 60,
+  "ambiente_hostil": "medio"
+ },
+ {
+  "id": "santa_fe",
+  "nombre": "Independiente Santa Fe",
+  "pais": "COL",
+  "ciudad": "Bogotá",
+  "estadio": "El Campín",
+  "km_desde_asuncion": 3400,
+  "altura_m": 2640,
+  "fuerza": 63,
+  "ambiente_hostil": "medio"
+ },
+ {
+  "id": "cienciano",
+  "nombre": "Cienciano",
+  "pais": "PER",
+  "ciudad": "Cusco",
+  "estadio": "Garcilaso",
+  "km_desde_asuncion": 2900,
+  "altura_m": 3400,
+  "fuerza": 57,
+  "ambiente_hostil": "medio"
+ },
+ {
+  "id": "city_torque",
+  "nombre": "Montevideo City Torque",
+  "pais": "URU",
+  "ciudad": "Montevideo",
+  "estadio": "Parque Viera",
+  "km_desde_asuncion": 1300,
+  "altura_m": 40,
+  "fuerza": 58,
+  "ambiente_hostil": "medio"
+ },
+ {
+  "id": "lanus",
+  "nombre": "Lanús",
+  "pais": "ARG",
+  "ciudad": "Lanús",
+  "estadio": "La Fortaleza",
+  "km_desde_asuncion": 1030,
+  "altura_m": 15,
+  "fuerza": 66,
+  "ambiente_hostil": "medio",
+  "nota": "Rival de Santos en octavos SIN CONFIRMAR. Está en la mitad derecha del cuadro."
+ },
+ {
+  "id": "recoleta",
+  "nombre": "Deportivo Recoleta",
+  "pais": "PAR",
+  "ciudad": "Asunción",
+  "estadio": "Ricardo Gregor",
+  "km_desde_asuncion": 0,
+  "altura_m": 43,
+  "fuerza": 59.5,
+  "ambiente_hostil": "medio"
+ }
+]

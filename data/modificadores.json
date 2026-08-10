@@ -1,0 +1,42 @@
+{
+ "localia": {
+  "liga": 3.0,
+  "copa_internacional": 8.0,
+  "nota": "Bonus al nivel efectivo del local. Olimpia se agranda de local en copa: 3-0 abajo en Río y 3-1 arriba en el Defensores contra Vasco en la fase de grupos 2026, y eliminaciones de local a Flamengo, Fluminense y Atlético Nacional en los últimos años. El Defensores de noche en copa tiene que pesar mucho más que el Defensores un domingo de Clausura."
+ },
+ "condicion": {
+  "formula": "0.65 + 0.35 * (condicion/100) ** 0.6",
+  "nota": "Curva con piso. El costo real de la fatiga va al riesgo de lesión, no al rendimiento."
+ },
+ "posicion": {
+  "natural": 1.0,
+  "adaptado": 0.9,
+  "fuera_de_puesto": 0.75,
+  "arquero_de_campo": 0.35
+ },
+ "forma": {
+  "en_racha": 1.08,
+  "neutral": 1.0,
+  "en_baja": 0.92
+ },
+ "ambiente_hostil": {
+  "nota": "Penalización al visitante en copa. Se deriva de edad y partidos_internacionales, sin stats nuevas.",
+  "penalizacion_max": 0.15,
+  "penalizacion_min": 0.03
+ },
+ "rasgos": {
+  "nota": "Etiquetas cualitativas. NO son stats: no tienen número, no se comparan, no se entrenan y no tocan el Nivel efectivo. Solo sesgan la distribución de eventos del motor y el texto del relato.",
+  "desequilibrante": "Genera más situaciones de gol de las que su Nivel sugeriría.",
+  "definidor": "Convierte por encima de lo que su Nivel sugeriría.",
+  "juego_aereo": "Más peligro en córners y centros.",
+  "veterano_de_copas": "Reduce la penalización por ambiente hostil del grupo, no solo la propia.",
+  "proyeccion": "Sube de Nivel más rápido con minutos oficiales.",
+  "fragil": "Mayor probabilidad de lesión con condición baja.",
+  "definicion_irregular": "Misma conversión media que su Nivel indica, pero mucha más dispersión: puede hacer dos en un partido y errar cuatro en el siguiente. Se modela como aumento de varianza, no como penalización constante."
+ },
+ "altura": {
+  "nota": "Penalización al visitante por metros sobre el nivel del mar. Se agrava si viajó con poca antelación. Cusco (3400 m) y Bogotá (2640 m) son los casos extremos del cuadro de esta Sudamericana.",
+  "umbral_m": 1500,
+  "penalizacion_por_1000m": 0.06
+ }
+}

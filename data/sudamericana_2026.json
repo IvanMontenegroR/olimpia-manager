@@ -1,0 +1,126 @@
+{
+ "id": "sudamericana_2026",
+ "nombre": "Copa Sudamericana 2026",
+ "final": {
+  "fecha": "2026-11-21",
+  "sede": "Estadio Metropolitano Roberto Meléndez",
+  "ciudad": "Barranquilla",
+  "pais": "COL",
+  "km_desde_asuncion": 4000,
+  "altura_m": 10,
+  "partido_unico": true
+ },
+ "reglas": {
+  "ida_y_vuelta": true,
+  "sin_alargue": true,
+  "definicion": "penales si el global está empatado al final de los 90 de la vuelta",
+  "ventana_de_inscripcion": "solo entre fase de grupos y octavos",
+  "nota_gol_visitante": "No rige. El global empatado va directo a penales."
+ },
+ "octavos": [
+  {
+   "llave": "A",
+   "lado": "izquierda",
+   "local_ida": "boca_juniors",
+   "visitante_ida": "recoleta"
+  },
+  {
+   "llave": "B",
+   "lado": "izquierda",
+   "local_ida": "bolivar",
+   "visitante_ida": "sao_paulo"
+  },
+  {
+   "llave": "C",
+   "lado": "izquierda",
+   "local_ida": "santa_fe",
+   "visitante_ida": "river_plate"
+  },
+  {
+   "llave": "D",
+   "lado": "izquierda",
+   "local_ida": "vasco_da_gama",
+   "visitante_ida": "olimpia"
+  },
+  {
+   "llave": "E",
+   "lado": "derecha",
+   "local_ida": "bragantino",
+   "visitante_ida": "atletico_mineiro"
+  },
+  {
+   "llave": "F",
+   "lado": "derecha",
+   "local_ida": "santos",
+   "visitante_ida": "lanus"
+  },
+  {
+   "llave": "G",
+   "lado": "derecha",
+   "local_ida": "tigre",
+   "visitante_ida": "city_torque"
+  },
+  {
+   "llave": "H",
+   "lado": "derecha",
+   "local_ida": "cienciano",
+   "visitante_ida": "botafogo"
+  }
+ ],
+ "cruces": {
+  "cuartos": [
+   [
+    "C",
+    "D"
+   ],
+   [
+    "A",
+    "B"
+   ],
+   [
+    "E",
+    "F"
+   ],
+   [
+    "G",
+    "H"
+   ]
+  ],
+  "semifinales": [
+   [
+    "CD",
+    "AB"
+   ],
+   [
+    "EF",
+    "GH"
+   ]
+  ],
+  "nota": "Olimpia sale por la llave D. En cuartos enfrenta al ganador de Santa Fe vs River, y en semis a quien salga de Boca-Recoleta / Bolívar-São Paulo. La final es contra la mitad derecha del cuadro.",
+  "sin_confirmar": "El rival de Santos en octavos (llave F) no está confirmado."
+ },
+ "calendario": {
+  "octavos": {
+   "ida": "2026-08-13",
+   "vuelta": "2026-08-20",
+   "confirmado": true
+  },
+  "cuartos": {
+   "ida": "2026-09-17",
+   "vuelta": "2026-09-24",
+   "confirmado": false
+  },
+  "semifinales": {
+   "ida": "2026-10-22",
+   "vuelta": "2026-10-29",
+   "confirmado": false
+  },
+  "final": {
+   "fecha": "2026-11-21",
+   "confirmado": true
+  }
+ },
+ "historial_grupos_2026": {
+  "nota": "Olimpia salió primero del grupo G. Contra Vasco perdió 3-0 en São Januário el 30/04 y ganó 3-1 en el Defensores el 20/05, con goles de Mateo Gamarra de cabeza, Hugo Sandoval y Sebastián Ferreira. Vasco terminó con diez."
+ }
+}
