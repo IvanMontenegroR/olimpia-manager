@@ -2,12 +2,12 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Rng } from "@/engine/rng.ts";
-import { P } from "@/engine/motor.ts";
+import { desgastePorPartido, fuerzas, P } from "@/engine/motor.ts";
 import { ambienteDe, relatarTramo, type EventoRelato, type TipoEvento } from "@/engine/relato.ts";
 import { colorCondicion, nivelEf, nombreCorto, type PartidoUI } from "@/lib/juego.ts";
 import type { Actitud, Alineacion, Jugador, Posicion } from "@/engine/tipos.ts";
 import type { Salida } from "./ArmarOnce.tsx";
-import Cancha from "./Cancha.tsx";
+import Pulso from "./Pulso.tsx";
 import Escudo from "./Escudo.tsx";
 
 const VELOCIDADES = [
@@ -70,7 +70,8 @@ export default function PartidoEnVivo({
   const scroller = useRef<HTMLDivElement>(null);
 
   const condAhora = (j: Jugador) =>
-    Math.max(0, Math.round(j.condicion - (P.desgaste90 * Math.min(minuto, 90)) / 90));
+    Math.max(0, Math.round(
+      j.condicion - desgastePorPartido(j, Math.min(minuto, 90), ctx, salida.presionAlta)));
 
   const alineacion = useMemo<Alineacion>(
     () => ({ once, suplentes: banco, actitud, presionAlta: salida.presionAlta, puestos }),
@@ -186,6 +187,16 @@ export default function PartidoEnVivo({
     setPanel(null); setCorriendo(true);
   };
 
+  // Cuánto mejor es Olimpia que el rival hoy, normalizado. Sesga el pulso para
+  // que un partido contra Rubio Ñu no se vea igual que uno contra Cerro.
+  const tendencia = useMemo(() => {
+    const f = fuerzas(alineacion, ctx);
+    const localiaRival = ctx.competencia === "sudamericana" ? P.localiaCopaRival : P.localiaLiga;
+    const rival = ctx.rivalFuerza + (ctx.esLocal || ctx.neutral ? 0 : localiaRival);
+    return Math.max(-1, Math.min(1, ((f.ataque + f.defensa) / 2 - rival) / 12));
+  }, [alineacion, ctx]);
+  const semillaPulso = useMemo(() => Rng.hash(`${ctx.fecha}-${ctx.rivalNombre}`) % 1000, [ctx]);
+
   const ultimo = visibles[visibles.length - 1];
   const golDe: "olimpia" | "rival" | null =
     ultimo?.tipo === "gol" ? "olimpia" : ultimo?.tipo === "gol_rival" ? "rival" : null;
@@ -233,15 +244,14 @@ export default function PartidoEnVivo({
         </div>
       </header>
 
-      {/* ---------- cancha: se queda con todo el espacio que sobra ---------- */}
-      <Cancha once={once} puestos={puestos} minuto={minuto} corriendo={corriendo}
-              ultimoTipo={(ultimo?.tipo ?? "inicio") as TipoEvento} golDe={golDe}
-              rivalId={partido.rivalId} />
+      {/* ---------- pulso del partido ---------- */}
+      <Pulso eventos={visibles} minuto={minuto} once={once} condicionDe={condAhora}
+             tendencia={tendencia} semilla={semillaPulso} />
 
       {/* ---------- relato: franja de últimas jugadas ---------- */}
-      <div ref={scroller} className="scroll-y mt-2 flex shrink-0 flex-col border-t px-4 py-2.5"
-           style={{ borderColor: "var(--linea)", height: 152 }}>
-        <div className="mt-auto">
+      <div ref={scroller} className="scroll-y mt-2 flex min-h-0 flex-1 flex-col border-t px-4 py-2.5"
+           style={{ borderColor: "var(--linea)" }}>
+        <div>
           {visibles.map((e, i) => {
             const destacado = e.tipo === "gol" || e.tipo === "gol_rival";
             return (
