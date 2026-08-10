@@ -1,11 +1,12 @@
 import { Rng } from "./rng.ts";
 import { P, clamp, fuerzas, nivelEfectivo } from "./motor.ts";
+import { generarMomento, type Momento } from "./momentos.ts";
 import type { Alineacion, ContextoPartido, Jugador, Posicion } from "./tipos.ts";
 
 export type TipoEvento =
   | "inicio" | "gol" | "gol_rival" | "ocasion" | "ocasion_rival"
   | "amarilla" | "roja" | "lesion" | "aviso_condicion"
-  | "entretiempo" | "cambio" | "final";
+  | "entretiempo" | "cambio" | "final" | "momento";
 
 export interface EventoRelato {
   minuto: number;
@@ -16,6 +17,8 @@ export interface EventoRelato {
   golesRival: number;
   /** Corta la reproducción y le pide una decisión al DT. */
   pausa?: boolean;
+  /** Decisión con reloj: frena el partido hasta que el DT elige. */
+  momento?: Momento;
 }
 
 // ---------------------------------------------------------------- plantillas
@@ -212,6 +215,15 @@ export function relatarTramo(
     if (rng.chance(pAm)) {
       const m = rng.entero(desde + 1, Math.max(hasta, desde + 1));
       sucesos.push({ min: m, hacer: () => push(m, "amarilla", texto(rng, AMARILLA, j), { jugadorId: j.id }) });
+      // el amonestado puede seguir caliente y obligar a decidir
+      if (m < hasta - 6 && rng.chance(0.28)) {
+        const m2 = Math.min(hasta - 1, m + rng.entero(3, 9));
+        const caliente = generarMomento("jugador_caliente", m2, a, ctx, rng, j.id);
+        if (caliente) {
+          sucesos.push({ min: m2, hacer: () =>
+            push(m2, "momento", caliente.titulo, { pausa: true, momento: caliente, jugadorId: j.id }) });
+        }
+      }
     }
     if (rng.chance(0.006 * parte)) {
       const m = rng.entero(desde + 1, Math.max(hasta, desde + 1));
@@ -229,6 +241,23 @@ export function relatarTramo(
         push(m, "lesion", `${texto(rng, LESION, j)} Se queda sin ${puesto}.`,
              { jugadorId: j.id, pausa: true }) });
     }
+  }
+
+  // Momentos: decisiones con el reloj corriendo. Poco frecuentes a propósito,
+  // para que cuando aparezcan pesen.
+  const posibles: [Parameters<typeof generarMomento>[0], number][] = [
+    ["penal_favor", 0.09],
+    ["penal_contra", 0.08],
+    ["tiro_libre", 0.30],
+    ["mano_a_mano", 0.22],
+  ];
+  for (const [tipo, prob] of posibles) {
+    if (!rng.chance(prob * parte)) continue;
+    const m = rng.entero(desde + 2, Math.max(hasta - 2, desde + 3));
+    const momento = generarMomento(tipo, m, a, ctx, rng);
+    if (!momento) continue;
+    sucesos.push({ min: m, hacer: () =>
+      push(m, "momento", momento.titulo, { pausa: true, momento }) });
   }
 
   // el que peor llega, avisado una sola vez y solo si de verdad está fundido

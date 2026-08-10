@@ -8,6 +8,8 @@ import { colorCondicion, nivelEf, nombreCorto, type PartidoUI } from "@/lib/jueg
 import type { Actitud, Alineacion, Jugador, Posicion } from "@/engine/tipos.ts";
 import type { Salida } from "./ArmarOnce.tsx";
 import Pulso from "./Pulso.tsx";
+import MomentoOverlay from "./MomentoOverlay.tsx";
+import { resolverMomento, type Momento, type ResueltoMomento } from "@/engine/momentos.ts";
 import Escudo from "./Escudo.tsx";
 
 const VELOCIDADES = [
@@ -59,6 +61,8 @@ export default function PartidoEnVivo({
   const [panel, setPanel] = useState<"cambio" | "actitud" | null>(null);
   const [terminado, setTerminado] = useState(false);
   const [lesionado, setLesionado] = useState<string | null>(null);
+  const [momento, setMomento] = useState<Momento | null>(null);
+  const [resueltoMomento, setResuelto] = useState<ResueltoMomento | null>(null);
 
   // Varios cambios a la vez: se marcan los que salen y se les asigna quién entra.
   const [salen, setSalen] = useState<string[]>([]);
@@ -108,6 +112,9 @@ export default function PartidoEnVivo({
         const ultimoEv = ahora[ahora.length - 1];
         setGO(ultimoEv.golesOlimpia);
         setGR(ultimoEv.golesRival);
+
+        const conMomento = ahora.find((e) => e.momento);
+        if (conMomento?.momento) setMomento(conMomento.momento);
 
         const les = ahora.find((e) => e.tipo === "lesion");
         if (les?.jugadorId) {
@@ -171,6 +178,61 @@ export default function PartidoEnVivo({
     resimular(minuto, { once: nuevoOnce, suplentes: nuevoBanco, actitud,
                         presionAlta: salida.presionAlta, puestos: nuevosPuestos });
     setPanel(null); setSalen([]); setEntran({}); setEligiendoPara(null); setCorriendo(true);
+  };
+
+  const elegirEnMomento = (opcionId: string) => {
+    if (!momento) return;
+    const r = resolverMomento(momento, opcionId, alineacion, ctx,
+                              new Rng(`${ctx.fecha}-${momento.minuto}-${opcionId}`));
+    setResuelto(r);
+
+    const nuevoO = gO + (r.golOlimpia ? 1 : 0);
+    const nuevoR = gR + (r.golRival ? 1 : 0);
+    setGO(nuevoO);
+    setGR(nuevoR);
+
+    setVisibles((v) => [...v, {
+      minuto: momento.minuto,
+      tipo: r.golOlimpia ? "gol" : r.golRival ? "gol_rival" : r.rojaA ? "roja" : "cambio",
+      texto: r.texto,
+      golesOlimpia: nuevoO, golesRival: nuevoR,
+    }]);
+
+    // consecuencias que tocan al equipo
+    let nuevoOnce = once;
+    let nuevoBanco = banco;
+    const nuevosPuestos = new Map(puestos);
+    if (r.rojaA) {
+      nuevoOnce = once.filter((j) => j.id !== r.rojaA);
+      setOnce(nuevoOnce);
+    }
+    if (r.gastaCambio) {
+      const entra = banco.find((j) => j.posicion !== "ARQ");
+      if (entra && cambios > 0) {
+        nuevoOnce = once.map((j) => (j.id === r.gastaCambio ? entra : j));
+        nuevoBanco = banco.filter((j) => j.id !== entra.id);
+        nuevosPuestos.set(entra.id, puestos.get(r.gastaCambio) ?? entra.posicion);
+        setOnce(nuevoOnce);
+        setBanco(nuevoBanco);
+        setPuestos(nuevosPuestos);
+        setCambios((c) => c - 1);
+      }
+    }
+
+    // el resto del partido se vuelve a simular con el marcador y el equipo nuevos
+    semilla.current++;
+    cursor.current = 0;
+    setPendientes(relatarTramo(
+      { once: nuevoOnce, suplentes: nuevoBanco, actitud,
+        presionAlta: salida.presionAlta, puestos: nuevosPuestos },
+      ctx, new Rng(`${ctx.fecha}-${ctx.rivalNombre}-${semilla.current}`),
+      momento.minuto, 90, nuevoO, nuevoR));
+  };
+
+  const seguirTrasMomento = () => {
+    setMomento(null);
+    setResuelto(null);
+    setCorriendo(true);
   };
 
   const cambiarActitud = (a: Actitud) => {
@@ -393,6 +455,11 @@ export default function PartidoEnVivo({
             );
           })}
         </Panel>
+      )}
+
+      {momento && (
+        <MomentoOverlay momento={momento} resuelto={resueltoMomento}
+                        onElegir={elegirEnMomento} onSeguir={seguirTrasMomento} />
       )}
 
       {/* ---------- final ---------- */}

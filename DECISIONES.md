@@ -202,6 +202,37 @@ Falta conectar: la condición no se arrastra todavía entre fechas, no hay
 persistencia en localStorage, y no hay tabla ni Sudamericana en la interfaz. El
 motor ya tiene todo eso (`engine/temporada.ts`), falta cablearlo a la UI.
 
+## Momentos: decisiones con el reloj corriendo
+
+Se agregaron interrupciones jugables durante el partido, para que el DT no sea
+un espectador entre cambio y cambio.
+
+**Regla de diseño:** ponen a prueba la decisión, no los reflejos. Quién patea el
+penal importa; la precisión del dedo, no. Si el resultado dependiera del pulso del
+jugador, el Nivel del plantel dejaría de importar y se caería la premisa entera.
+
+Cinco tipos, todos con cuenta regresiva. Si se acaba el tiempo se toma la opción
+conservadora: no decidir también es decidir.
+
+| Momento | Decisión | Qué la vuelve interesante |
+|---|---|---|
+| Penal a favor | Cuál de los tres mejores patea | El `definidor` convierte más; el `definicion_irregular` es lotería |
+| Penal en contra | Para qué lado se tira el arquero | Acertar el palo depende del azar, atajarla del Nivel del arquero |
+| Tiro libre peligroso | Al arco, centro al área o corta | El centro paga si tenés alguien con `juego_aereo` |
+| Mano a mano | Cruzarla, picarla o aguantar | Picarla rinde menos, salvo con un definidor |
+| Va caliente | Sacarlo, hablarle o dejarlo | Sacarlo es seguro pero gasta un cambio |
+
+Frecuencia medida sobre 400 partidos: **0.99 momentos por partido, y el 67% de los
+partidos tiene al menos uno**. Bastante para que aparezcan, poco para que cansen.
+
+Tasa de éxito eligiendo siempre la opción conservadora: penal a favor 81%, mano a
+mano 75%, va caliente 83%, penal en contra 19%, tiro libre 9%. El primer balanceo
+daba 98% en "va caliente", o sea que hablarle era gratis y la decisión no existía;
+se bajó la probabilidad de que se calme y se subió el riesgo de roja.
+
+Cuando un momento se resuelve, el resto del partido se vuelve a simular con el
+marcador y el equipo que quedaron. Un penal errado cambia el partido de verdad.
+
 ## Estado de los datos
 
 | Archivo | Estado |
