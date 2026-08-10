@@ -67,6 +67,13 @@ están documentados en [DECISIONES.md](DECISIONES.md).
 
 Sin llamadas a modelos de IA en runtime.
 
+### Escudos
+
+Los escudos de `public/escudos/` provienen de Wikimedia Commons. Son marcas
+registradas de sus clubes y se usan acá con fines identificatorios dentro de un
+proyecto personal sin fines comerciales. Los clubes sin archivo de escudo caen a
+un monograma generado con sus colores.
+
 ## Estado
 
 MVP en construcción. Anda: armar el once, jugar el partido con relato, cambios y
