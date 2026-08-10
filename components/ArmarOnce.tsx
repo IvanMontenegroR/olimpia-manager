@@ -6,6 +6,8 @@ import {
   nivelEf, PLANTEL, type PartidoUI,
 } from "@/lib/juego.ts";
 import type { Actitud, Jugador, Posicion } from "@/engine/tipos.ts";
+import Escudo from "./Escudo.tsx";
+import { ACTITUD } from "./PartidoEnVivo.tsx";
 
 const POSICIONES: (Posicion | "TODOS")[] = ["TODOS", "ARQ", "DEF", "MED", "DEL"];
 const ORDEN: Record<Posicion, number> = { ARQ: 0, DEF: 1, MED: 2, DEL: 3 };
@@ -67,10 +69,14 @@ export default function ArmarOnce({
 
   const jugar = () => {
     if (problema || !asign) return;
-    const suplentes = PLANTEL
-      .filter((j) => !sel.has(j.id) && j.posicion !== "ARQ" && !j.lesionado_hasta)
-      .sort((a, b) => nivelEf(b, b.posicion, ctx) - nivelEf(a, a.posicion, ctx))
-      .slice(0, 3);
+    const libres = PLANTEL.filter((j) => !sel.has(j.id) && !j.lesionado_hasta);
+    const porNivel = (a: Jugador, b: Jugador) =>
+      nivelEf(b, b.posicion, ctx) - nivelEf(a, a.posicion, ctx);
+    const arquero = libres.filter((j) => j.posicion === "ARQ").sort(porNivel)[0];
+    const suplentes = [
+      ...(arquero ? [arquero] : []),
+      ...libres.filter((j) => j.posicion !== "ARQ").sort(porNivel).slice(0, 6),
+    ];
     onJugar({ once, suplentes, actitud, presionAlta, puestos: asign.puestos });
   };
 
@@ -87,7 +93,7 @@ export default function ArmarOnce({
           </span>
         </div>
         <div className="mt-1 flex items-center gap-2.5">
-          <div className="franjas h-7 w-1.5 rounded-full opacity-90" />
+          <Escudo id={partido.rivalId} nombre={partido.rivalNombre} tam={30} />
           <span className="text-[13px] font-semibold" style={{ color: "var(--apagado)" }}>vs</span>
           <h1 className="apellido text-[26px] leading-none">{partido.rivalNombre}</h1>
           {ctx.esClasico && (
@@ -212,16 +218,20 @@ export default function ArmarOnce({
       <div className="border-t px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2.5"
            style={{ borderColor: "var(--linea)", background: "var(--negro)" }}>
         <div className="mb-2 flex gap-1.5">
-          {(["defensivo", "equilibrado", "ofensivo"] as Actitud[]).map((a) => (
-            <button key={a} onClick={() => setActitud(a)}
-              className="flex-1 rounded py-2 text-[11px] font-bold uppercase tracking-wider"
-              style={{
-                background: actitud === a ? "var(--blanco)" : "var(--carbon)",
-                color: actitud === a ? "var(--negro)" : "var(--tenue)",
-              }}>
-              {a === "defensivo" ? "Aguantar" : a === "equilibrado" ? "Parejo" : "Ir al frente"}
-            </button>
-          ))}
+          {(["defensivo", "equilibrado", "ofensivo"] as Actitud[]).map((a) => {
+            const A = ACTITUD[a];
+            return (
+              <button key={a} onClick={() => setActitud(a)}
+                className="flex-1 rounded py-2 text-[11px] font-bold uppercase tracking-wider"
+                style={{
+                  background: actitud === a ? A.color : "var(--carbon)",
+                  color: actitud === a ? A.sobre : "var(--tenue)",
+                  boxShadow: actitud === a ? "none" : `inset 3px 0 0 ${A.color}`,
+                }}>
+                {A.nombre}
+              </button>
+            );
+          })}
           <button onClick={() => setPresion((p) => !p)}
             className="rounded px-3 py-2 text-[11px] font-bold uppercase tracking-wider"
             style={{

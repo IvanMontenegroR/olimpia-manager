@@ -162,17 +162,18 @@ export function simularTemporada(
 
     // Tres cambios al minuto 65. Salen los más fundidos, nunca el arquero ni el
     // Sub-18: si el juvenil no completa los 90, sus minutos no cuentan para la meta.
+    const entran = alineacion.suplentes.filter((j) => j.posicion !== "ARQ").slice(0, 3);
     const salen = new Set(
       alineacion.once
         .filter((j) => j.posicion !== "ARQ" && !esSub18(j))
         .sort((a, b) => a.condicion - b.condicion)
-        .slice(0, alineacion.suplentes.length)
+        .slice(0, entran.length)
         .map((j) => j.id),
     );
 
     const enCancha: [Jugador, number][] = [
       ...alineacion.once.map((j) => [j, salen.has(j.id) ? 65 : 90] as [Jugador, number]),
-      ...alineacion.suplentes.map((j) => [j, 25] as [Jugador, number]),
+      ...entran.map((j) => [j, 25] as [Jugador, number]),
     ];
 
     for (const [j, min] of enCancha) {

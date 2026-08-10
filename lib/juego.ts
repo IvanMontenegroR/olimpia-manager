@@ -89,6 +89,7 @@ export function asignarPuestos(once: Jugador[], ctx: ContextoPartido): Asignacio
 
 export interface PartidoUI {
   ctx: ContextoPartido;
+  rivalId: string;
   rivalNombre: string;
   estadio: string;
   ciudad: string;
@@ -106,6 +107,7 @@ export function partidosDeOlimpia(): PartidoUI[] {
       const rivalId = esLocal ? p.visitante : p.local;
       const rival = porId[rivalId];
       return {
+        rivalId,
         rivalNombre: rival.nombre,
         estadio: p.estadio,
         ciudad: p.ciudad,

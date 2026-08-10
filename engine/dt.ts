@@ -108,13 +108,19 @@ export function armarOnce(
     meter(j, j.posicion);
   }
 
-  // los tres cambios: los mejores que quedaron afuera, respetando el cupo
+  // Banco de siete, con arquero: los cambios son tres, pero tenés que poder
+  // reemplazar al arquero si se lesiona.
   const suplentes: Jugador[] = [];
+  const arquero = aptos
+    .filter((j) => !usado.has(j.id) && j.posicion === "ARQ")
+    .sort((a, b) => valor(b, "ARQ") - valor(a, "ARQ"))[0];
+  if (arquero) { suplentes.push(arquero); usado.add(arquero.id); puestos.set(arquero.id, "ARQ"); }
+
   const restantes = aptos
     .filter((j) => !usado.has(j.id) && j.posicion !== "ARQ")
     .sort((a, b) => valor(b, b.posicion) - valor(a, a.posicion));
   for (const j of restantes) {
-    if (suplentes.length >= 3) break;
+    if (suplentes.length >= 7) break;
     if (j.extranjero && extranjeros >= CUPO_EXTRANJEROS) continue;
     suplentes.push(j);
     puestos.set(j.id, j.posicion);

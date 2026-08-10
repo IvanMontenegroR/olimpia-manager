@@ -1,0 +1,15 @@
+{
+  "_nota": "Colores de club para la interfaz. 'escudo' en true solo cuando el archivo existe en public/escudos/<id>.png. Los marcados como verificar están en gris neutro a propósito: es preferible eso a inventar un color.",
+  "olimpia":             { "primario": "#ffffff", "secundario": "#0b0b0c", "sobrePrimario": "#0b0b0c", "escudo": false },
+  "cerro_porteno":       { "primario": "#0b3ea8", "secundario": "#e2001a", "sobrePrimario": "#ffffff", "escudo": false },
+  "libertad":            { "primario": "#f2f2f2", "secundario": "#0b0b0c", "sobrePrimario": "#0b0b0c", "escudo": false },
+  "guarani":             { "primario": "#f5c400", "secundario": "#0b0b0c", "sobrePrimario": "#0b0b0c", "escudo": false },
+  "nacional":            { "primario": "#0b3da5", "secundario": "#ffffff", "sobrePrimario": "#ffffff", "escudo": false },
+  "sportivo_luqueno":    { "primario": "#1e3a8a", "secundario": "#f5c400", "sobrePrimario": "#ffffff", "escudo": false, "verificar": true },
+  "recoleta":            { "primario": "#3f3f46", "secundario": "#a1a1aa", "sobrePrimario": "#ffffff", "escudo": false, "verificar": true },
+  "sportivo_ameliano":   { "primario": "#3f3f46", "secundario": "#a1a1aa", "sobrePrimario": "#ffffff", "escudo": false, "verificar": true },
+  "sportivo_trinidense": { "primario": "#3f3f46", "secundario": "#a1a1aa", "sobrePrimario": "#ffffff", "escudo": false, "verificar": true },
+  "2_de_mayo":           { "primario": "#3f3f46", "secundario": "#a1a1aa", "sobrePrimario": "#ffffff", "escudo": false, "verificar": true },
+  "san_lorenzo":         { "primario": "#3f3f46", "secundario": "#a1a1aa", "sobrePrimario": "#ffffff", "escudo": false, "verificar": true },
+  "rubio_nu":            { "primario": "#3f3f46", "secundario": "#a1a1aa", "sobrePrimario": "#ffffff", "escudo": false, "verificar": true }
+}

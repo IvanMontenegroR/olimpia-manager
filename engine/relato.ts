@@ -23,6 +23,9 @@ export interface EventoRelato {
 
 const GOL_DEL = [
   "{j} la empuja en el área chica. No perdona.",
+  "Quedó mano a mano {j} y la picó por encima del arquero.",
+  "{j} la paró en el área, se acomodó y la cruzó al segundo palo.",
+  "Se la dejaron servida a {j} y la reventó contra la red.",
   "Contra letal y {j} define cruzado. Golazo.",
   "Le queda el rebote a {j} y la manda a guardar.",
   "{j} se la baja al pecho, gira y la clava.",
@@ -32,15 +35,22 @@ const GOL_DEL = [
 const GOL_AEREO = [
   "Centro al área y {j} se eleva por encima de todos. De cabeza, adentro.",
   "Córner, sube {j} y le gana en el salto. Gol de cabeza.",
+  "Le colgaron el centro a {j} y la bajó de cabeza contra el palo.",
+  "Tiro libre al área, {j} ganó en las alturas y la puso abajo.",
 ];
 const GOL_MED = [
   "{j} llega de atrás y saca el zurdazo. Se metió pegada al palo.",
   "Habilitación para {j}, que entró como un puñal. La define de primera.",
   "Tiro libre de {j}. Se le metió por el ángulo.",
+  "{j} la agarró de afuera y la clavó donde no llega nadie.",
+  "Le quedó el rebote a {j} en la puerta del área y no lo pensó.",
+  "Pared entre líneas y {j} apareció solo por el medio. Gol.",
 ];
 const GOL_DEF = [
   "Pelota parada y aparece {j} entre todos. Cabezazo y adentro.",
   "{j} sube por sorpresa y la manda a guardar. Nadie lo marcó.",
+  "Córner, peinada al segundo palo y {j} la empuja.",
+  "{j} se metió al área como si fuera delantero y la clavó.",
 ];
 const OCASION = [
   "{j} quedó de frente y le pegó desviado. Se agarra la cabeza.",
@@ -48,17 +58,33 @@ const OCASION = [
   "Tremenda atajada del arquero al remate de {j}.",
   "{j} la tuvo en el área chica y la mandó al córner.",
   "Se la pierde {j} solo frente al arco. No lo puede creer nadie.",
+  "Cabezazo de {j} que pega en el travesaño. Estuvo adentro.",
+  "{j} le pegó de afuera y se fue lamiendo el palo.",
+  "Le quedó a {j} en la puerta del área y le salió mordida.",
+  "{j} encaró, tiró el centro atrás y no había nadie. Se pierde una clara.",
+  "Contra rápida y {j} definió al cuerpo del arquero.",
+  "{j} reclamó penal después de que lo tocaran. El árbitro no cobró nada.",
 ];
 const OCASION_IRREGULAR = [
   "{j} desborda, se saca a dos y define pésimo. Es lo que tiene.",
   "Otra vez {j} generando todo el peligro, y otra vez la manda a la tribuna.",
   "{j} inventa una jugada de otro partido y la termina tirando afuera.",
+  "Le queda a {j} de sobrepique y le pega como si le tuviera miedo a la pelota.",
+  "{j} hizo lo difícil, gambeteó a tres, y falló lo fácil.",
+  "Genialidad de {j} para quedar solo. Definición para el olvido.",
 ];
 const OCASION_RIVAL = [
   "Se salvó Olimpia. Le quedó servida en el área y la tiró arriba.",
   "Tapadón del arquero. Manoteó la pelota abajo del ángulo.",
   "La pelota pegó en el palo y salió. Susto grande.",
   "Contra del rival y la definición se fue apenas ancha.",
+  "Se lo perdió el nueve del rival, solo contra el arquero.",
+  "Centro pasado y cabezazo que se va rozando el palo.",
+  "Le pegó de afuera y la sacó al córner el arquero, con lo justo.",
+  "Reclamaron penal en el área de Olimpia. El árbitro dijo que siga.",
+  "Quedó mano a mano y le salió bien el arquero. Achicó y se la comió.",
+  "Tres pases y quedaron de frente al arco. La tiraron por arriba.",
+  "Pelota parada peligrosa. Despejó la defensa como pudo.",
 ];
 const GOL_RIVAL = [
   "Gol del rival. Centro atrás y definición cruzada, no llegó nadie.",
@@ -66,11 +92,19 @@ const GOL_RIVAL = [
   "Error en la salida y lo terminaron pagando. Gol.",
   "Cabezazo tras córner. Olimpia quedó mirando.",
   "Contragolpe letal. La liquidaron de primera.",
+  "Rebote en el área y el más vivo la empujó. Gol del rival.",
+  "Tiro libre al ángulo. El arquero ni se movió.",
+  "Se metieron por la banda y la pusieron atrás. Gol y a empezar de nuevo.",
+  "Penal. Lo cambió por gol sin despeinarse.",
+  "Le quedó el rebote del palo y no falló. Gol.",
 ];
 const AMARILLA = [
   "Amarilla a {j}. Va sentido con el árbitro.",
   "Falta táctica de {j}. Amarilla y protesta.",
   "{j} llegó tarde y vio la amarilla. Tiene que tener cuidado.",
+  "{j} cortó la contra con la mano. Amarilla justa.",
+  "Amonestado {j} por protestar. Innecesaria.",
+  "Plancha de {j} en mitad de cancha. Amarilla y podría haber sido peor.",
 ];
 const ROJA = [
   "Roja a {j}. Se va a las duchas y deja a Olimpia con diez.",
@@ -80,6 +114,8 @@ const LESION = [
   "{j} se toca atrás del muslo y pide el cambio.",
   "Queda tendido {j}. Entra el médico y no puede seguir.",
   "{j} pisó mal y se resintió. No va a poder continuar.",
+  "Choque fuerte y {j} queda dolorido en el piso. No sigue.",
+  "{j} hace señas al banco agarrándose el gemelo.",
 ];
 
 // ---------------------------------------------------------------- helpers
@@ -188,8 +224,10 @@ export function relatarTramo(
     if (j.edad >= 33) pLes *= P.lesionVeterano;
     if (rng.chance(pLes * parte)) {
       const m = rng.entero(desde + 1, Math.max(hasta, desde + 1));
+      const puesto = a.puestos.get(j.id) ?? j.posicion;
       sucesos.push({ min: m, hacer: () =>
-        push(m, "lesion", texto(rng, LESION, j), { jugadorId: j.id, pausa: true }) });
+        push(m, "lesion", `${texto(rng, LESION, j)} Se queda sin ${puesto}.`,
+             { jugadorId: j.id, pausa: true }) });
     }
   }
 
