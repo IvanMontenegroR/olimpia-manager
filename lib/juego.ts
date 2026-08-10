@@ -136,5 +136,18 @@ export const BANDERA: Record<string, string> = {
   BRA: "🇧🇷", COL: "🇨🇴", ECU: "🇪🇨", PER: "🇵🇪", BOL: "🇧🇴", VEN: "🇻🇪",
 };
 
+/** Nombre corto para los marcadores, donde no entra el nombre completo. */
+const CORTOS: Record<string, string> = {
+  cerro_porteno: "Cerro",
+  recoleta: "Recoleta",
+  sportivo_ameliano: "Ameliano",
+  sportivo_luqueno: "Luqueño",
+  sportivo_trinidense: "Trinidense",
+  san_lorenzo: "San Lorenzo",
+  "2_de_mayo": "2 de Mayo",
+};
+export const nombreCorto = (id: string, nombre: string) =>
+  CORTOS[id] ?? nombre.replace(/^(Club|Sportivo|Deportivo)\s+/i, "");
+
 export const colorCondicion = (c: number) =>
   c >= 80 ? "var(--ok)" : c >= 60 ? "var(--medio)" : c >= 40 ? "var(--bajo)" : "var(--critico)";

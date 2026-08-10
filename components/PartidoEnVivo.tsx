@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Rng } from "@/engine/rng.ts";
 import { P } from "@/engine/motor.ts";
 import { ambienteDe, relatarTramo, type EventoRelato, type TipoEvento } from "@/engine/relato.ts";
-import { colorCondicion, nivelEf, type PartidoUI } from "@/lib/juego.ts";
+import { colorCondicion, nivelEf, nombreCorto, type PartidoUI } from "@/lib/juego.ts";
 import type { Actitud, Alineacion, Jugador, Posicion } from "@/engine/tipos.ts";
 import type { Salida } from "./ArmarOnce.tsx";
 import Cancha from "./Cancha.tsx";
@@ -201,23 +201,30 @@ export default function PartidoEnVivo({
           <span className="shrink-0">{partido.etiqueta}</span>
           <span className="truncate pl-2">{partido.estadio}</span>
         </div>
-        <div className="mt-1.5 flex items-center gap-2">
-          <div className="flex shrink-0 flex-col gap-1">
-            <Escudo id="olimpia" nombre="Olimpia" tam={22} />
-            <Escudo id={partido.rivalId} nombre={partido.rivalNombre} tam={22} />
+        {/* cada equipo de su lado, marcador y reloj en el medio */}
+        <div className="mt-1.5 grid items-center" style={{ gridTemplateColumns: "1fr auto 1fr" }}>
+          <div className="flex flex-col items-center gap-1">
+            <Escudo id="olimpia" nombre="Olimpia" tam={32} />
+            <span className="apellido max-w-full truncate text-[12px] leading-none">Olimpia</span>
           </div>
-          <div className="min-w-0 flex-1">
-            <div className="apellido truncate text-[14px] leading-[22px]">Olimpia</div>
-            <div className="apellido truncate text-[14px] leading-[22px]"
-                 style={{ color: "var(--tenue)" }}>{partido.rivalNombre}</div>
-          </div>
-          <div className="marcador text-[36px]">{gO}</div>
-          <div className="marcador text-[36px]" style={{ color: "var(--apagado)" }}>—</div>
-          <div className="marcador text-[36px]" style={{ color: "var(--tenue)" }}>{gR}</div>
-          <div className="ml-1.5 w-10 shrink-0 text-right">
-            <div className={`num text-[19px] leading-none ${corriendo ? "latir" : ""}`}>
+
+          <div className="px-3 text-center">
+            <div className="marcador flex items-baseline justify-center gap-2 text-[38px]">
+              <span>{gO}</span>
+              <span style={{ color: "var(--apagado)" }}>–</span>
+              <span>{gR}</span>
+            </div>
+            <div className={`num mt-0.5 text-[13px] leading-none ${corriendo ? "latir" : ""}`}
+                 style={{ color: "var(--tenue)" }}>
               {Math.min(minuto, 90)}'
             </div>
+          </div>
+
+          <div className="flex flex-col items-center gap-1">
+            <Escudo id={partido.rivalId} nombre={partido.rivalNombre} tam={32} />
+            <span className="apellido max-w-full truncate text-[12px] leading-none">
+              {nombreCorto(partido.rivalId, partido.rivalNombre)}
+            </span>
           </div>
         </div>
         <div className="mt-1.5 h-0.5 w-full overflow-hidden rounded-full" style={{ background: "var(--linea)" }}>
@@ -226,14 +233,14 @@ export default function PartidoEnVivo({
         </div>
       </header>
 
-      {/* ---------- cancha ---------- */}
+      {/* ---------- cancha: se queda con todo el espacio que sobra ---------- */}
       <Cancha once={once} puestos={puestos} minuto={minuto} corriendo={corriendo}
               ultimoTipo={(ultimo?.tipo ?? "inicio") as TipoEvento} golDe={golDe}
               rivalId={partido.rivalId} />
 
-      {/* ---------- relato ---------- */}
-      <div ref={scroller} className="scroll-y mt-2 flex flex-1 flex-col border-t px-4 py-2.5"
-           style={{ borderColor: "var(--linea)" }}>
+      {/* ---------- relato: franja de últimas jugadas ---------- */}
+      <div ref={scroller} className="scroll-y mt-2 flex shrink-0 flex-col border-t px-4 py-2.5"
+           style={{ borderColor: "var(--linea)", height: 152 }}>
         <div className="mt-auto">
           {visibles.map((e, i) => {
             const destacado = e.tipo === "gol" || e.tipo === "gol_rival";

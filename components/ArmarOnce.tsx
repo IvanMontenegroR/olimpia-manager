@@ -2,14 +2,15 @@
 
 import { useMemo, useState } from "react";
 import {
-  asignarPuestos, BANDERA, colorCondicion, CUPO_EXTRANJEROS, esSub18,
-  nivelEf, PLANTEL, type PartidoUI,
+  asignarPuestos, colorCondicion, CUPO_EXTRANJEROS, esSub18,
+  nivelEf, nombreCorto, PLANTEL, type PartidoUI,
 } from "@/lib/juego.ts";
 import type { Actitud, Jugador, Posicion } from "@/engine/tipos.ts";
 import Escudo from "./Escudo.tsx";
+import CanchaArmado from "./CanchaArmado.tsx";
 import { ACTITUD } from "./PartidoEnVivo.tsx";
 
-const POSICIONES: (Posicion | "TODOS")[] = ["TODOS", "ARQ", "DEF", "MED", "DEL"];
+const FILTROS: (Posicion | "TODOS")[] = ["TODOS", "ARQ", "DEF", "MED", "DEL"];
 const ORDEN: Record<Posicion, number> = { ARQ: 0, DEF: 1, MED: 2, DEL: 3 };
 
 export interface Salida {
@@ -28,6 +29,8 @@ export default function ArmarOnce({
   const [filtro, setFiltro] = useState<Posicion | "TODOS">("TODOS");
   const [actitud, setActitud] = useState<Actitud>(ctx.esLocal ? "ofensivo" : "equilibrado");
   const [presionAlta, setPresion] = useState(ctx.esLocal);
+  /** Jugador tocado, esperando con quién intercambiarse. */
+  const [marcado, setMarcado] = useState<string | null>(null);
 
   const once = useMemo(
     () => PLANTEL.filter((j) => sel.has(j.id)).sort((a, b) => ORDEN[a.posicion] - ORDEN[b.posicion]),
@@ -48,24 +51,38 @@ export default function ArmarOnce({
     extranjeros > CUPO_EXTRANJEROS ? `${extranjeros} extranjeros, el cupo es ${CUPO_EXTRANJEROS}` :
     null;
 
-  const alternar = (j: Jugador) => {
+  const banco = useMemo(() => {
+    const fuera = PLANTEL.filter((j) => !sel.has(j.id));
+    const base = filtro === "TODOS" ? fuera : fuera.filter((j) => j.posicion === filtro);
+    // Sin filtro conviene ver primero a los mejores: si ordenara por puesto,
+    // los tres arqueros suplentes se comerían el arranque del banco.
+    return [...base].sort((a, b) =>
+      filtro === "TODOS"
+        ? nivelEf(b, b.posicion, ctx) - nivelEf(a, a.posicion, ctx)
+        : ORDEN[a.posicion] - ORDEN[b.posicion] ||
+          nivelEf(b, b.posicion, ctx) - nivelEf(a, a.posicion, ctx));
+  }, [filtro, sel, ctx]);
+
+  /** Tocar en la cancha y después en el banco (o al revés) intercambia. */
+  const tocar = (j: Jugador) => {
+    const enCancha = sel.has(j.id);
+    if (!marcado) { setMarcado(j.id); return; }
+    if (marcado === j.id) { setMarcado(null); return; }
+
+    const otro = PLANTEL.find((x) => x.id === marcado)!;
+    const otroEnCancha = sel.has(otro.id);
+    if (enCancha === otroEnCancha) { setMarcado(j.id); return; } // los dos del mismo lado
+
     setSel((prev) => {
       const n = new Set(prev);
-      if (n.has(j.id)) n.delete(j.id);
-      else if (n.size < 11) n.add(j.id);
+      const sale = enCancha ? j : otro;
+      const entra = enCancha ? otro : j;
+      n.delete(sale.id);
+      n.add(entra.id);
       return n;
     });
+    setMarcado(null);
   };
-
-  const lista = useMemo(() => {
-    const base = filtro === "TODOS" ? PLANTEL : PLANTEL.filter((j) => j.posicion === filtro);
-    return [...base].sort((a, b) => {
-      const sa = sel.has(a.id) ? 0 : 1, sb = sel.has(b.id) ? 0 : 1;
-      if (sa !== sb) return sa - sb;
-      if (ORDEN[a.posicion] !== ORDEN[b.posicion]) return ORDEN[a.posicion] - ORDEN[b.posicion];
-      return nivelEf(b, b.posicion, ctx) - nivelEf(a, a.posicion, ctx);
-    });
-  }, [filtro, sel, ctx]);
 
   const jugar = () => {
     if (problema || !asign) return;
@@ -82,147 +99,118 @@ export default function ArmarOnce({
 
   return (
     <div className="app">
-      {/* ---------- cabecera del partido ---------- */}
-      <header className="px-4 pt-3 pb-2.5 border-b" style={{ borderColor: "var(--linea)" }}>
-        <div className="flex items-baseline justify-between">
-          <span className="text-[10px] uppercase tracking-[0.18em]" style={{ color: "var(--tenue)" }}>
-            {partido.etiqueta}
-          </span>
-          <span className="text-[10px] uppercase tracking-[0.18em]" style={{ color: "var(--tenue)" }}>
-            {ctx.esLocal ? "Local" : "Visitante"}
-          </span>
+      {/* ---------- cabecera ---------- */}
+      <header className="px-4 pb-2 pt-2.5">
+        <div className="flex items-baseline justify-between text-[10px] uppercase tracking-[0.18em]"
+             style={{ color: "var(--tenue)" }}>
+          <span>{partido.etiqueta}</span>
+          <span>{ctx.esLocal ? "Local" : "Visitante"}</span>
         </div>
         <div className="mt-1 flex items-center gap-2.5">
-          <Escudo id={partido.rivalId} nombre={partido.rivalNombre} tam={30} />
-          <span className="text-[13px] font-semibold" style={{ color: "var(--apagado)" }}>vs</span>
-          <h1 className="apellido text-[26px] leading-none">{partido.rivalNombre}</h1>
+          <Escudo id={partido.rivalId} nombre={partido.rivalNombre} tam={28} />
+          <span className="text-[12px] font-semibold" style={{ color: "var(--apagado)" }}>vs</span>
+          <h1 className="apellido truncate text-[22px] leading-none">
+            {nombreCorto(partido.rivalId, partido.rivalNombre)}
+          </h1>
           {ctx.esClasico && (
-            <span className="ml-auto rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest"
+            <span className="ml-auto shrink-0 rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest"
                   style={{ background: "var(--blanco)", color: "var(--negro)" }}>
               Clásico
             </span>
           )}
         </div>
-        <div className="mt-1 text-[11px]" style={{ color: "var(--apagado)" }}>
-          {partido.estadio} · {partido.ciudad}
-          {ctx.viajeKm > 0 && ` · ${ctx.viajeKm} km de viaje`}
-        </div>
       </header>
 
       {/* ---------- estado del once ---------- */}
-      <div className="flex items-stretch border-b" style={{ borderColor: "var(--linea)" }}>
-        <Dato etiqueta="Once" valor={`${once.length}/11`}
-              alerta={once.length !== 11} />
+      <div className="flex items-stretch border-y" style={{ borderColor: "var(--linea)" }}>
+        <Dato etiqueta="Once" valor={`${once.length}/11`} alerta={once.length !== 11} />
         <Dato etiqueta="Sistema" valor={asign?.molde ?? "—"} />
         <Dato etiqueta="Extranj." valor={`${extranjeros}/${CUPO_EXTRANJEROS}`}
               alerta={extranjeros > CUPO_EXTRANJEROS} />
-        <Dato etiqueta="Sub-18" valor={sub18 > 0 ? String(sub18) : "0"}
-              alerta={sub18 === 0} />
+        <Dato etiqueta="Sub-18" valor={String(sub18)} alerta={sub18 === 0} />
         <Dato etiqueta="Nivel" valor={nivelOnce ? String(nivelOnce) : "—"} fuerte />
       </div>
 
-      {(asign?.adaptados.length || asign?.fueraDePuesto.length) ? (
-        <div className="px-4 py-1.5 text-[11px] border-b" style={{ borderColor: "var(--linea)", color: "var(--tenue)" }}>
+      {/* ---------- cancha ---------- */}
+      <div className="flex min-h-0 flex-1 flex-col py-2">
+        <CanchaArmado once={once} puestos={asign?.puestos ?? new Map()} ctx={ctx}
+                      seleccionado={marcado} onTocar={tocar} />
+      </div>
+
+      {asign && (asign.adaptados.length > 0 || asign.fueraDePuesto.length > 0) && (
+        <div className="px-4 pb-1 text-[10px]" style={{ color: "var(--tenue)" }}>
           {asign.adaptados.map((j) => (
             <span key={j.id} className="mr-2">
-              {j.apellido} de {asign.puestos.get(j.id)} <span style={{ color: "var(--medio)" }}>×0.90</span>
+              {j.apellido} de {asign.puestos.get(j.id)}{" "}
+              <span style={{ color: "var(--medio)" }}>×0.90</span>
             </span>
           ))}
           {asign.fueraDePuesto.map((j) => (
             <span key={j.id} className="mr-2">
-              {j.apellido} de {asign.puestos.get(j.id)} <span style={{ color: "var(--critico)" }}>×0.75</span>
+              {j.apellido} de {asign.puestos.get(j.id)}{" "}
+              <span style={{ color: "var(--critico)" }}>×0.75</span>
             </span>
           ))}
         </div>
-      ) : null}
+      )}
 
-      {/* ---------- filtro por posición ---------- */}
-      <div className="flex gap-1 px-3 py-2">
-        {POSICIONES.map((p) => (
-          <button key={p} onClick={() => setFiltro(p)}
-            className="flex-1 rounded py-1.5 text-[11px] font-bold uppercase tracking-wider transition-colors"
-            style={{
-              background: filtro === p ? "var(--blanco)" : "var(--carbon)",
-              color: filtro === p ? "var(--negro)" : "var(--tenue)",
-            }}>
-            {p === "TODOS" ? "Todos" : p}
-          </button>
-        ))}
-      </div>
-
-      {/* ---------- plantel ---------- */}
-      <div className="scroll-y flex-1 px-3 pb-2">
-        {lista.map((j) => {
-          const elegido = sel.has(j.id);
-          const puesto = elegido && asign ? asign.puestos.get(j.id)! : j.posicion;
-          const ef = nivelEf(j, puesto, ctx);
-          const adaptado = elegido && puesto !== j.posicion;
-          return (
-            <button key={j.id} onClick={() => alternar(j)}
-              className="relative mb-1 flex w-full items-center gap-3 rounded-lg px-2.5 py-2 pl-3.5 text-left transition-colors"
+      {/* ---------- banco ---------- */}
+      <div className="border-t pt-1.5" style={{ borderColor: "var(--linea)" }}>
+        <div className="flex items-center gap-1 px-3 pb-1.5">
+          <span className="mr-1 shrink-0 text-[9px] uppercase tracking-[0.14em]"
+                style={{ color: "var(--apagado)" }}>
+            Banco
+          </span>
+          {FILTROS.map((p) => (
+            <button key={p} onClick={() => setFiltro(p)}
+              className="flex-1 rounded py-1 text-[10px] font-bold uppercase tracking-wider"
               style={{
-                background: elegido ? "var(--carbon)" : "transparent",
-                boxShadow: elegido ? "inset 0 0 0 1px var(--linea)" : "none",
-                opacity: !elegido && sel.size >= 11 ? 0.42 : 1,
+                background: filtro === p ? "var(--blanco)" : "var(--carbon)",
+                color: filtro === p ? "var(--negro)" : "var(--tenue)",
               }}>
-              {elegido && (
-                <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full"
-                      style={{ background: "var(--blanco)" }} />
-              )}
-              <span className="num w-8 shrink-0 text-center text-[19px]"
-                    style={{ color: elegido ? "var(--blanco)" : "var(--apagado)" }}>
-                {j.numero}
-              </span>
-
-              <span className="min-w-0 flex-1">
-                <span className="flex items-baseline gap-1.5">
-                  <span className="apellido truncate text-[14px]">{j.apellido}</span>
-                  <span className="truncate text-[11px]" style={{ color: "var(--apagado)" }}>
-                    {j.nombre}
-                  </span>
-                </span>
-                <span className="mt-0.5 flex items-center gap-1.5 text-[10px]"
-                      style={{ color: "var(--tenue)" }}>
-                  <span style={{ color: adaptado ? "var(--medio)" : "var(--tenue)" }}>
-                    {puesto}{adaptado && ` (de ${j.posicion})`}
-                  </span>
-                  <span>{BANDERA[j.nacionalidad] ?? ""}</span>
-                  {esSub18(j) && (
-                    <span className="rounded px-1 font-bold"
-                          style={{ background: "var(--linea)", color: "var(--blanco)" }}>S18</span>
-                  )}
-                  <span className="ml-auto flex items-center gap-1">
-                    <span className="h-1 w-10 overflow-hidden rounded-full" style={{ background: "var(--linea)" }}>
-                      <span className="block h-full rounded-full"
-                            style={{ width: `${j.condicion}%`, background: colorCondicion(j.condicion) }} />
-                    </span>
-                    <span style={{ color: colorCondicion(j.condicion) }}>{j.condicion}%</span>
-                  </span>
-                </span>
-              </span>
-
-              <span className="w-9 shrink-0 text-right">
-                <span className="num block text-[20px] leading-none">{ef}</span>
-                {ef !== j.nivel && (
-                  <span className="block text-[9px] leading-tight" style={{ color: "var(--apagado)" }}>
-                    de {j.nivel}
-                  </span>
-                )}
-              </span>
+              {p === "TODOS" ? "Todos" : p}
             </button>
-          );
-        })}
+          ))}
+        </div>
+
+        <div className="scroll-x flex gap-1.5 px-3 pb-2">
+          {banco.map((j) => {
+            const elegido = marcado === j.id;
+            return (
+              <button key={j.id} onClick={() => tocar(j)}
+                className="flex shrink-0 flex-col items-center rounded-lg px-2 py-1.5"
+                style={{
+                  width: 66,
+                  background: elegido ? "var(--medio)" : "var(--carbon)",
+                  color: elegido ? "var(--negro)" : "var(--blanco)",
+                }}>
+                <span className="num text-[16px] leading-none">{j.numero}</span>
+                <span className="apellido mt-1 max-w-full truncate text-[9px] leading-tight">
+                  {j.apellido}
+                </span>
+                <span className="mt-0.5 flex items-center gap-1 text-[9px] leading-none">
+                  <span style={{ color: elegido ? "var(--negro)" : "var(--apagado)" }}>
+                    {j.posicion}
+                  </span>
+                  <span className="num">{nivelEf(j, j.posicion, ctx)}</span>
+                  <span className="inline-block h-1 w-1 rounded-full"
+                        style={{ background: colorCondicion(j.condicion) }} />
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      {/* ---------- decisiones y salida ---------- */}
-      <div className="border-t px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2.5"
-           style={{ borderColor: "var(--linea)", background: "var(--negro)" }}>
-        <div className="mb-2 flex gap-1.5">
+      {/* ---------- decisiones ---------- */}
+      <div className="border-t px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2"
+           style={{ borderColor: "var(--linea)" }}>
+        <div className="mb-1.5 flex gap-1.5">
           {(["defensivo", "equilibrado", "ofensivo"] as Actitud[]).map((a) => {
             const A = ACTITUD[a];
             return (
               <button key={a} onClick={() => setActitud(a)}
-                className="flex-1 rounded py-2 text-[11px] font-bold uppercase tracking-wider"
+                className="flex-1 rounded py-2 text-[10px] font-bold uppercase tracking-wider"
                 style={{
                   background: actitud === a ? A.color : "var(--carbon)",
                   color: actitud === a ? A.sobre : "var(--tenue)",
@@ -233,7 +221,7 @@ export default function ArmarOnce({
             );
           })}
           <button onClick={() => setPresion((p) => !p)}
-            className="rounded px-3 py-2 text-[11px] font-bold uppercase tracking-wider"
+            className="rounded px-2.5 py-2 text-[10px] font-bold uppercase tracking-wider"
             style={{
               background: presionAlta ? "var(--blanco)" : "var(--carbon)",
               color: presionAlta ? "var(--negro)" : "var(--tenue)",
@@ -243,7 +231,7 @@ export default function ArmarOnce({
         </div>
 
         <button onClick={jugar} disabled={!!problema}
-          className="w-full rounded-lg py-3.5 text-[15px] font-extrabold uppercase tracking-[0.14em]"
+          className="w-full rounded-lg py-3 text-[14px] font-extrabold uppercase tracking-[0.14em]"
           style={{
             background: problema ? "var(--carbon)" : "var(--blanco)",
             color: problema ? "var(--apagado)" : "var(--negro)",
@@ -259,11 +247,11 @@ function Dato({ etiqueta, valor, alerta, fuerte }: {
   etiqueta: string; valor: string; alerta?: boolean; fuerte?: boolean;
 }) {
   return (
-    <div className="flex-1 border-r px-2 py-1.5 last:border-r-0" style={{ borderColor: "var(--linea)" }}>
-      <div className="text-[9px] uppercase tracking-[0.12em]" style={{ color: "var(--apagado)" }}>
+    <div className="flex-1 border-r px-2 py-1 last:border-r-0" style={{ borderColor: "var(--linea)" }}>
+      <div className="text-[8px] uppercase tracking-[0.12em]" style={{ color: "var(--apagado)" }}>
         {etiqueta}
       </div>
-      <div className={fuerte ? "num text-[17px] leading-tight" : "text-[13px] font-bold leading-tight"}
+      <div className={fuerte ? "num text-[16px] leading-tight" : "text-[12px] font-bold leading-tight"}
            style={{ color: alerta ? "var(--medio)" : "var(--blanco)" }}>
         {valor}
       </div>
@@ -276,8 +264,8 @@ function autoOnce(ctx: PartidoUI["ctx"]): string[] {
   const cupos: Record<Posicion, number> = { ARQ: 1, DEF: 4, MED: 3, DEL: 3 };
   const elegidos: Jugador[] = [];
   let ext = 0;
-  const sub = PLANTEL.filter(esSub18).sort(
-    (a, b) => nivelEf(b, b.posicion, ctx) - nivelEf(a, a.posicion, ctx))[0];
+  const sub = PLANTEL.filter(esSub18)
+    .sort((a, b) => nivelEf(b, b.posicion, ctx) - nivelEf(a, a.posicion, ctx))[0];
   if (sub) { elegidos.push(sub); cupos[sub.posicion]--; }
 
   for (const pos of ["ARQ", "DEF", "MED", "DEL"] as Posicion[]) {

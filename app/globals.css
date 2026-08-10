@@ -95,3 +95,11 @@ body {
   70%  { opacity: 1; }
   100% { opacity: 0; }
 }
+
+.scroll-x {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.scroll-x::-webkit-scrollbar { display: none; }
