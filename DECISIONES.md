@@ -233,6 +233,37 @@ se bajó la probabilidad de que se calme y se subió el riesgo de roja.
 Cuando un momento se resuelve, el resto del partido se vuelve a simular con el
 marcador y el equipo que quedaron. Un penal errado cambia el partido de verdad.
 
+## La pantalla de partido, versión visual
+
+El gráfico de dominio se reemplazó por el **estado de los once**, que es lo que hace
+falta ver mientras el partido corre. Cada jugador es una fila con el color de su
+puesto (arquero ámbar, defensa azul, medio verde, delantero rojo) y muestra:
+
+- Condición, con barra y número en color.
+- Amarilla, como una tarjeta amarilla de verdad.
+- **Riesgo de que lo echen**, en porcentaje. Sale de `engine/riesgo.ts`, que replica
+  exactamente lo que hace el motor, para que la interfaz no mienta.
+- Goles y lesión, como chapas de color.
+
+La fila entera se tiñe cuando hay algo urgente: naranja si se lesionó, rojo si está
+por irse expulsado, ámbar si tiene amarilla. **Ya no hace falta leer el relato para
+saber a quién cambiar**, que era el problema. Tocando una fila se abre el cambio
+apuntando a ese jugador.
+
+Arriba queda una franja fina verde y roja con el dominio del partido, que conserva
+de un vistazo lo que daba el gráfico grande sin comerse media pantalla.
+
+Cambio de motor asociado: **la roja ahora depende de la amarilla**. Antes era un
+0,6% independiente; ahora un amonestado arranca en 5,5% y sube con presión alta,
+actitud defensiva, condición baja y clásico. Sin eso, mostrar un riesgo en pantalla
+habría sido decorativo.
+
+Los eventos del relato pasaron a tener chapa de color por tipo (GOL, PELIGRO,
+AMARILLA, LESIÓN, DECISIÓN) y los importantes van con fondo teñido y borde.
+
+El overlay de los momentos dejó de ser un telón negro: es un degradado que arriba
+casi no tapa, para que se siga viendo el partido mientras decidís.
+
 ## Estado de los datos
 
 | Archivo | Estado |

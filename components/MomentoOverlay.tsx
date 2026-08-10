@@ -55,7 +55,7 @@ export default function MomentoOverlay({
 
   return (
     <div className="absolute inset-0 z-20 flex flex-col justify-end"
-         style={{ background: "rgba(0,0,0,0.93)", backdropFilter: "blur(3px)" }}>
+         style={{ background: "linear-gradient(to bottom, rgba(11,11,12,0.25) 0%, rgba(11,11,12,0.82) 45%, rgba(11,11,12,0.96) 100%)", backdropFilter: "blur(2px)" }}>
       <div className="entrar px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
 
         <div className="mb-1 flex items-baseline gap-2">

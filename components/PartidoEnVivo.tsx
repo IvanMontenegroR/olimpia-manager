@@ -7,7 +7,7 @@ import { ambienteDe, relatarTramo, type EventoRelato, type TipoEvento } from "@/
 import { colorCondicion, nivelEf, nombreCorto, type PartidoUI } from "@/lib/juego.ts";
 import type { Actitud, Alineacion, Jugador, Posicion } from "@/engine/tipos.ts";
 import type { Salida } from "./ArmarOnce.tsx";
-import Pulso from "./Pulso.tsx";
+import PanelJugadores, { type EstadoJugador } from "./PanelJugadores.tsx";
 import MomentoOverlay from "./MomentoOverlay.tsx";
 import { resolverMomento, type Momento, type ResueltoMomento } from "@/engine/momentos.ts";
 import Escudo from "./Escudo.tsx";
@@ -27,14 +27,21 @@ export const ACTITUD: Record<Actitud, { nombre: string; color: string; sobre: st
                  nota: "Más peligro arriba, quedás más expuesto atrás" },
 };
 
-const COLOR_EVENTO: Record<string, string> = {
-  gol: "var(--ok)",
-  gol_rival: "var(--critico)",
-  amarilla: "var(--medio)",
-  roja: "var(--critico)",
-  lesion: "var(--bajo)",
-  aviso_condicion: "var(--bajo)",
-  cambio: "var(--tenue)",
+/** Cada tipo de evento con su color y su etiqueta, para que se lea de un golpe. */
+const ESTILO_EVENTO: Record<string, { color: string; etiqueta?: string; fuerte?: boolean }> = {
+  gol:            { color: "#22c55e", etiqueta: "GOL", fuerte: true },
+  gol_rival:      { color: "#ef4444", etiqueta: "GOL RIVAL", fuerte: true },
+  ocasion:        { color: "#a3e635", etiqueta: "OCASIÓN" },
+  ocasion_rival:  { color: "#fb923c", etiqueta: "PELIGRO" },
+  amarilla:       { color: "#facc15", etiqueta: "AMARILLA" },
+  roja:           { color: "#ef4444", etiqueta: "ROJA", fuerte: true },
+  lesion:         { color: "#fb923c", etiqueta: "LESIÓN", fuerte: true },
+  aviso_condicion:{ color: "#fb923c", etiqueta: "FUNDIDO" },
+  cambio:         { color: "#60a5fa", etiqueta: "CAMBIO" },
+  momento:        { color: "#a78bfa", etiqueta: "DECISIÓN" },
+  entretiempo:    { color: "#8b8b95", etiqueta: "DESCANSO" },
+  final:          { color: "#ffffff", etiqueta: "FINAL" },
+  inicio:         { color: "#8b8b95" },
 };
 
 export default function PartidoEnVivo({
@@ -93,7 +100,7 @@ export default function PartidoEnVivo({
     cursor.current = 0;
     setPendientes(relatarTramo(
       nueva, ctx, new Rng(`${ctx.fecha}-${ctx.rivalNombre}-${semilla.current}`),
-      desdeMin, 90, gO, gR));
+      desdeMin, 90, gO, gR, amonestados));
   };
 
   useEffect(() => {
@@ -226,7 +233,7 @@ export default function PartidoEnVivo({
       { once: nuevoOnce, suplentes: nuevoBanco, actitud,
         presionAlta: salida.presionAlta, puestos: nuevosPuestos },
       ctx, new Rng(`${ctx.fecha}-${ctx.rivalNombre}-${semilla.current}`),
-      momento.minuto, 90, nuevoO, nuevoR));
+      momento.minuto, 90, nuevoO, nuevoR, amonestados));
   };
 
   const seguirTrasMomento = () => {
@@ -257,7 +264,36 @@ export default function PartidoEnVivo({
     const rival = ctx.rivalFuerza + (ctx.esLocal || ctx.neutral ? 0 : localiaRival);
     return Math.max(-1, Math.min(1, ((f.ataque + f.defensa) / 2 - rival) / 12));
   }, [alineacion, ctx]);
-  const semillaPulso = useMemo(() => Rng.hash(`${ctx.fecha}-${ctx.rivalNombre}`) % 1000, [ctx]);
+  /** Dominio acumulado: la tendencia base movida por lo que fue pasando. */
+  const dominio = useMemo(() => {
+    let v = 0.5 + tendencia * 0.16;
+    for (const e of visibles) {
+      if (e.tipo === "gol" || e.tipo === "ocasion") v += 0.035;
+      if (e.tipo === "gol_rival" || e.tipo === "ocasion_rival") v -= 0.035;
+    }
+    return Math.max(0.12, Math.min(0.88, v));
+  }, [visibles, tendencia]);
+
+  /** Lo que le pasó a cada jugador en este partido, leído del propio relato. */
+  const estadoJugadores = useMemo(() => {
+    const m = new Map<string, EstadoJugador>();
+    const base = (): EstadoJugador =>
+      ({ amarilla: false, goles: 0, lesionado: false, caliente: false });
+    for (const e of visibles) {
+      if (!e.jugadorId) continue;
+      const st = m.get(e.jugadorId) ?? base();
+      if (e.tipo === "amarilla") st.amarilla = true;
+      if (e.tipo === "gol") st.goles++;
+      if (e.tipo === "lesion") st.lesionado = true;
+      if (e.tipo === "momento") st.caliente = true;
+      m.set(e.jugadorId, st);
+    }
+    return m;
+  }, [visibles]);
+
+  const amonestados = useMemo(
+    () => new Set([...estadoJugadores].filter(([, e]) => e.amarilla).map(([id]) => id)),
+    [estadoJugadores]);
 
   const ultimo = visibles[visibles.length - 1];
   const golDe: "olimpia" | "rival" | null =
@@ -306,25 +342,45 @@ export default function PartidoEnVivo({
         </div>
       </header>
 
-      {/* ---------- pulso del partido ---------- */}
-      <Pulso eventos={visibles} minuto={minuto} once={once} condicionDe={condAhora}
-             tendencia={tendencia} semilla={semillaPulso} />
+      {/* ---------- estado de los once ---------- */}
+      <PanelJugadores once={once} puestos={puestos} estado={estadoJugadores}
+                      condicionDe={condAhora} minuto={minuto} alineacion={alineacion}
+                      ctx={ctx} dominio={dominio} onTocar={(j) => {
+                        setCorriendo(false);
+                        setSalen([j.id]);
+                        setEligiendoPara(j.id);
+                        setPanel("cambio");
+                      }} />
 
       {/* ---------- relato: franja de últimas jugadas ---------- */}
       <div ref={scroller} className="scroll-y mt-2 flex min-h-0 flex-1 flex-col border-t px-4 py-2.5"
            style={{ borderColor: "var(--linea)" }}>
         <div>
           {visibles.map((e, i) => {
-            const destacado = e.tipo === "gol" || e.tipo === "gol_rival";
+            const est = ESTILO_EVENTO[e.tipo] ?? { color: "#ffffff" };
             return (
-              <div key={i} className="entrar mb-2 flex gap-3">
-                <span className="num w-7 shrink-0 pt-0.5 text-right text-[12px]"
+              <div key={i} className="entrar mb-1.5 flex gap-2 rounded-lg py-1.5 pl-2 pr-2"
+                   style={{
+                     background: est.fuerte
+                       ? `color-mix(in srgb, ${est.color} 16%, transparent)`
+                       : "transparent",
+                     boxShadow: est.fuerte ? `inset 3px 0 0 ${est.color}` : "none",
+                   }}>
+                <span className="num w-6 shrink-0 pt-0.5 text-right text-[11px]"
                       style={{ color: "var(--apagado)" }}>
                   {e.minuto}'
                 </span>
-                <span className={destacado ? "apellido text-[14px] leading-snug" : "text-[13px] leading-snug"}
-                      style={{ color: COLOR_EVENTO[e.tipo] ?? "var(--blanco)" }}>
-                  {e.texto}
+                <span className="min-w-0 flex-1">
+                  {est.etiqueta && (
+                    <span className="mr-1.5 inline-block rounded px-1 align-middle text-[8px] font-extrabold uppercase tracking-wider"
+                          style={{ background: est.color, color: "#0b0b0c" }}>
+                      {est.etiqueta}
+                    </span>
+                  )}
+                  <span className={est.fuerte ? "apellido text-[13px] leading-snug" : "text-[12.5px] leading-snug"}
+                        style={{ color: est.fuerte ? est.color : "var(--blanco)" }}>
+                    {e.texto}
+                  </span>
                 </span>
               </div>
             );

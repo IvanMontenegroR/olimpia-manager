@@ -167,6 +167,8 @@ function elegirGoleador(a: Alineacion, ctx: ContextoPartido, rng: Rng): Jugador 
 export function relatarTramo(
   a: Alineacion, ctx: ContextoPartido, rng: Rng,
   desde: number, hasta: number, gOIni: number, gRIni: number,
+  /** Quiénes ya vieron amarilla: la segunda cuesta mucho más barata. */
+  amonestados: Set<string> = new Set(),
 ): EventoRelato[] {
   const f = fuerzas(a, ctx);
   const localiaRival = ctx.competencia === "sudamericana" ? P.localiaCopaRival : P.localiaLiga;
@@ -225,7 +227,17 @@ export function relatarTramo(
         }
       }
     }
-    if (rng.chance(0.006 * parte)) {
+    // Con amarilla encima, cualquier entrada fuerte es la segunda. El riesgo se
+    // multiplica, y sube más si el equipo va a presionar o el jugador está fundido.
+    let pRoja = 0.005;
+    if (amonestados.has(j.id)) {
+      pRoja = 0.055;
+      if (a.presionAlta) pRoja += 0.025;
+      if (a.actitud === "defensivo") pRoja += 0.015;
+      if (j.condicion < 55) pRoja += 0.02;
+      if (ctx.esClasico) pRoja += 0.02;
+    }
+    if (rng.chance(pRoja * parte)) {
       const m = rng.entero(desde + 1, Math.max(hasta, desde + 1));
       sucesos.push({ min: m, hacer: () => push(m, "roja", texto(rng, ROJA, j), { jugadorId: j.id }) });
     }
