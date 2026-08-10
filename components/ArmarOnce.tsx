@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import {
   asignarPuestos, colorCondicion, CUPO_EXTRANJEROS, esSub18,
-  nivelEf, nombreCorto, PLANTEL, type PartidoUI,
+  nivelEf, nombreCorto, type PartidoUI,
 } from "@/lib/juego.ts";
 import type { Actitud, Jugador, Posicion } from "@/engine/tipos.ts";
 import Escudo from "./Escudo.tsx";
@@ -22,10 +22,17 @@ export interface Salida {
 }
 
 export default function ArmarOnce({
-  partido, onJugar,
-}: { partido: PartidoUI; onJugar: (s: Salida) => void }) {
+  partido, plantel, onJugar, onVolver,
+}: {
+  partido: PartidoUI;
+  plantel: Jugador[];
+  onJugar: (s: Salida) => void;
+  onVolver: () => void;
+}) {
   const { ctx } = partido;
-  const [sel, setSel] = useState<Set<string>>(() => new Set(autoOnce(ctx)));
+  const aptos = useMemo(
+    () => plantel.filter((j) => !j.suspendido && !j.lesionado_hasta), [plantel]);
+  const [sel, setSel] = useState<Set<string>>(() => new Set(autoOnce(ctx, aptos)));
   const [filtro, setFiltro] = useState<Posicion | "TODOS">("TODOS");
   const [actitud, setActitud] = useState<Actitud>(ctx.esLocal ? "ofensivo" : "equilibrado");
   const [presionAlta, setPresion] = useState(ctx.esLocal);
@@ -33,8 +40,8 @@ export default function ArmarOnce({
   const [marcado, setMarcado] = useState<string | null>(null);
 
   const once = useMemo(
-    () => PLANTEL.filter((j) => sel.has(j.id)).sort((a, b) => ORDEN[a.posicion] - ORDEN[b.posicion]),
-    [sel]);
+    () => aptos.filter((j) => sel.has(j.id)).sort((a, b) => ORDEN[a.posicion] - ORDEN[b.posicion]),
+    [sel, aptos]);
 
   const asign = useMemo(() => asignarPuestos(once, ctx), [once, ctx]);
   const extranjeros = once.filter((j) => j.extranjero).length;
@@ -52,7 +59,7 @@ export default function ArmarOnce({
     null;
 
   const banco = useMemo(() => {
-    const fuera = PLANTEL.filter((j) => !sel.has(j.id));
+    const fuera = aptos.filter((j) => !sel.has(j.id));
     const base = filtro === "TODOS" ? fuera : fuera.filter((j) => j.posicion === filtro);
     // Sin filtro conviene ver primero a los mejores: si ordenara por puesto,
     // los tres arqueros suplentes se comerían el arranque del banco.
@@ -61,7 +68,7 @@ export default function ArmarOnce({
         ? nivelEf(b, b.posicion, ctx) - nivelEf(a, a.posicion, ctx)
         : ORDEN[a.posicion] - ORDEN[b.posicion] ||
           nivelEf(b, b.posicion, ctx) - nivelEf(a, a.posicion, ctx));
-  }, [filtro, sel, ctx]);
+  }, [filtro, sel, ctx, aptos]);
 
   /** Tocar en la cancha y después en el banco (o al revés) intercambia. */
   const tocar = (j: Jugador) => {
@@ -69,7 +76,7 @@ export default function ArmarOnce({
     if (!marcado) { setMarcado(j.id); return; }
     if (marcado === j.id) { setMarcado(null); return; }
 
-    const otro = PLANTEL.find((x) => x.id === marcado)!;
+    const otro = aptos.find((x) => x.id === marcado)!;
     const otroEnCancha = sel.has(otro.id);
     if (enCancha === otroEnCancha) { setMarcado(j.id); return; } // los dos del mismo lado
 
@@ -86,7 +93,7 @@ export default function ArmarOnce({
 
   const jugar = () => {
     if (problema || !asign) return;
-    const libres = PLANTEL.filter((j) => !sel.has(j.id) && !j.lesionado_hasta);
+    const libres = aptos.filter((j) => !sel.has(j.id));
     const porNivel = (a: Jugador, b: Jugador) =>
       nivelEf(b, b.posicion, ctx) - nivelEf(a, a.posicion, ctx);
     const arquero = libres.filter((j) => j.posicion === "ARQ").sort(porNivel)[0];
@@ -101,8 +108,10 @@ export default function ArmarOnce({
     <div className="app">
       {/* ---------- cabecera ---------- */}
       <header className="px-4 pb-2 pt-2.5">
-        <div className="flex items-baseline justify-between text-[10px] uppercase tracking-[0.18em]"
+        <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.18em]"
              style={{ color: "var(--tenue)" }}>
+          <button onClick={onVolver} className="rounded px-1.5 py-0.5 text-[11px]"
+                  style={{ background: "var(--carbon)" }}>←</button>
           <span>{partido.etiqueta}</span>
           <span>{ctx.esLocal ? "Local" : "Visitante"}</span>
         </div>
@@ -212,9 +221,10 @@ export default function ArmarOnce({
               <button key={a} onClick={() => setActitud(a)}
                 className="flex-1 rounded py-2 text-[10px] font-bold uppercase tracking-wider"
                 style={{
-                  background: actitud === a ? A.color : "var(--carbon)",
-                  color: actitud === a ? A.sobre : "var(--tenue)",
-                  boxShadow: actitud === a ? "none" : `inset 3px 0 0 ${A.color}`,
+                  background: actitud === a
+                    ? A.color
+                    : `color-mix(in srgb, ${A.color} 14%, var(--carbon))`,
+                  color: actitud === a ? A.sobre : A.color,
                 }}>
                 {A.nombre}
               </button>
@@ -260,17 +270,17 @@ function Dato({ etiqueta, valor, alerta, fuerte }: {
 }
 
 /** Once inicial sugerido: el mejor posible respetando cupo y Sub-18. */
-function autoOnce(ctx: PartidoUI["ctx"]): string[] {
+function autoOnce(ctx: PartidoUI["ctx"], plantel: Jugador[]): string[] {
   const cupos: Record<Posicion, number> = { ARQ: 1, DEF: 4, MED: 3, DEL: 3 };
   const elegidos: Jugador[] = [];
   let ext = 0;
-  const sub = PLANTEL.filter(esSub18)
+  const sub = plantel.filter(esSub18)
     .sort((a, b) => nivelEf(b, b.posicion, ctx) - nivelEf(a, a.posicion, ctx))[0];
   if (sub) { elegidos.push(sub); cupos[sub.posicion]--; }
 
   for (const pos of ["ARQ", "DEF", "MED", "DEL"] as Posicion[]) {
-    const cand = PLANTEL
-      .filter((j) => j.posicion === pos && !elegidos.includes(j) && !j.lesionado_hasta)
+    const cand = plantel
+      .filter((j) => j.posicion === pos && !elegidos.includes(j))
       .sort((a, b) => nivelEf(b, pos, ctx) - nivelEf(a, pos, ctx));
     for (const j of cand) {
       if (cupos[pos] <= 0) break;

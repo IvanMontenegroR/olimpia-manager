@@ -87,7 +87,8 @@ export default function MomentoOverlay({
               {momento.opciones.map((o) => (
                 <button key={o.id} onClick={() => elegir(o.id)}
                   className="w-full rounded-lg px-3.5 py-3 text-left"
-                  style={{ background: "var(--carbon)", boxShadow: `inset 3px 0 0 ${color}` }}>
+                  style={{ background: `color-mix(in srgb, ${color} 12%, var(--carbon))`,
+                           outline: `1px solid color-mix(in srgb, ${color} 45%, transparent)` }}>
                   <span className="apellido block text-[15px] leading-tight">{o.etiqueta}</span>
                   <span className="block text-[11px]" style={{ color: "var(--tenue)" }}>
                     {o.detalle}
@@ -99,8 +100,10 @@ export default function MomentoOverlay({
         ) : (
           <>
             <div className="mb-3 rounded-lg px-3.5 py-3"
-                 style={{ background: "var(--carbon)",
-                          boxShadow: `inset 3px 0 0 ${resuelto.exito ? "var(--ok)" : "var(--critico)"}` }}>
+                 style={{
+                   background: `color-mix(in srgb, ${resuelto.exito ? "#22c55e" : "#ef4444"} 16%, var(--carbon))`,
+                   outline: `1px solid color-mix(in srgb, ${resuelto.exito ? "#22c55e" : "#ef4444"} 50%, transparent)`,
+                 }}>
               <span className="apellido block text-[15px] leading-snug"
                     style={{ color: resuelto.exito ? "var(--ok)" : "var(--critico)" }}>
                 {resuelto.texto}

@@ -7,7 +7,9 @@ import { ambienteDe, relatarTramo, type EventoRelato, type TipoEvento } from "@/
 import { colorCondicion, nivelEf, nombreCorto, type PartidoUI } from "@/lib/juego.ts";
 import type { Actitud, Alineacion, Jugador, Posicion } from "@/engine/tipos.ts";
 import type { Salida } from "./ArmarOnce.tsx";
-import PanelJugadores, { type EstadoJugador } from "./PanelJugadores.tsx";
+import PanelPartido, { type EstadoJugador } from "./PanelPartido.tsx";
+import { onceRival } from "@/engine/rival.ts";
+import type { CierrePartido } from "@/lib/temporada.ts";
 import MomentoOverlay from "./MomentoOverlay.tsx";
 import { resolverMomento, type Momento, type ResueltoMomento } from "@/engine/momentos.ts";
 import Escudo from "./Escudo.tsx";
@@ -46,7 +48,7 @@ const ESTILO_EVENTO: Record<string, { color: string; etiqueta?: string; fuerte?:
 
 export default function PartidoEnVivo({
   partido, salida, onTerminar,
-}: { partido: PartidoUI; salida: Salida; onTerminar: (gO: number, gR: number) => void }) {
+}: { partido: PartidoUI; salida: Salida; onTerminar: (c: CierrePartido) => void }) {
   const { ctx } = partido;
 
   const [once, setOnce] = useState<Jugador[]>(salida.once);
@@ -76,6 +78,13 @@ export default function PartidoEnVivo({
   const [entran, setEntran] = useState<Record<string, string>>({});
   const [eligiendoPara, setEligiendoPara] = useState<string | null>(null);
 
+  const rival11 = useMemo(
+    () => onceRival(partido.rivalId, ctx.rivalFuerza), [partido.rivalId, ctx.rivalFuerza]);
+
+  /** Cuándo entró y cuándo salió cada uno, para cerrar los minutos al final. */
+  const entradas = useRef<Map<string, number>>(new Map(salida.once.map((j) => [j.id, 0])));
+  const salidas = useRef<Map<string, number>>(new Map());
+
   const semilla = useRef(0);
   const cursor = useRef(0);
   const scroller = useRef<HTMLDivElement>(null);
@@ -92,7 +101,8 @@ export default function PartidoEnVivo({
     relatarTramo(
       { once: salida.once, suplentes: salida.suplentes, actitud: salida.actitud,
         presionAlta: salida.presionAlta, puestos: salida.puestos },
-      ctx, new Rng(`${ctx.fecha}-${ctx.rivalNombre}-0`), 0, 90, 0, 0));
+      ctx, new Rng(`${ctx.fecha}-${ctx.rivalNombre}-0`), 0, 90, 0, 0,
+      new Set(), onceRival(partido.rivalId, ctx.rivalFuerza)));
 
   /** Vuelve a simular lo que queda con el equipo que hay ahora. */
   const resimular = (desdeMin: number, nueva: Alineacion) => {
@@ -100,7 +110,7 @@ export default function PartidoEnVivo({
     cursor.current = 0;
     setPendientes(relatarTramo(
       nueva, ctx, new Rng(`${ctx.fecha}-${ctx.rivalNombre}-${semilla.current}`),
-      desdeMin, 90, gO, gR, amonestados));
+      desdeMin, 90, gO, gR, amonestados, rival11));
   };
 
   useEffect(() => {
@@ -164,6 +174,8 @@ export default function PartidoEnVivo({
       nuevoOnce = nuevoOnce.map((j) => (j.id === s.id ? e : j));
       nuevosPuestos.set(e.id, puestos.get(s.id) ?? e.posicion);
       entrantes.add(e.id);
+      salidas.current.set(s.id, minuto);
+      entradas.current.set(e.id, minuto);
     }
     const nuevoBanco = banco.filter((j) => !entrantes.has(j.id));
 
@@ -233,7 +245,7 @@ export default function PartidoEnVivo({
       { once: nuevoOnce, suplentes: nuevoBanco, actitud,
         presionAlta: salida.presionAlta, puestos: nuevosPuestos },
       ctx, new Rng(`${ctx.fecha}-${ctx.rivalNombre}-${semilla.current}`),
-      momento.minuto, 90, nuevoO, nuevoR, amonestados));
+      momento.minuto, 90, nuevoO, nuevoR, amonestados, rival11));
   };
 
   const seguirTrasMomento = () => {
@@ -278,22 +290,75 @@ export default function PartidoEnVivo({
   const estadoJugadores = useMemo(() => {
     const m = new Map<string, EstadoJugador>();
     const base = (): EstadoJugador =>
-      ({ amarilla: false, goles: 0, lesionado: false, caliente: false });
+      ({ amarilla: false, goles: 0, lesionado: false, encendido: false, apagado: false });
+    // participaciones recientes, para marcar quién está encendido
+    const recientes = new Map<string, number>();
     for (const e of visibles) {
       if (!e.jugadorId) continue;
       const st = m.get(e.jugadorId) ?? base();
       if (e.tipo === "amarilla") st.amarilla = true;
       if (e.tipo === "gol") st.goles++;
       if (e.tipo === "lesion") st.lesionado = true;
-      if (e.tipo === "momento") st.caliente = true;
       m.set(e.jugadorId, st);
+      if (e.tipo === "gol" || e.tipo === "ocasion") {
+        if (minuto - e.minuto <= 25) recientes.set(e.jugadorId, (recientes.get(e.jugadorId) ?? 0) + 1);
+      }
+    }
+    for (const [id, n] of recientes) {
+      const st = m.get(id) ?? base();
+      if (n >= 2) st.encendido = true;
+      m.set(id, st);
+    }
+    // apagado: delantero sin una sola participación pasada la media hora
+    if (minuto > 35) {
+      for (const j of once) {
+        const pos = puestos.get(j.id) ?? j.posicion;
+        if (pos !== "DEL") continue;
+        if (!visibles.some((e) => e.jugadorId === j.id)) {
+          const st = m.get(j.id) ?? base();
+          st.apagado = true;
+          m.set(j.id, st);
+        }
+      }
     }
     return m;
-  }, [visibles]);
+  }, [visibles, minuto, once, puestos]);
 
   const amonestados = useMemo(
     () => new Set([...estadoJugadores].filter(([, e]) => e.amarilla).map(([id]) => id)),
     [estadoJugadores]);
+
+  const estadoRival = useMemo(() => {
+    const m = new Map<string, { amarilla: boolean; expulsado: boolean }>();
+    for (const e of visibles) {
+      if (!e.rivalJugadorId) continue;
+      const st = m.get(e.rivalJugadorId) ?? { amarilla: false, expulsado: false };
+      if (e.tipo === "amarilla_rival") st.amarilla = true;
+      if (e.tipo === "roja_rival") st.expulsado = true;
+      m.set(e.rivalJugadorId, st);
+    }
+    return m;
+  }, [visibles]);
+
+  /** Lo que hay que devolverle a la temporada cuando termina el partido. */
+  const armarCierre = (): CierrePartido => {
+    const minutos = new Map<string, number>();
+    for (const [id, entra] of entradas.current) {
+      const sale = salidas.current.get(id) ?? 90;
+      minutos.set(id, Math.max(0, sale - entra));
+    }
+    return {
+      golesOlimpia: gO,
+      golesRival: gR,
+      minutos,
+      amarillas: visibles.filter((e) => e.tipo === "amarilla" && e.jugadorId)
+        .map((e) => e.jugadorId!),
+      rojas: visibles.filter((e) => e.tipo === "roja" && e.jugadorId).map((e) => e.jugadorId!),
+      lesionados: visibles.filter((e) => e.tipo === "lesion" && e.jugadorId)
+        .map((e) => ({ id: e.jugadorId!, fechas: 1 + Math.floor(Math.random() * 3) })),
+      goleadores: visibles.filter((e) => e.tipo === "gol" && e.jugadorId).map((e) => e.jugadorId!),
+    };
+  };
 
   const ultimo = visibles[visibles.length - 1];
   const golDe: "olimpia" | "rival" | null =
@@ -343,14 +408,16 @@ export default function PartidoEnVivo({
       </header>
 
       {/* ---------- estado de los once ---------- */}
-      <PanelJugadores once={once} puestos={puestos} estado={estadoJugadores}
-                      condicionDe={condAhora} minuto={minuto} alineacion={alineacion}
-                      ctx={ctx} dominio={dominio} onTocar={(j) => {
+      <PanelPartido once={once} puestos={puestos} estado={estadoJugadores}
+                    condicionDe={condAhora} minuto={minuto} alineacion={alineacion}
+                    ctx={ctx} dominio={dominio} rival11={rival11} estadoRival={estadoRival}
+                    eventos={visibles} rivalNombre={nombreCorto(partido.rivalId, partido.rivalNombre)}
+                    onTocar={(j) => {
                         setCorriendo(false);
                         setSalen([j.id]);
                         setEligiendoPara(j.id);
-                        setPanel("cambio");
-                      }} />
+                      setPanel("cambio");
+                    }} />
 
       {/* ---------- relato: franja de últimas jugadas ---------- */}
       <div ref={scroller} className="scroll-y mt-2 flex min-h-0 flex-1 flex-col border-t px-4 py-2.5"
@@ -362,9 +429,11 @@ export default function PartidoEnVivo({
               <div key={i} className="entrar mb-1.5 flex gap-2 rounded-lg py-1.5 pl-2 pr-2"
                    style={{
                      background: est.fuerte
-                       ? `color-mix(in srgb, ${est.color} 16%, transparent)`
+                       ? `color-mix(in srgb, ${est.color} 15%, transparent)`
                        : "transparent",
-                     boxShadow: est.fuerte ? `inset 3px 0 0 ${est.color}` : "none",
+                     outline: est.fuerte
+                       ? `1px solid color-mix(in srgb, ${est.color} 35%, transparent)`
+                       : "none",
                    }}>
                 <span className="num w-6 shrink-0 pt-0.5 text-right text-[11px]"
                       style={{ color: "var(--apagado)" }}>
@@ -501,9 +570,8 @@ export default function PartidoEnVivo({
               <button key={a} onClick={() => cambiarActitud(a)}
                 className="mb-1.5 w-full rounded-lg px-3 py-3 text-left"
                 style={{
-                  background: activa ? A.color : "var(--carbon)",
-                  color: activa ? A.sobre : "var(--blanco)",
-                  boxShadow: activa ? "none" : `inset 3px 0 0 ${A.color}`,
+                  background: activa ? A.color : `color-mix(in srgb, ${A.color} 13%, var(--carbon))`,
+                  color: activa ? A.sobre : A.color,
                 }}>
                 <span className="apellido text-[14px]">{A.nombre}</span>
                 <span className="block text-[11px] opacity-70">{A.nota}</span>
@@ -526,7 +594,7 @@ export default function PartidoEnVivo({
                style={{ color: gO > gR ? "var(--ok)" : gO < gR ? "var(--critico)" : "var(--tenue)" }}>
             {gO > gR ? "Victoria" : gO < gR ? "Derrota" : "Empate"}
           </div>
-          <button onClick={() => onTerminar(gO, gR)}
+          <button onClick={() => onTerminar(armarCierre())}
             className="w-full rounded-lg py-3.5 text-[15px] font-extrabold uppercase tracking-[0.14em]"
             style={{ background: "var(--blanco)", color: "var(--negro)" }}>
             Siguiente fecha
@@ -548,7 +616,7 @@ function FilaJugador({
       className="mb-1 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left"
       style={{
         background: marcado ? "var(--linea)" : "var(--carbon)",
-        boxShadow: lesionado ? "inset 0 0 0 1px var(--bajo)" : "none",
+        outline: lesionado ? "1px solid #fb923c" : "none",
       }}>
       <span className="num w-8 text-center text-[18px]">{j.numero}</span>
       <span className="min-w-0 flex-1">

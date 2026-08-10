@@ -1,12 +1,14 @@
 import { Rng } from "./rng.ts";
 import { P, clamp, fuerzas, nivelEfectivo } from "./motor.ts";
 import { generarMomento, type Momento } from "./momentos.ts";
+import type { JugadorRival } from "./rival.ts";
 import type { Alineacion, ContextoPartido, Jugador, Posicion } from "./tipos.ts";
 
 export type TipoEvento =
   | "inicio" | "gol" | "gol_rival" | "ocasion" | "ocasion_rival"
   | "amarilla" | "roja" | "lesion" | "aviso_condicion"
-  | "entretiempo" | "cambio" | "final" | "momento";
+  | "entretiempo" | "cambio" | "final" | "momento"
+  | "amarilla_rival" | "roja_rival" | "tribuna";
 
 export interface EventoRelato {
   minuto: number;
@@ -19,6 +21,8 @@ export interface EventoRelato {
   pausa?: boolean;
   /** Decisión con reloj: frena el partido hasta que el DT elige. */
   momento?: Momento;
+  /** Para eventos del rival: a qué jugador suyo le pasó. */
+  rivalJugadorId?: string;
 }
 
 // ---------------------------------------------------------------- plantillas
@@ -113,6 +117,25 @@ const ROJA = [
   "Roja a {j}. Se va a las duchas y deja a Olimpia con diez.",
   "Segunda amarilla para {j}. Cometió una infantilidad.",
 ];
+const AMARILLA_RIVAL = [
+  "Amarilla para {r} del rival. Venía cortando todo.",
+  "Falta dura de {r} y el árbitro le muestra la amarilla.",
+  "{r} agarró de la camiseta y se llevó la amonestación.",
+  "Amonestado {r} por reclamar.",
+];
+const ROJA_RIVAL = [
+  "ROJA para {r}. El rival se queda con diez.",
+  "Segunda amarilla de {r} y se va expulsado. Hay uno menos del otro lado.",
+];
+const TRIBUNA_ABAJO = [
+  "La tribuna empieza a impacientarse. Se escuchan silbidos.",
+  "El Defensores pide que Olimpia vaya al frente de una vez.",
+  "Se hace largo el partido y la gente lo hace sentir.",
+];
+const TRIBUNA_ARRIBA = [
+  "La hinchada empuja, se viene una ola desde la popular.",
+  "El estadio es una fiesta. Olimpia lo está manejando.",
+];
 const LESION = [
   "{j} se toca atrás del muslo y pide el cambio.",
   "Queda tendido {j}. Entra el médico y no puede seguir.",
@@ -169,6 +192,7 @@ export function relatarTramo(
   desde: number, hasta: number, gOIni: number, gRIni: number,
   /** Quiénes ya vieron amarilla: la segunda cuesta mucho más barata. */
   amonestados: Set<string> = new Set(),
+  rival11: JugadorRival[] = [],
 ): EventoRelato[] {
   const f = fuerzas(a, ctx);
   const localiaRival = ctx.competencia === "sudamericana" ? P.localiaCopaRival : P.localiaLiga;
@@ -255,6 +279,32 @@ export function relatarTramo(
     }
   }
 
+  // El rival también recibe tarjetas: sirve para leer por dónde está sufriendo.
+  for (const r of rival11) {
+    const pAm = (r.posicion === "DEF" ? 0.15 : r.posicion === "MED" ? 0.13 : 0.07) * parte;
+    if (rng.chance(pAm)) {
+      const m = rng.entero(desde + 1, Math.max(hasta, desde + 1));
+      sucesos.push({ min: m, hacer: () =>
+        push(m, "amarilla_rival", rng.elegir(AMARILLA_RIVAL).replace("{r}", r.apellido),
+             { rivalJugadorId: r.id }) });
+      if (rng.chance(0.09)) {
+        const m2 = Math.min(hasta - 1, m + rng.entero(4, 14));
+        if (m2 > m) sucesos.push({ min: m2, hacer: () =>
+          push(m2, "roja_rival", rng.elegir(ROJA_RIVAL).replace("{r}", r.apellido),
+               { rivalJugadorId: r.id }) });
+      }
+    }
+  }
+
+  // La tribuna reacciona al resultado. Es presión, no información nueva.
+  if (desde < 72 && hasta > 72 && ctx.esLocal) {
+    const m = rng.entero(70, Math.min(80, Math.max(hasta - 2, 71)));
+    sucesos.push({ min: m, hacer: () =>
+      push(m, "tribuna", gO < gR ? rng.elegir(TRIBUNA_ABAJO)
+        : gO > gR ? rng.elegir(TRIBUNA_ARRIBA)
+        : rng.elegir(TRIBUNA_ABAJO)) });
+  }
+
   // Momentos: decisiones con el reloj corriendo. Poco frecuentes a propósito,
   // para que cuando aparezcan pesen.
   const posibles: [Parameters<typeof generarMomento>[0], number][] = [
@@ -262,6 +312,7 @@ export function relatarTramo(
     ["penal_contra", 0.08],
     ["tiro_libre", 0.30],
     ["mano_a_mano", 0.22],
+    ["rival_con_diez", 0.10],
   ];
   for (const [tipo, prob] of posibles) {
     if (!rng.chance(prob * parte)) continue;
@@ -270,6 +321,15 @@ export function relatarTramo(
     if (!momento) continue;
     sucesos.push({ min: m, hacer: () =>
       push(m, "momento", momento.titulo, { pausa: true, momento }) });
+  }
+
+  // Penal sobre la hora, solo si el partido está para definirse. Es el momento
+  // con más peso del juego y por eso está condicionado, no librado al azar.
+  if (hasta >= 88 && Math.abs(gO - gR) <= 1 && rng.chance(0.12)) {
+    const m = rng.entero(88, 90);
+    const ultimo = generarMomento("penal_ultima", m, a, ctx, rng);
+    if (ultimo) sucesos.push({ min: m, hacer: () =>
+      push(m, "momento", ultimo.titulo, { pausa: true, momento: ultimo }) });
   }
 
   // el que peor llega, avisado una sola vez y solo si de verdad está fundido

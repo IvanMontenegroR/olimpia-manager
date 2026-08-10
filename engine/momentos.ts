@@ -12,7 +12,8 @@ import type { Alineacion, ContextoPartido, Jugador, Posicion } from "./tipos.ts"
  */
 
 export type TipoMomento =
-  | "penal_favor" | "penal_contra" | "tiro_libre" | "jugador_caliente" | "mano_a_mano";
+  | "penal_favor" | "penal_contra" | "tiro_libre" | "jugador_caliente" | "mano_a_mano"
+  | "penal_ultima" | "rival_con_diez";
 
 export interface OpcionMomento {
   id: string;
@@ -136,6 +137,43 @@ export function generarMomento(
       };
     }
 
+    case "penal_ultima": {
+      const tres = pateadores(a, ctx).slice(0, 3);
+      if (tres.length < 2) return null;
+      return {
+        tipo, minuto, segundos: 10,
+        titulo: "PENAL SOBRE LA HORA",
+        contexto: "Último minuto. Esto define el partido. ¿Quién se hace cargo?",
+        opciones: tres.map((j) => ({
+          id: j.id,
+          etiqueta: `${j.numero} ${apellido(j)}`,
+          detalle: j.partidos_internacionales > 40 ? "Jugó mil partidos, no le tiembla"
+            : j.edad <= 21 ? "Es un pibe, nunca pateó una así"
+            : j.rasgos.includes("definidor") ? "Definidor"
+            : `Nivel ${Math.round(nivelEfectivo(j, a.puestos.get(j.id) ?? j.posicion, ctx))}`,
+          jugadorId: j.id,
+        })),
+        porDefecto: tres[0].id,
+      };
+    }
+
+    case "rival_con_diez": {
+      return {
+        tipo, minuto, segundos: 8,
+        titulo: "EL RIVAL SE QUEDÓ CON DIEZ",
+        contexto: "Hay un hombre de más. ¿Qué hacés con la ventaja?",
+        opciones: [
+          { id: "ahogar", etiqueta: "Ahogarlo arriba",
+            detalle: "Máxima presión, desgasta mucho" },
+          { id: "abrir", etiqueta: "Abrir la cancha",
+            detalle: "Cansarlo moviendo la pelota" },
+          { id: "sostener", etiqueta: "No cambiar nada",
+            detalle: "Administrar sin regalar nada" },
+        ],
+        porDefecto: "sostener",
+      };
+    }
+
     case "mano_a_mano": {
       const del = pateadores(a, ctx)[0];
       return {
@@ -251,6 +289,32 @@ export function resolverMomento(
         texto: roja
           ? `ROJA. Era cuestión de tiempo. ${apellido(j)} se va y quedan diez.`
           : `${apellido(j)} siguió al límite y aguantó. Salió bien la apuesta.` };
+    }
+
+    case "penal_ultima": {
+      const j = buscar(opcionId) ?? buscar(m.porDefecto)!;
+      // sobre la hora pesa la experiencia, no solo el pie
+      let p = 0.52 + (nivel(j) - 55) * 0.005;
+      p += Math.min(0.12, j.partidos_internacionales * 0.002);
+      if (j.edad <= 21) p -= 0.09;
+      if (j.rasgos.includes("definidor")) p += 0.08;
+      if (j.rasgos.includes("definicion_irregular")) p += rng.entre(-0.20, 0.08);
+      const mete = rng.chance(Math.max(0.25, Math.min(0.92, p)));
+      return {
+        exito: mete, golOlimpia: mete,
+        texto: mete
+          ? `¡GOL! ${apellido(j)} lo definió sobre la hora. Se lo dio vuelta al partido.`
+          : `${apellido(j)} la mandó afuera en la última. No lo va a olvidar.`,
+      };
+    }
+
+    case "rival_con_diez": {
+      const textos: Record<string, string> = {
+        ahogar: "Olimpia se va con todo arriba. El rival no puede salir de su área.",
+        abrir: "Olimpia abre la cancha y lo hace correr de lado a lado.",
+        sostener: "Olimpia administra la ventaja sin apurarse.",
+      };
+      return { exito: true, texto: textos[opcionId] ?? textos.sostener };
     }
 
     case "mano_a_mano": {

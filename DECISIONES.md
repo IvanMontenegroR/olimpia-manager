@@ -264,6 +264,41 @@ AMARILLA, LESIÓN, DECISIÓN) y los importantes van con fondo teñido y borde.
 El overlay de los momentos dejó de ser un telón negro: es un degradado que arriba
 casi no tapa, para que se siga viendo el partido mientras decidís.
 
+## El juego dejó de ser solo partidos
+
+**Pantalla de inicio.** Escudo, posición, puntos, racha de los últimos cinco,
+próximo partido con los dos escudos y la sede, bajas por lesión o suspensión,
+punta de la tabla y objetivo de la dirigencia. Desde ahí se entra a Plantel,
+Tabla y Fixture.
+
+**La temporada persiste en localStorage.** Es el cambio que faltaba desde el
+principio: la condición se arrastra de una fecha a la otra, las suspensiones por
+cinco amarillas se cumplen, los lesionados se pierden fechas, y los minutos Sub-18
+se acumulan contra los 900 obligatorios. Recién ahora armar el once tiene
+consecuencia más allá del partido que estás jugando.
+
+## Lo que se agregó a la pantalla de partido
+
+| | |
+|---|---|
+| **Estado del rival** | Once sintético determinista por club (`engine/rival.ts`). No son datos reales, y sirven para que "al lateral de Libertad le sacaron amarilla" signifique algo. El rival ahora recibe amarillas y rojas. |
+| **Números en vivo** | Posesión, remates, al arco, córners y tarjetas de los dos lados. |
+| **Rachas** | Un jugador con dos participaciones en 25 minutos queda "en llamas"; un delantero sin una sola pasada la media hora queda "apagado". |
+| **Presión de resultado** | Pasado el minuto 70 de local, la tribuna reacciona al marcador. |
+| **Momentos nuevos** | Penal sobre la hora (solo si el partido está a un gol, y ahí pesa `partidos_internacionales`: al pibe le tiembla) y rival con diez (qué hacés con la ventaja). |
+
+Todo se ve en tres pestañas: mi equipo, el rival y los números.
+
+## Rediseño
+
+Se eliminó la barra de color a la izquierda de las tarjetas en toda la aplicación.
+En su lugar: dorsales en un cuadro con el color del puesto (arquero ámbar, defensa
+azul, medio verde, delantero rojo), fondos teñidos con la mezcla del color y borde
+completo cuando algo requiere atención, y chapas de color para los estados.
+
+Los eventos del relato llevan chapa de color por tipo y los importantes van con
+fondo teñido: no hace falta leer para saber que hubo una lesión.
+
 ## Estado de los datos
 
 | Archivo | Estado |
