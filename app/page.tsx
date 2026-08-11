@@ -5,6 +5,7 @@ import ArmarOnce, { type Salida } from "@/components/ArmarOnce.tsx";
 import PantallaHito from "@/components/PantallaHito.tsx";
 import PartidoEnVivo from "@/components/PartidoEnVivo.tsx";
 import Escritorio from "@/components/Escritorio.tsx";
+import { salidaAutomatica } from "@/lib/juego.ts";
 import {
   avanzarUnDia, cargar, cerrarPartido, fichar, ficharEstrella, guardar, partidaNueva,
   partidoDe, plantelDe, rechazarEstrella, resolverAsunto,
@@ -80,6 +81,12 @@ export default function Page() {
         setPartida((p) => (p ? resolverAsunto(p, asuntoId, opcionId) : p))}
       onFichar={(id) => setPartida((p) => (p ? fichar(p, id) ?? p : p))}
       onGuardarEquipos={(equipos) => setPartida((p) => (p ? { ...p, equipos } : p))}
+      onJugarDirecto={() => {
+        // El once que propone el juego, sin pasar por la pantalla de armado.
+        if (!partido) return;
+        setSalida(salidaAutomatica(partido, plantelDe(partida)));
+        setFase("partido");
+      }}
       onFicharEstrella={() => setPartida((p) => (p ? ficharEstrella(p) : p))}
       onRechazarEstrella={() => setPartida((p) => (p ? rechazarEstrella(p) : p))}
       onMoverReserva={(id, aReserva) => setPartida((p) => (p ? {

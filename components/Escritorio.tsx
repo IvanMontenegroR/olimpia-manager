@@ -77,7 +77,7 @@ const AYUDAS: Record<Ayuda, { titulo: string; texto: string; mueve: string[] }> 
 
 export default function Escritorio({
   partida, onAvanzar, onDirigir, onResolver, onFichar, onReiniciar, onGuardarEquipos,
-  onMoverReserva, onFicharEstrella, onRechazarEstrella,
+  onMoverReserva, onFicharEstrella, onRechazarEstrella, onJugarDirecto,
 }: {
   partida: Partida;
   onAvanzar: () => void;
@@ -87,6 +87,7 @@ export default function Escritorio({
   onMoverReserva: (id: string, aReserva: boolean) => void;
   onFicharEstrella: () => void;
   onRechazarEstrella: () => void;
+  onJugarDirecto: () => void;
   onFichar: (fichajeId: string) => void;
   onReiniciar: () => void;
 }) {
@@ -382,22 +383,32 @@ export default function Escritorio({
       {!pendiente && (
         <div className="px-3 pt-2">
           {esHoy && partido ? (
-            <button onClick={onDirigir}
-              className="relieve-alto flex w-full items-center gap-3 rounded-lg px-3 py-2.5"
-              style={{ background: "var(--blanco)", color: "var(--negro)" }}>
-              <Escudo id={partido.rivalId} nombre={partido.rivalNombre} tam={30} />
-              <span className="min-w-0 flex-1 text-left">
-                <span className="block text-[9px] uppercase tracking-[0.14em] opacity-60">
-                  {esPartidoDeCopa(partido) ? partido.etiqueta : "Hoy se juega"}
+            /* Jugar directo es lo normal: el once sugerido ya es bueno y pasar
+               por la pantalla de armado veintidós veces era un trámite. El que
+               quiere tocar algo entra por "Armar". */
+            <div className="flex gap-1.5">
+              <button onClick={onJugarDirecto}
+                className="relieve-alto flex min-w-0 flex-1 items-center gap-3 rounded-lg px-3 py-2.5"
+                style={{ background: "var(--blanco)", color: "var(--negro)" }}>
+                <Escudo id={partido.rivalId} nombre={partido.rivalNombre} tam={30} />
+                <span className="min-w-0 flex-1 text-left">
+                  <span className="block text-[9px] uppercase tracking-[0.14em] opacity-60">
+                    {esPartidoDeCopa(partido) ? partido.etiqueta : "Hoy se juega"}
+                  </span>
+                  <span className="apellido block truncate text-[14px] leading-tight">
+                    {nombreCorto(partido.rivalId, partido.rivalNombre)}
+                  </span>
                 </span>
-                <span className="apellido block truncate text-[14px] leading-tight">
-                  {nombreCorto(partido.rivalId, partido.rivalNombre)}
+                <span className="shrink-0 text-[11px] font-extrabold uppercase tracking-wider">
+                  Jugar →
                 </span>
-              </span>
-              <span className="shrink-0 text-[11px] font-extrabold uppercase tracking-wider">
-                Dirigir →
-              </span>
-            </button>
+              </button>
+              <button onClick={onDirigir}
+                className="relieve shrink-0 rounded-lg px-3 text-[10px] font-bold uppercase tracking-wider"
+                style={{ background: "var(--carbon)", color: "var(--tenue)" }}>
+                Armar<br />el once
+              </button>
+            </div>
           ) : partido ? (
             <button onClick={onAvanzar}
               className="relieve flex w-full items-center gap-3 rounded-lg px-3 py-2.5"

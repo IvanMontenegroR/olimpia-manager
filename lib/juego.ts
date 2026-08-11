@@ -2,7 +2,7 @@ import plantelJson from "@/data/plantel_olimpia_2026.json";
 import fixtureJson from "@/data/fixture_clausura2026_final.json";
 import equiposJson from "@/data/equipos_2026.json";
 import { nivelEfectivo } from "@/engine/motor.ts";
-import type { ContextoPartido, Jugador, Posicion } from "@/engine/tipos.ts";
+import type { Actitud, ContextoPartido, Jugador, Posicion } from "@/engine/tipos.ts";
 
 export const PLANTEL = plantelJson as unknown as Jugador[];
 const EQUIPOS = equiposJson as any[];
@@ -289,3 +289,95 @@ export const nombreCorto = (id: string, nombre: string) =>
 
 export const colorCondicion = (c: number) =>
   c >= 80 ? "var(--ok)" : c >= 60 ? "var(--medio)" : c >= 40 ? "var(--bajo)" : "var(--critico)";
+
+/** Once inicial sugerido: el mejor posible respetando cupo y Sub-18. */
+export function autoOnce(ctx: PartidoUI["ctx"], plantel: Jugador[]): string[] {
+  // Se llena el 4-3-3 slot por slot con el mejor de cada uno, en vez de por
+  // línea: así no termina un lateral derecho jugando de izquierdo teniendo un
+  // izquierdo natural en el banco.
+  const slots: Posicion[] =
+    ["ARQ", "LD", "DFC", "DFC", "LI", "MCD", "MC", "MC", "ED", "DC", "EI"];
+  const elegidos: Jugador[] = [];
+  const usado = new Set<string>();
+  let ext = 0;
+
+  const meter = (j: Jugador) => {
+    elegidos.push(j);
+    usado.add(j.id);
+    if (j.extranjero) ext++;
+  };
+
+  // El Sub-18 entra primero y consume el slot que mejor le calza, no uno
+  // cualquiera: si no se descuenta un slot, el molde queda de doce y el último
+  // puesto se pierde al recortar.
+  const sub = plantel.filter(esSub18)
+    .sort((a, b) => nivelEf(b, b.posicion, ctx) - nivelEf(a, a.posicion, ctx))[0];
+  if (sub) {
+    meter(sub);
+    const suyo = slots.indexOf(sub.posicion);
+    slots.splice(suyo >= 0 ? suyo : slots.length - 1, 1);
+  }
+
+  // Cada vuelta es un slot: contar por puesto natural saltea slots y deja el
+  // once en diez, que es lo que trababa la pantalla.
+  for (const puesto of slots) {
+    const cand = plantel
+      .filter((j) => !usado.has(j.id))
+      .sort((a, b) => nivelEf(b, puesto, ctx) - nivelEf(a, puesto, ctx));
+    const j = cand.find((c) => !c.extranjero || ext < CUPO_EXTRANJEROS);
+    if (j) meter(j);
+  }
+
+  // Red de seguridad por si el cupo de extranjeros dejó algún hueco.
+  for (const j of [...plantel].sort((a, b) => b.nivel - a.nivel)) {
+    if (elegidos.length >= 11) break;
+    if (usado.has(j.id)) continue;
+    if (j.extranjero && ext >= CUPO_EXTRANJEROS) continue;
+    meter(j);
+  }
+  return elegidos.slice(0, 11).map((j) => j.id);
+}
+
+/**
+ * Los siete del banco: primero un arquero, después los mejores que queden. La
+ * reserva no cuenta salvo que la hayas subido a mano.
+ */
+export function bancoSugerido(
+  aptos: Jugador[], once: Jugador[], ctx: ContextoPartido,
+): Jugador[] {
+  const dentro = new Set(once.map((j) => j.id));
+  const libres = aptos.filter((j) => !dentro.has(j.id) && !j.reserva);
+  const porNivel = (a: Jugador, b: Jugador) =>
+    nivelEf(b, b.posicion, ctx) - nivelEf(a, a.posicion, ctx);
+  const arquero = libres.filter((j) => j.posicion === "ARQ").sort(porNivel)[0];
+  return [
+    ...(arquero ? [arquero] : []),
+    ...libres.filter((j) => j.posicion !== "ARQ").sort(porNivel).slice(0, 6),
+  ];
+}
+
+/**
+ * El equipo con el que sale Olimpia si no tocás nada. Lo usan el botón de
+ * jugar directo y la pantalla de armado, así que los dos parten de lo mismo.
+ */
+export function salidaAutomatica(partido: PartidoUI, plantel: Jugador[]) {
+  const { ctx } = partido;
+  const aptos = plantel.filter((j) => !j.suspendido && !j.lesionado_hasta);
+  const porId = new Map(aptos.map((j) => [j.id, j]));
+
+  const elegidos = autoOnce(ctx, aptos.filter((j) => !j.reserva))
+    .map((id) => porId.get(id)!).filter(Boolean);
+  const { formacion, alineado } = mejorMolde(elegidos, ctx);
+  const slots = MOLDE_DE(formacion);
+
+  const once = alineado.map((id) => (id ? porId.get(id) : null)).filter(Boolean) as Jugador[];
+  const puestos = new Map<string, Posicion>();
+  alineado.forEach((id, s) => { if (id) puestos.set(id, slots[s]); });
+
+  return {
+    once,
+    suplentes: bancoSugerido(aptos, once, ctx),
+    actitud: (ctx.esLocal ? "ofensivo" : "equilibrado") as Actitud,
+    puestos,
+  };
+}

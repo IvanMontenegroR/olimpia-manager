@@ -923,6 +923,7 @@ export function avanzarUnDia(p: Partida): ResultadoAvance {
 
   // una situación cada tanto, nunca el día del partido ni el anterior
   if ((alPartido === null || alPartido > 1) && !n.pendientes.length && rng.chance(0.3)) {
+    const proximo = partidoDe(n);
     const armada = sortearSituacion({
       plantel: plantelDe(n),
       ambiente: n.ambiente,
@@ -930,6 +931,9 @@ export function avanzarUnDia(p: Partida): ResultadoAvance {
       racha: n.resultados.slice(-3).map((r) =>
         r.golesOlimpia > r.golesRival ? "G" : r.golesOlimpia === r.golesRival ? "E" : "P"),
       posicion: 0,
+      // hay situaciones que solo tienen sentido en cierto momento
+      esSemanaDeClasico: !!proximo?.ctx.esClasico && (diasAlPartido(n) ?? 99) <= 6,
+      faltanDias: diasAlPartido(n),
     }, rng);
     if (armada) {
       n.pendientes.push({

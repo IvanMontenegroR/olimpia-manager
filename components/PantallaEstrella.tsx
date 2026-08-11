@@ -24,6 +24,11 @@ const ESTILO: Record<CategoriaEstrella, { acento: string; fondo: string; rotulo:
     fondo: "radial-gradient(120% 80% at 50% 0%, #14304a, #0a120d 72%)",
     rotulo: "Oportunidad de mercado",
   },
+  clasico: {
+    acento: "#c0392b",
+    fondo: "radial-gradient(120% 80% at 50% 0%, #3a1a20, #0a120d 72%)",
+    rotulo: "Se lo sacás a Cerro",
+  },
   leyenda: {
     acento: "#e8c25a",
     fondo: "radial-gradient(120% 80% at 50% 0%, #4a3a12, #0a120d 68%)",

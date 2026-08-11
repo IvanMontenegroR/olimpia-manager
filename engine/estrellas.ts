@@ -16,7 +16,7 @@ import type { Jugador, Posicion } from "./tipos.ts";
  * pasar, firma en otro lado.
  */
 
-export type CategoriaEstrella = "regreso" | "crack" | "leyenda";
+export type CategoriaEstrella = "regreso" | "crack" | "leyenda" | "clasico";
 
 export interface Estrella {
   id: string;
@@ -43,9 +43,10 @@ export const ESTRELLAS = estrellasJson as Estrella[];
  * Messi apareciera todas las temporadas dejaría de ser Messi.
  */
 export const CHANCE_POR_CATEGORIA: Record<CategoriaEstrella, number> = {
-  regreso: 0.55,
-  crack: 0.32,
-  leyenda: 0.13,
+  regreso: 0.48,
+  crack: 0.28,
+  clasico: 0.16,
+  leyenda: 0.08,
 };
 
 /** Días que tenés para decidir antes de que firme en otro lado. */
@@ -107,9 +108,16 @@ export function jugadorDeEstrella(e: Estrella, numero: number): Jugador {
   };
 }
 
-/** Lo que mueve traer a alguien así, más allá de la cancha. */
+/**
+ * Lo que mueve traer a alguien así, más allá de la cancha.
+ *
+ * El ídolo del clásico es un caso aparte: la hinchada se divide, así que sube
+ * menos de lo que subiría cualquier otro refuerzo del mismo nivel, pero
+ * sacárselo a Cerro es lo que más prestigio da en Asunción.
+ */
 export function impactoDe(e: Estrella): { hinchada: number; ambiente: number; prestigio: number } {
   if (e.categoria === "leyenda") return { hinchada: 30, ambiente: 18, prestigio: 25 };
+  if (e.categoria === "clasico") return { hinchada: 7, ambiente: 4, prestigio: 20 };
   if (e.categoria === "crack") return { hinchada: 16, ambiente: 10, prestigio: 12 };
   return { hinchada: 12, ambiente: 8, prestigio: 8 };
 }

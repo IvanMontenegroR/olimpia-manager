@@ -3,14 +3,19 @@
 import { miles, type Asunto, type Partida } from "@/lib/temporada.ts";
 import { PLANTEL } from "@/lib/juego.ts";
 import Efectos, { type EfectoVisible } from "./Efectos.tsx";
+import { DibujoEscena, ESCENAS, type TipoEscena } from "./Escena.tsx";
 
-const COLOR: Record<Asunto["tipo"], string> = {
-  entrenamiento: "#3fa76a",
-  evento: "#d9a832",
-  oferta: "#d9a832",
-  marketing: "#4a7fb5",
-  prensa: "#d9a832",
-  viaje: "#4a7fb5",
+/**
+ * De qué escena es cada asunto que no viene de una situación escrita. Las
+ * situaciones traen la suya; estas cuatro son fijas.
+ */
+const ESCENA_POR_TIPO: Record<Asunto["tipo"], TipoEscena> = {
+  entrenamiento: "predio",
+  evento: "vestuario",
+  oferta: "mercado",
+  marketing: "tribuna",
+  prensa: "prensa",
+  viaje: "ruta",
 };
 
 /** Lo que hay que resolver antes de que el día siga. */
@@ -21,34 +26,33 @@ export default function Asuntos({
   partida: Partida;
   onResolver: (asuntoId: string, opcionId: string) => void;
 }) {
-  const color = COLOR[asunto.tipo];
+  // La situación escrita trae su propia escena; el resto usa la de su tipo.
+  const tipoEscena: TipoEscena = asunto.situacion?.escena ?? ESCENA_POR_TIPO[asunto.tipo];
+  const escena = ESCENAS[tipoEscena];
+  const color = escena.acento;
   const opciones = opcionesDe(asunto, partida);
 
   return (
-    <div className="relieve-alto flex h-full flex-col justify-center rounded-xl p-4"
-         style={{
-           background: `linear-gradient(165deg,
-             color-mix(in srgb, ${color} 22%, var(--carbon-alto)),
-             color-mix(in srgb, ${color} 7%, var(--carbon)))`,
-         }}>
-      <span className="text-[10px] uppercase tracking-[0.18em]" style={{ color }}>
-        {asunto.tipo === "entrenamiento" ? "Semana de trabajo"
-          : asunto.tipo === "oferta" ? "Mercado"
-          : asunto.tipo === "marketing" ? "Comercial"
-          : asunto.tipo === "viaje" ? "Logística"
-          : "Vestuario y prensa"}
+    <div key={asunto.id}
+         className="relieve-alto relative flex h-full flex-col justify-center overflow-hidden rounded-xl p-4"
+         style={{ background: escena.fondo }}>
+      <DibujoEscena tipo={tipoEscena} color={color} />
+
+      <span className="relative text-[10px] uppercase tracking-[0.18em]" style={{ color }}>
+        {escena.rotulo}
       </span>
-      <h2 className="apellido mt-1 text-[22px] leading-tight">{asunto.titulo}</h2>
-      <p className="mt-1.5 text-[13px] leading-snug" style={{ color: "var(--tenue)" }}>
+      <h2 className="apellido relative mt-1 text-[22px] leading-tight">{asunto.titulo}</h2>
+      <p className="relative mt-1.5 text-[13px] leading-snug" style={{ color: "var(--tenue)" }}>
         {asunto.detalle}
       </p>
 
-      <div className="mt-4 flex flex-col gap-1.5">
+      <div className="relative mt-4 flex flex-col gap-1.5">
         {opciones.map((o) => (
           <button key={o.id} onClick={() => onResolver(asunto.id, o.id)}
             className="w-full rounded-lg px-3.5 py-3 text-left"
             style={{
-              background: "var(--carbon-alto)",
+              background: "color-mix(in srgb, var(--carbon-alto) 82%, transparent)",
+              backdropFilter: "blur(2px)",
               boxShadow: `inset 0 1px 0 rgba(255,255,255,0.07),
                           0 0 0 1px color-mix(in srgb, ${color} 38%, transparent)`,
             }}>

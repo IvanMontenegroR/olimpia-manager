@@ -2,8 +2,8 @@
 
 import { useMemo, useState } from "react";
 import {
-  CUPO_EXTRANJEROS, esSub18, mejorMolde, MOLDE_DE, nivelEf, nombreCorto,
-  type PartidoUI, repartirEnMolde,
+  autoOnce, bancoSugerido, CUPO_EXTRANJEROS, esSub18, mejorMolde, MOLDE_DE,
+  nivelEf, nombreCorto, type PartidoUI, repartirEnMolde,
 } from "@/lib/juego.ts";
 import type { Actitud, Jugador, Posicion } from "@/engine/tipos.ts";
 import type { EquipoGuardado } from "@/lib/temporada.ts";
@@ -301,50 +301,3 @@ function Dato({ etiqueta, valor, alerta, fuerte }: {
   );
 }
 
-/** Once inicial sugerido: el mejor posible respetando cupo y Sub-18. */
-function autoOnce(ctx: PartidoUI["ctx"], plantel: Jugador[]): string[] {
-  // Se llena el 4-3-3 slot por slot con el mejor de cada uno, en vez de por
-  // línea: así no termina un lateral derecho jugando de izquierdo teniendo un
-  // izquierdo natural en el banco.
-  const slots: Posicion[] =
-    ["ARQ", "LD", "DFC", "DFC", "LI", "MCD", "MC", "MC", "ED", "DC", "EI"];
-  const elegidos: Jugador[] = [];
-  const usado = new Set<string>();
-  let ext = 0;
-
-  const meter = (j: Jugador) => {
-    elegidos.push(j);
-    usado.add(j.id);
-    if (j.extranjero) ext++;
-  };
-
-  // El Sub-18 entra primero y consume el slot que mejor le calza, no uno
-  // cualquiera: si no se descuenta un slot, el molde queda de doce y el último
-  // puesto se pierde al recortar.
-  const sub = plantel.filter(esSub18)
-    .sort((a, b) => nivelEf(b, b.posicion, ctx) - nivelEf(a, a.posicion, ctx))[0];
-  if (sub) {
-    meter(sub);
-    const suyo = slots.indexOf(sub.posicion);
-    slots.splice(suyo >= 0 ? suyo : slots.length - 1, 1);
-  }
-
-  // Cada vuelta es un slot: contar por puesto natural saltea slots y deja el
-  // once en diez, que es lo que trababa la pantalla.
-  for (const puesto of slots) {
-    const cand = plantel
-      .filter((j) => !usado.has(j.id))
-      .sort((a, b) => nivelEf(b, puesto, ctx) - nivelEf(a, puesto, ctx));
-    const j = cand.find((c) => !c.extranjero || ext < CUPO_EXTRANJEROS);
-    if (j) meter(j);
-  }
-
-  // Red de seguridad por si el cupo de extranjeros dejó algún hueco.
-  for (const j of [...plantel].sort((a, b) => b.nivel - a.nivel)) {
-    if (elegidos.length >= 11) break;
-    if (usado.has(j.id)) continue;
-    if (j.extranjero && ext >= CUPO_EXTRANJEROS) continue;
-    meter(j);
-  }
-  return elegidos.slice(0, 11).map((j) => j.id);
-}
