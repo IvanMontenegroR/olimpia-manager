@@ -306,14 +306,24 @@ export default function Escritorio({
                       style={{ color: "var(--apagado)" }}>ver todo</button>
             </div>
             <div className="escalona">
-            {[...partida.bitacora].reverse().slice(0, 12).map((b, i) => (
-              <div key={i} className="mb-1 flex gap-2 text-[11px]">
-                <span className="num shrink-0" style={{ color: "var(--apagado)" }}>
-                  {b.dia.slice(8, 10)}/{b.dia.slice(5, 7)}
-                </span>
-                <span style={{ color: "var(--tenue)" }}>{b.texto}</span>
-              </div>
-            ))}
+            {[...partida.bitacora].reverse().slice(0, 12).map((b, i) => {
+              const m = b.marca ? MARCA[b.marca] : null;
+              return (
+                <div key={i} className="mb-1 flex items-center gap-2 text-[11px]">
+                  {m ? (
+                    <span className="num shrink-0 rounded px-1 text-[10px] font-extrabold leading-tight"
+                          style={{ background: m.color, color: "#0a120d", minWidth: 30, textAlign: "center" }}>
+                      {b.cifra ?? m.icono}
+                    </span>
+                  ) : (
+                    <span className="num shrink-0" style={{ color: "var(--apagado)", minWidth: 30 }}>
+                      {b.dia.slice(8, 10)}/{b.dia.slice(5, 7)}
+                    </span>
+                  )}
+                  <span style={{ color: m ? "var(--blanco)" : "var(--tenue)" }}>{b.texto}</span>
+                </div>
+              );
+            })}
             </div>
           </div>
         </div>
@@ -906,21 +916,70 @@ function VistaCopa({ partida }: { partida: Partida }) {
   );
 }
 
+/** Cómo se ve cada cosa que pasa. Lo importante no puede leerse como el resto. */
+const MARCA: Record<string, { color: string; icono: string; etiqueta: string }> = {
+  victoria: { color: "#3fa76a", icono: "✔", etiqueta: "Ganó" },
+  empate:   { color: "#8fa396", icono: "=", etiqueta: "Empató" },
+  derrota:  { color: "#c0392b", icono: "✕", etiqueta: "Perdió" },
+  titulo:   { color: "#e8c25a", icono: "★", etiqueta: "Título" },
+  golpe:    { color: "#c0392b", icono: "!", etiqueta: "Golpe" },
+  plata:    { color: "#e0902a", icono: "$", etiqueta: "Caja" },
+  aviso:    { color: "#d9a832", icono: "!", etiqueta: "Atención" },
+};
+
 function VistaBitacora({ partida }: { partida: Partida }) {
   return (
     <>
-      {[...partida.bitacora].reverse().map((b, i) => (
-        <div key={i} className="mb-1 flex gap-2 rounded-md px-2 py-1.5 text-[11px]"
-             style={{ background: "var(--carbon)" }}>
-          <span className="num shrink-0" style={{ color: "var(--apagado)" }}>
-            {b.dia.slice(8, 10)}/{b.dia.slice(5, 7)}
-          </span>
-          <span style={{ color: "var(--tenue)" }}>{b.texto}</span>
-        </div>
-      ))}
+      {[...partida.bitacora].reverse().map((b, i) => {
+        const m = b.marca ? MARCA[b.marca] : null;
+
+        // Lo que pasó de verdad va en tarjeta, con su color y su marcador.
+        if (m) {
+          return (
+            <div key={i} className="relieve mb-1.5 flex items-center gap-2.5 rounded-lg px-2.5 py-2"
+                 style={{
+                   background: `linear-gradient(160deg,
+                     color-mix(in srgb, ${m.color} 22%, var(--carbon-alto)),
+                     color-mix(in srgb, ${m.color} 7%, var(--carbon)))`,
+                 }}>
+              {b.cifra ? (
+                <span className="num shrink-0 rounded-md px-2 py-1 text-[15px] leading-none"
+                      style={{ background: m.color, color: "#0a120d" }}>
+                  {b.cifra}
+                </span>
+              ) : (
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[13px] font-extrabold"
+                      style={{ background: m.color, color: "#0a120d" }}>
+                  {m.icono}
+                </span>
+              )}
+              <span className="min-w-0 flex-1">
+                <span className="block text-[8px] uppercase tracking-[0.16em]" style={{ color: m.color }}>
+                  {m.etiqueta}
+                </span>
+                <span className="block text-[11px] leading-snug">{b.texto}</span>
+              </span>
+              <span className="num shrink-0 text-[9px]" style={{ color: "var(--apagado)" }}>
+                {b.dia.slice(8, 10)}/{b.dia.slice(5, 7)}
+              </span>
+            </div>
+          );
+        }
+
+        return (
+          <div key={i} className="mb-1 flex gap-2 rounded-md px-2 py-1.5 text-[11px]"
+               style={{ background: "var(--carbon)" }}>
+            <span className="num shrink-0" style={{ color: "var(--apagado)" }}>
+              {b.dia.slice(8, 10)}/{b.dia.slice(5, 7)}
+            </span>
+            <span style={{ color: "var(--tenue)" }}>{b.texto}</span>
+          </div>
+        );
+      })}
     </>
   );
 }
+
 
 /**
  * Equipos guardados: armar un once con calma fuera del día de partido y

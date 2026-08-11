@@ -27,7 +27,10 @@ export default function Efectos({ e }: { e: EfectoVisible }) {
   if (e.ambiente) chips.push({ texto: `${signo(e.ambiente)} vestuario`, bueno: e.ambiente > 0 });
   if (e.hinchada) chips.push({ texto: `${signo(e.hinchada)} hinchada`, bueno: e.hinchada > 0 });
   if (e.condicionTodos) {
-    chips.push({ texto: `${signo(e.condicionTodos)} condición`, bueno: e.condicionTodos > 0 });
+    chips.push({
+      texto: `${signo(e.condicionTodos)} condición a todo el plantel`,
+      bueno: e.condicionTodos > 0,
+    });
   }
   if (e.moralDe) {
     chips.push({

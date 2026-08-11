@@ -118,8 +118,14 @@ function opcionesDe(a: Asunto, p: Partida):
           ambiente: -3,
         } },
       { id: "rechazar", etiqueta: "Rechazar",
-        detalle: `${j?.apellido ?? "El jugador"} se queda dolido y rinde menos por un tiempo`,
-        efecto: { ambiente: 2, moralDe: { id: "", delta: -6 }, moralTexto: j?.apellido } },
+        detalle: oferta?.quiereIrse
+          ? `${j?.apellido ?? "El jugador"} quería irse: se queda dolido y rinde menos`
+          : `${j?.apellido ?? "El jugador"} no pidió salir, así que no le cae mal`,
+        efecto: {
+          ambiente: 2,
+          moralDe: { id: "", delta: oferta?.quiereIrse ? -10 : 3 },
+          moralTexto: j?.apellido,
+        } },
     ];
   }
   return (a.situacion?.opciones ?? []).map((o) => ({

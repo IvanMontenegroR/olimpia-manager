@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import ArmarOnce, { type Salida } from "@/components/ArmarOnce.tsx";
+import PantallaHito from "@/components/PantallaHito.tsx";
 import PartidoEnVivo from "@/components/PartidoEnVivo.tsx";
 import Escritorio from "@/components/Escritorio.tsx";
 import {
@@ -29,6 +30,15 @@ export default function Page() {
   }
 
   const partido = partidoDe(partida);
+
+  // Un hito tapa todo hasta que lo cierres: dar la vuelta no puede pasar
+  // desapercibido entre dos líneas de la bitácora.
+  if (partida.hito) {
+    return (
+      <PantallaHito hito={partida.hito}
+        onCerrar={() => setPartida((p) => (p ? { ...p, hito: null } : p))} />
+    );
+  }
 
   if (fase === "armar" && partido) {
     return (

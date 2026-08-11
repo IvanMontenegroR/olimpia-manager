@@ -4,7 +4,7 @@ import {
   CUPO_EXTRANJEROS, MOLDE_DE, PLANTEL, esSub18, partidosDeOlimpia, repartirEnMolde,
   type PartidoUI,
 } from "./juego.ts";
-import { P, clamp, factorCondicion } from "@/engine/motor.ts";
+import { P, clamp, factorCondicion, recuperar } from "@/engine/motor.ts";
 import { Rng } from "@/engine/rng.ts";
 import equiposJson from "@/data/equipos_2026.json";
 import fixtureJson from "@/data/fixture_clausura2026_final.json";
@@ -18,7 +18,7 @@ const EQUIPOS = equiposJson as any[];
 const FIXTURE = fixtureJson as any[];
 const RIVALES = rivalesJson as any[];
 const CLAVE = "olimpia-manager-clausura-2026";
-const VERSION = 12;
+const VERSION = 13;
 
 export const DIA_INICIAL = "2026-07-20";
 export const TOTAL_FECHAS = 22;
@@ -28,6 +28,11 @@ export const OBJETIVO = "Salir campeón del Clausura";
 
 export type Enfoque = "recuperacion" | "tactico" | "individual";
 export type RondaCopa = "octavos" | "cuartos" | "semis" | "final" | "eliminado" | "campeon";
+
+export const NOMBRE_RONDA: Record<string, string> = {
+  octavos: "octavos", cuartos: "cuartos", semis: "semifinales", final: "la final",
+  eliminado: "eliminado", campeon: "campeón",
+};
 
 export interface EstadoCopa {
   ronda: RondaCopa;
@@ -72,6 +77,8 @@ export interface Oferta {
   club: string;
   montoUsd: number;
   venceEl: string;
+  /** Si el jugador quiere irse, rechazarla le cae mal. Si está cómodo, no. */
+  quiereIrse: boolean;
 }
 
 export type Fichaje = FichajeGenerado;
@@ -86,6 +93,39 @@ export interface Asunto {
   datos?: Record<string, unknown>;
   situacion?: Situacion;
   efectos?: Record<string, Efecto>;
+}
+
+/**
+ * Una línea del diario. Las que importan llevan `marca` y se dibujan distinto:
+ * un resultado, una lesión y "se firmó el sponsor" no pueden leerse todas
+ * iguales, que era lo que hacía que todo pareciera lo mismo.
+ */
+export type MarcaDiario =
+  | "victoria" | "derrota" | "empate" | "titulo" | "golpe" | "plata" | "aviso";
+
+export interface EntradaDiario {
+  dia: string;
+  texto: string;
+  marca?: MarcaDiario;
+  /** Dato corto y grande, como el marcador. */
+  cifra?: string;
+}
+
+/**
+ * Un momento que merece su propia pantalla. Son pocos y son los que uno se
+ * acuerda: salir campeón, quedar afuera de la copa, que te echen. El resto de
+ * lo que pasa va a la bitácora.
+ */
+export type TipoHito =
+  | "campeon_liga" | "campeon_copa" | "eliminado_copa" | "despedido" | "fin_temporada";
+
+export interface Hito {
+  tipo: TipoHito;
+  titulo: string;
+  detalle: string;
+  /** Dato grande de la pantalla: el marcador, la posición, los puntos. */
+  cifra?: string;
+  pie?: string;
 }
 
 /** Un once armado y guardado con nombre, para volver a ponerlo de un toque. */
@@ -119,6 +159,8 @@ export interface Partida {
   paciencia: number;
   /** Si te echaron, por qué. */
   despedido: string | null;
+  /** Lo que hay que mostrar a pantalla completa antes de seguir. */
+  hito: Hito | null;
 
   /** Alineaciones guardadas por el DT: el titular, el equipo de copa, etc. */
   equipos: EquipoGuardado[];
@@ -139,7 +181,7 @@ export interface Partida {
   ofertas: Oferta[];
   fichajes: Fichaje[];
   pendientes: Asunto[];
-  bitacora: { dia: string; texto: string }[];
+  bitacora: EntradaDiario[];
 }
 
 // ---------------------------------------------------------------- utilidades
@@ -237,6 +279,7 @@ export function partidaNueva(): Partida {
     puntosDescontados: 0,
     paciencia: 70,
     despedido: null,
+    hito: null,
     copa: { ronda: "octavos", rivalId: "vasco_da_gama", globalO: 0, globalR: 0, jugadosEnRonda: 0 },
     ofertas: [],
     fichajes: generarMercado(DIA_INICIAL),
@@ -282,6 +325,7 @@ export function cargar(): Partida {
     p.equipos ??= [];
     p.enReserva ??= PLANTEL.filter((j) => j.reserva).map((j) => j.id);
     p.aclimatacion ??= 0;
+    p.hito ??= null;
     return p;
   } catch {
     return partidaNueva();
@@ -564,8 +608,13 @@ export function cerrarPartido(p: Partida, partido: PartidoUI, c: CierrePartido):
   const arrastreHinchada = (n.hinchada - 50) * 0.05;
   n.ambiente = clamp(n.ambiente + (gano ? 3 : empate ? 0 : -4) + arrastreHinchada, 0, 100);
 
-  n.bitacora.push({ dia: p.dia, texto:
-    `${partido.ctx.esLocal ? "" : "De visitante. "}Olimpia ${c.golesOlimpia} - ${c.golesRival} ${partido.rivalNombre}.` });
+  n.bitacora.push({
+    dia: p.dia,
+    marca: gano ? "victoria" : empate ? "empate" : "derrota",
+    cifra: `${c.golesOlimpia}-${c.golesRival}`,
+    texto: `${partido.ctx.esLocal ? "De local" : "De visitante"} contra ` +
+      `${partido.rivalNombre}${partido.ctx.esClasico ? ", el clásico" : ""}.`,
+  });
 
   actualizarPaciencia(n, { gano, empate, esCopa, esClasico: partido.ctx.esClasico });
 
@@ -577,7 +626,7 @@ export function cerrarPartido(p: Partida, partido: PartidoUI, c: CierrePartido):
     // La APF descuenta puntos al que no cumple los 900 minutos de Sub-18.
     if (n.fechaActual > TOTAL_FECHAS && n.minutosSub18 < 900) {
       n.puntosDescontados = 3;
-      n.bitacora.push({ dia: p.dia, texto:
+      n.bitacora.push({ dia: p.dia, marca: "golpe", texto:
         `Sanción: Olimpia no llegó a los 900 minutos Sub-18 (${n.minutosSub18}). ` +
         `La APF descuenta 3 puntos.` });
     }
@@ -585,7 +634,30 @@ export function cerrarPartido(p: Partida, partido: PartidoUI, c: CierrePartido):
     // el sponsor con bonus paga cuando hay algo que festejar
     if (n.sponsorConBonus && gano && n.fechaActual > TOTAL_FECHAS) {
       n.dineroUsd += 2_500_000;
-      n.bitacora.push({ dia: p.dia, texto: "El sponsor pagó el bonus por objetivos." });
+      n.bitacora.push({ dia: p.dia, marca: "plata",
+        texto: "El sponsor pagó el bonus por objetivos." });
+    }
+
+    // se terminó el torneo: campeón o no, la temporada merece su pantalla
+    if (n.fechaActual > TOTAL_FECHAS) {
+      const tabla = tablaDe(n);
+      const yo = tabla.findIndex((f) => f.id === "olimpia") + 1;
+      const mios = tabla.find((f) => f.id === "olimpia");
+      n.hito = yo === 1
+        ? {
+            tipo: "campeon_liga",
+            titulo: "Campeón del Clausura",
+            detalle: "Olimpia dio la vuelta.",
+            cifra: `${mios?.pts ?? 0}`,
+            pie: "puntos en 22 fechas",
+          }
+        : {
+            tipo: "fin_temporada",
+            titulo: "Se terminó el Clausura",
+            detalle: `Olimpia cerró ${yo}° con ${mios?.pts ?? 0} puntos.`,
+            cifra: `${yo}°`,
+            pie: `a ${(tabla[0]?.pts ?? 0) - (mios?.pts ?? 0)} del campeón`,
+          };
     }
   }
   n.entrenamiento = null;
@@ -619,18 +691,30 @@ function avanzarLlave(n: Partida, c: CierrePartido, partido: PartidoUI) {
   }
 
   const rng = new Rng(`copa-${copa.ronda}-${n.dia}`);
+  const rondaJugada = copa.ronda;
   // sin gol de visitante y sin alargue: el global empatado va a penales
   const pasa = copa.globalO > copa.globalR
     || (copa.globalO === copa.globalR && rng.chance(0.5));
 
-  n.bitacora.push({ dia: n.dia, texto:
-    `Copa Sudamericana: Olimpia ${c.golesOlimpia} - ${c.golesRival} ${partido.rivalNombre}. ` +
-    `Global ${copa.globalO}-${copa.globalR}. ${pasa ? "Olimpia avanza." : "Olimpia queda afuera."}` });
+  n.bitacora.push({
+    dia: n.dia,
+    marca: pasa ? "victoria" : "golpe",
+    cifra: `${copa.globalO}-${copa.globalR}`,
+    texto: `Sudamericana contra ${partido.rivalNombre}. ` +
+      `${pasa ? "Olimpia avanza de ronda." : "Olimpia queda afuera."}`,
+  });
 
   if (!pasa) {
     copa.ronda = "eliminado";
     n.hinchada = clamp(n.hinchada - 10, 0, 100);
     n.ambiente = clamp(n.ambiente - 6, 0, 100);
+    n.hito = {
+      tipo: "eliminado_copa",
+      titulo: "Afuera de la Sudamericana",
+      detalle: `${partido.rivalNombre} eliminó a Olimpia en ${NOMBRE_RONDA[rondaJugada]}.`,
+      cifra: `${copa.globalO} - ${copa.globalR}`,
+      pie: "global",
+    };
     return;
   }
 
@@ -643,7 +727,15 @@ function avanzarLlave(n: Partida, c: CierrePartido, partido: PartidoUI) {
   const siguiente = SIGUIENTE[copa.ronda];
   if (siguiente === "campeon") {
     copa.ronda = "campeon";
-    n.bitacora.push({ dia: n.dia, texto: "OLIMPIA CAMPEÓN DE LA COPA SUDAMERICANA." });
+    n.bitacora.push({ dia: n.dia, marca: "titulo",
+      texto: "Olimpia campeón de la Copa Sudamericana." });
+    n.hito = {
+      tipo: "campeon_copa",
+      titulo: "Campeón de América",
+      detalle: `Olimpia le ganó la final a ${partido.rivalNombre} en Barranquilla.`,
+      cifra: `${c.golesOlimpia} - ${c.golesRival}`,
+      pie: "la final",
+    };
     return;
   }
   copa.ronda = siguiente;
@@ -682,11 +774,18 @@ function actualizarPaciencia(
   if (n.paciencia <= 0 && !n.despedido) {
     n.despedido =
       `Olimpia terminó el ciclo en la fecha ${n.fechaActual}, ${pos}° en la tabla.`;
-    n.bitacora.push({ dia: n.dia, texto:
-      "La dirigencia decidió cortar el ciclo. Gracias por todo." });
+    n.bitacora.push({ dia: n.dia, marca: "golpe",
+      texto: "La dirigencia decidió cortar el ciclo. Gracias por todo." });
+    n.hito = {
+      tipo: "despedido",
+      titulo: "Se terminó el ciclo",
+      detalle: "La dirigencia decidió que hasta acá llegaste.",
+      cifra: `${pos}°`,
+      pie: `en la fecha ${n.fechaActual}`,
+    };
   } else if (n.paciencia < 25) {
-    n.bitacora.push({ dia: n.dia, texto:
-      "La dirigencia se reunió de urgencia. El puesto está en discusión." });
+    n.bitacora.push({ dia: n.dia, marca: "aviso",
+      texto: "La dirigencia se reunió de urgencia. El puesto está en discusión." });
   }
 }
 
@@ -724,11 +823,17 @@ export function avanzarUnDia(p: Partida): ResultadoAvance {
     }
     if (e.lesionadoHasta) continue;
 
-    let tasa = j.edad >= 33 ? P.recuperacionVeterano : P.recuperacionPorDia;
-    if (entrena === "recuperacion") tasa *= 1.6;
-    if (entrena === "tactico") tasa *= 0.85;
-    if (entrena === "individual") tasa *= 0.9;
-    e.condicion = clamp(e.condicion + tasa, 0, 100);
+    // Un día de recuperación, con la misma curva del motor: se recupera casi
+    // todo en la primera semana y después se estanca. El enfoque de la semana
+    // acelera o frena esa curva.
+    const dias = entrena === "recuperacion" ? 1.6
+      : entrena === "tactico" ? 0.85
+      : entrena === "individual" ? 0.9
+      : 1;
+    const antes = e.condicion;
+    const j2 = { ...j, condicion: antes };
+    recuperar(j2, dias + P.recuperacionDiaPerdido);
+    e.condicion = clamp(j2.condicion, 0, 100);
 
     // El ánimo de cada uno tiende al clima del vestuario: un plantel roto
     // arrastra a todos, uno unido levanta al que está caído.
@@ -822,12 +927,16 @@ export function avanzarUnDia(p: Partida): ResultadoAvance {
       n.ofertas.push({
         id: `of-${n.dia}`, jugadorId: o.jugadorId, club: o.club,
         montoUsd: o.montoUsd, venceEl: sumarDias(n.dia, 4),
+        quiereIrse: o.quiereIrse,
       });
       const j = PLANTEL.find((x) => x.id === o.jugadorId)!;
       n.pendientes.push({
         id: `ofp-${n.dia}`, tipo: "oferta", dia: n.dia,
         titulo: "Llegó una oferta",
-        detalle: `${o.club} ofrece ${miles(o.montoUsd)} por ${j.apellido}.`,
+        detalle: `${o.club} ofrece ${miles(o.montoUsd)} por ${j.apellido}. ` +
+          (o.quiereIrse
+            ? `${j.apellido} quiere ir: dice que es la chance de su carrera.`
+            : `${j.apellido} está cómodo acá y no pidió salir.`),
         datos: { ofertaId: `of-${n.dia}` },
       });
     }
@@ -893,12 +1002,16 @@ export function resolverAsunto(p: Partida, asuntoId: string, opcionId: string): 
       n.plantel[oferta.jugadorId].lesionadoHasta = "2099-01-01"; // sale del plantel
       n.hinchada = clamp(n.hinchada - (j.nivel >= 68 ? 9 : 3), 0, 100);
       n.ambiente = clamp(n.ambiente - 3, 0, 100);
-      n.bitacora.push({ dia: n.dia, texto:
-        `${j.apellido} se va a ${oferta.club} por ${miles(oferta.montoUsd)}.` });
+      n.bitacora.push({ dia: n.dia, marca: "plata",
+        texto: `${j.apellido} se va a ${oferta.club} por ${miles(oferta.montoUsd)}.` });
     } else {
       n.ambiente = clamp(n.ambiente + 2, 0, 100);
-      n.plantel[oferta.jugadorId].animo = clamp(n.plantel[oferta.jugadorId].animo - 6, 0, 100);
-      n.bitacora.push({ dia: n.dia, texto: `Se rechazó la oferta por ${j.apellido}.` });
+      // solo se enoja el que se quería ir; al que está cómodo le suma quedarse
+      const e = n.plantel[oferta.jugadorId];
+      e.animo = clamp(e.animo + (oferta.quiereIrse ? -10 : 3), 0, 100);
+      n.bitacora.push({ dia: n.dia, texto: oferta.quiereIrse
+        ? `Se rechazó la oferta por ${j.apellido} y quedó dolido: quería irse.`
+        : `Se rechazó la oferta por ${j.apellido}, que igual quería quedarse.` });
     }
     return n;
   }

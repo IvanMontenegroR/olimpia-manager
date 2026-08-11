@@ -311,3 +311,53 @@ button:active:not(:disabled) {
   pointer-events: none;
 }
 @media (prefers-reduced-motion: reduce) { .delta { animation: none; opacity: 0; } }
+
+/* ---------- pantallas de hito: campeón, eliminado, despedido ---------- */
+
+@keyframes girar-rayos { to { transform: rotate(360deg); } }
+.rayos-hito { animation: girar-rayos 26s linear infinite; }
+
+@keyframes caer-papelito {
+  0%   { transform: translateY(-12vh) rotate(0deg);   opacity: 0; }
+  8%   { opacity: 1; }
+  100% { transform: translateY(105vh) rotate(560deg); opacity: 0.9; }
+}
+.papelito-hito {
+  top: 0;
+  animation-name: caer-papelito;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  border-radius: 1px;
+}
+
+@keyframes caer-lluvia {
+  0%   { transform: translateY(-12vh); opacity: 0; }
+  10%  { opacity: 1; }
+  100% { transform: translateY(105vh); opacity: 0; }
+}
+.lluvia-hito {
+  top: 0;
+  animation-name: caer-lluvia;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rayos-hito, .papelito-hito, .lluvia-hito { animation: none; opacity: 0.25; }
+}
+
+@keyframes entrar-hito {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.entra-hito { animation: entrar-hito 700ms ease-out both; }
+
+@keyframes golpear-hito {
+  from { transform: scale(0.7); }
+  to   { transform: scale(1); }
+}
+.golpea-hito { animation: golpear-hito 800ms cubic-bezier(.2, 1.4, .4, 1) 220ms both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .entra-hito, .golpea-hito { animation: none; }
+}

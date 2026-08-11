@@ -117,6 +117,13 @@ export interface Jugador {
    * tres nombres cuando en un partido usás dieciocho.
    */
   reserva?: boolean;
+  /**
+   * Minutos jugados en las últimas tres semanas. No afecta el rendimiento
+   * (para eso está la condición) pero sí el riesgo de romperse: el que juega
+   * todo se lesiona más aunque llegue entero al partido, que es como pasa en
+   * la realidad y es el costo verdadero de no rotar.
+   */
+  minutosRecientes?: number;
   /** 1 a 5. No toca la simulación deportiva: es la moneda del marketing. */
   valor_comercial?: number;
 }

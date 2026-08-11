@@ -57,6 +57,11 @@ export function armarOnce(
     // penalizar al fundido, pero solo en la medida en que el partido lo permita
     if (j.condicion < 55) v -= 14 * (1 - peso);
     else if (j.condicion < 70) v -= 6 * (1 - peso);
+    // Y al que viene jugando todo: con una semana entre fechas la condición
+    // vuelve casi entera, así que lo que hay que mirar para decidir un
+    // descanso es la carga acumulada, no cómo se ve hoy.
+    const exceso = Math.max(0, (j.minutosRecientes ?? 0) - 300) / 120;
+    v -= exceso * 12 * (1 - peso);
     // en copa se prioriza al que aguanta el ambiente
     if (ctx.competencia === "sudamericana" && !ctx.esLocal &&
         j.rasgos.includes("veterano_de_copas")) v += 3;

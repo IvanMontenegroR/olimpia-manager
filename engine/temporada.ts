@@ -90,6 +90,8 @@ export function simularTemporada(
   }
 
   const minutos = new Map<string, number>(plantel.map((j) => [j.id, 0]));
+  /** Lo jugado por cada uno, para saber qué viene arrastrando. */
+  const historial = new Map<string, { dia: string; min: number }[]>();
   const condiciones: number[] = [];
   let puntos = 0, gf = 0, gc = 0, lesiones = 0, diasLesion = 0;
   let minutosSub18 = 0, usosOnceIdeal = 0, condicionMinima = 100, partidosConFundido = 0;
@@ -144,6 +146,14 @@ export function simularTemporada(
       aclimatacion: ev.aclimatacion,
     };
 
+    // cuánto viene jugando cada uno en las últimas tres semanas
+    for (const j of plantel) {
+      const previos = historial.get(j.id) ?? [];
+      j.minutosRecientes = previos
+        .filter((h) => diasEntre(h.dia, ev.fecha) <= 21)
+        .reduce((s, h) => s + h.min, 0);
+    }
+
     const alineacion = armarOnce(plantel, ctx, estrategia, {
       minutosSub18,
       partidosRestantes: totalEventos - i,
@@ -182,6 +192,7 @@ export function simularTemporada(
 
     for (const [j, min] of enCancha) {
       minutos.set(j.id, (minutos.get(j.id) ?? 0) + min);
+      historial.set(j.id, [...(historial.get(j.id) ?? []), { dia: ev.fecha, min }]);
       if (esSub18(j) && min === 90) minutosSub18 += 90;
       j.condicion = clamp(
         j.condicion - desgastePorPartido(j, min, ctx, alineacion.actitud), 0, 100);

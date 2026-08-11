@@ -90,10 +90,22 @@ export function sortearOferta(plantel: Jugador[], semilla: string) {
   let elegido = candidatos[candidatos.length - 1];
   for (const j of candidatos) { r -= peso(j); if (r <= 0) { elegido = j; break; } }
 
+  /**
+   * Que el jugador quiera irse o no es lo que decide si rechazar la oferta le
+   * cae mal. Antes se enojaban todos por igual, que no tiene sentido: al que
+   * está cómodo en el club le da lo mismo, y al que está caliente o es joven
+   * con una vidriera afuera sí le duele quedarse.
+   */
+  const joven = elegido.edad <= 24;
+  const dolido = (elegido.animo ?? 70) < 55;
+  const chanceDeQuererse = (joven ? 0.35 : 0.15) + (dolido ? 0.35 : 0);
+  const quiereIrse = rng.chance(Math.min(0.85, chanceDeQuererse));
+
   const base = precioDe(elegido.nivel, elegido.edad);
   return {
     jugadorId: elegido.id,
     club: rng.elegir(CLUBES_COMPRADORES),
     montoUsd: Math.round((base * rng.entre(0.75, 1.6)) / 10_000) * 10_000,
+    quiereIrse,
   };
 }

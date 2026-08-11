@@ -107,17 +107,18 @@ const PLANTILLAS: Plantilla[] = [
       s: {
         id: "dirigencia_gastos",
         titulo: "La dirigencia pide recortar",
-        contexto: "Piden bajar gastos de concentración para ahorrar unos dólares.",
+        contexto: "Quieren bajar los gastos de concentración: menos días en el " +
+          "predio, comida más barata y viajes en el día.",
         opciones: [
           { id: "aceptar", etiqueta: "Aceptar el recorte",
-            detalle: "Entra plata, se resiente la preparación" },
+            detalle: "Entra plata, pero el plantel entrena y descansa peor" },
           { id: "pelear", etiqueta: "Pelear el presupuesto",
-            detalle: "Sale plata, el plantel lo nota" },
+            detalle: "Sale plata de la caja y el plantel ve que los bancás" },
         ],
       },
       efectos: {
         aceptar: { dineroUsd: 120_000, condicionTodos: -4, ambiente: -4,
-          texto: "Se recortó la concentración. El plantel llega más justo." },
+          texto: "Se recortó la concentración: todo el plantel perdió 4 de condición." },
         pelear: { dineroUsd: -90_000, ambiente: 6,
           texto: "Se mantuvo todo. El plantel vio que los banca." },
       },

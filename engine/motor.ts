@@ -19,8 +19,26 @@ export const P = {
   desgasteViajeKm: 3.0, // extra cada 1000 km
   desgastePresionAlta: 5,
   desgasteVeterano: 4,  // 33 años o más
-  recuperacionPorDia: 4.5,
-  recuperacionVeterano: 3.5,
+
+  /**
+   * La recuperación va hacia 100 con rendimientos decrecientes, como en la
+   * vida real: los primeros días se recupera casi todo y después se estanca.
+   *
+   * Antes era lineal a 4.5 por día, y como un partido cuesta 36, con siete
+   * días entre fechas se perdían 4.5 por semana sin parar: un titular llegaba
+   * a la fecha 12 con 15% de condición y había que inventar equipos con gente
+   * fuera de puesto. Con esta curva, una semana completa te deja entero y lo
+   * que cansa de verdad es jugar dos veces en la misma semana, que es
+   * exactamente cuando cansa en el fútbol.
+   */
+  recuperacionTau: 2.2,
+  recuperacionTauVeterano: 3.0,
+  /**
+   * El día siguiente a un partido no se recupera nada: es el día de descanso.
+   * Sin esto, jugar jueves y domingo casi no se notaba, que es justo lo único
+   * que tiene que cansar.
+   */
+  recuperacionDiaPerdido: 1,
 
   // --- lesiones ---
   lesionBase: 0.012,    // por partido completo, con condición plena
@@ -28,6 +46,17 @@ export const P = {
   lesionCond45: 4.0,
   lesionFragil: 1.8,
   lesionVeterano: 1.4,
+  /**
+   * Cuánto multiplica el riesgo la carga acumulada. Este es el precio real de
+   * no rotar: no que el titular llegue arrastrándose (eso no pasa en el fútbol
+   * con una semana entre partidos), sino que jugando todo termina rompiéndose.
+   */
+  // Jugar todas las fechas ya son 270 minutos en tres semanas: ese es el ritmo
+  // normal y no tiene que castigar nada. Lo que rompe es lo que viene por
+  // encima, o sea las semanas con partido entre semana.
+  lesionCargaDesde: 300,
+  lesionCargaPorTanda: 120,
+  lesionPorCarga: 1.6,
 
   // --- posición ---
   // La pérdida ya no es un escalón sino una función de cuán lejos queda el
@@ -53,6 +82,15 @@ export const P = {
   alientoMax: 1.35,
 
   // --- contexto ---
+  /**
+   * Cuánta ventaja se le da al rival, en puntos de fuerza. Existe para calibrar
+   * la dificultad sin tocar los datos de cada club. Subió cuando se arregló la
+   * recuperación: antes los titulares llegaban fundidos a media temporada y eso
+   * hacía de freno artificial; ahora llegan enteros, así que la vara la tienen
+   * que poner los rivales y no el cansancio.
+   */
+  ajusteRival: 2,
+
   localiaLiga: 3.0,
   localiaCopa: 13.0,     // Olimpia de local en copa: eliminó de local a Flamengo, Fluminense y Atlético Nacional
   localiaCopaRival: 6.0, // el rival de local en copa: pesa, pero no como el Defensores     // el Defensores de noche en Conmebol no es el Defensores de un domingo
@@ -232,7 +270,7 @@ export function simularPartido(
   // nivel efectivo, así que se le aplica la misma curva de condición.
   const rival =
     ctx.rivalFuerza * factorCondicion(ctx.rivalCondicion ?? 100) +
-    (ctx.esLocal || ctx.neutral ? 0 : localiaRival);
+    (ctx.esLocal || ctx.neutral ? 0 : localiaRival) + P.ajusteRival;
 
   let xgOlimpia = P.xgBase * Math.exp(P.xgK * (f.ataque - rival));
   let xgRival = P.xgBase * Math.exp(P.xgK * (rival - f.defensa));
@@ -259,6 +297,9 @@ export function simularPartido(
     let p = P.lesionBase;
     if (j.condicion < 45) p *= P.lesionCond45;
     else if (j.condicion < 60) p *= P.lesionCond60;
+    // lo que viene arrastrando de las últimas tres semanas
+    const exceso = Math.max(0, (j.minutosRecientes ?? 0) - P.lesionCargaDesde);
+    p *= 1 + (exceso / P.lesionCargaPorTanda) * P.lesionPorCarga;
     if (j.rasgos.includes("fragil")) p *= P.lesionFragil;
     if (j.edad >= 33) p *= P.lesionVeterano;
     if (aprieta(a.actitud)) p *= 1.15;
@@ -288,6 +329,9 @@ export function desgastePorPartido(j: Jugador, minutos: number, ctx: ContextoPar
 }
 
 export function recuperar(j: Jugador, dias: number): void {
-  const tasa = j.edad >= 33 ? P.recuperacionVeterano : P.recuperacionPorDia;
-  j.condicion = clamp(j.condicion + tasa * dias, 0, 100);
+  const utiles = dias - P.recuperacionDiaPerdido;
+  if (utiles <= 0) return;
+  const tau = j.edad >= 33 ? P.recuperacionTauVeterano : P.recuperacionTau;
+  const falta = 100 - j.condicion;
+  j.condicion = clamp(100 - falta * Math.exp(-utiles / tau), 0, 100);
 }
