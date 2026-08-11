@@ -290,11 +290,11 @@ button:active:not(:disabled) {
   line-height: 1;
   transform: skewX(-9deg);
   color: #d5352b;
-  -webkit-text-stroke: 0.9px #f4efe4;
+  -webkit-text-stroke: 0.55px #f4efe4;
   paint-order: fill stroke;
 }
 
 /* En chico el contorno tapa el número, así que se afina. */
 .dorsal-numero.chico {
-  -webkit-text-stroke-width: 0.6px;
+  -webkit-text-stroke-width: 0.38px;
 }
