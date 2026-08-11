@@ -4,18 +4,64 @@ import { colorCondicion, esSub18, nivelEf } from "@/lib/juego.ts";
 import Dorsal from "./Dorsal.tsx";
 import { COORD, LINEA_DE, type ContextoPartido, type Jugador, type Posicion } from "@/engine/tipos.ts";
 
-/** Cancha vertical: se ataca hacia arriba, el arco propio queda abajo.
- *  Cada jugador va donde corresponde su puesto, sin tablas aparte. */
-function ubicar(pos: Posicion, indice = 0, total = 1) {
-  const c = COORD[pos];
-  // dos centrales o dos volantes comparten coordenada: se abren en abanico
-  const paso = total > 1 ? 30 : 0;
-  const y = c.y + (indice - (total - 1) / 2) * paso;
-  return {
-    izq: 8 + (Math.max(4, Math.min(96, y)) / 100) * 84,
-    arriba: 92 - (c.x / 100) * 84,
-  };
+/**
+ * Ubica a los once en la cancha vertical. Dos choques posibles: los que
+ * comparten puesto (dos centrales se abren en abanico) y los que caen casi
+ * encima (el enganche justo delante del volante central). Al segundo se lo
+ * separa en profundidad y no de costado: un MCO corrido a la banda deja de
+ * leerse como enganche.
+ */
+const ALTO = 16;  // profundidad que ocupa un bloque, en unidades de cancha
+const ANCHO = 19; // lo que ocupa a lo ancho
+
+function ubicarTodos(once: Jugador[], puestos: Map<string, Posicion>) {
+  const porPuesto = new Map<Posicion, Jugador[]>();
+  for (const j of once) {
+    const p = puestos.get(j.id) ?? j.posicion;
+    porPuesto.set(p, [...(porPuesto.get(p) ?? []), j]);
+  }
+
+  const puntos: { j: Jugador; x: number; y: number }[] = [];
+  for (const [pos, jugadores] of porPuesto) {
+    const c = COORD[pos];
+    const paso = jugadores.length > 1 ? 30 : 0;
+    jugadores.forEach((j, i) => {
+      puntos.push({ j, x: c.x, y: c.y + (i - (jugadores.length - 1) / 2) * paso });
+    });
+  }
+
+  // Relajación por pares: cada choque empuja a los dos en profundidad, mitad
+  // para cada uno. Iterativo porque separar un par puede crear otro.
+  for (let paso = 0; paso < 40; paso++) {
+    let hubo = false;
+    for (let i = 0; i < puntos.length; i++) {
+      for (let k = i + 1; k < puntos.length; k++) {
+        const a = puntos[i], b = puntos[k];
+        if (Math.abs(a.y - b.y) >= ANCHO) continue;
+        const dx = Math.abs(a.x - b.x);
+        if (dx >= ALTO) continue;
+        hubo = true;
+        const empuje = (ALTO - dx) / 2 + 0.01;
+        // el que ya está más adelante sigue adelante; si empatan, desempata el arco
+        const aAdelante = a.x > b.x || (a.x === b.x && i > k);
+        a.x = clampX(a.x + (aAdelante ? empuje : -empuje));
+        b.x = clampX(b.x + (aAdelante ? -empuje : empuje));
+      }
+    }
+    if (!hubo) break;
+  }
+
+  const lugares = new Map<string, { izq: number; arriba: number }>();
+  for (const { j, x, y } of puntos) {
+    lugares.set(j.id, {
+      izq: 9 + (Math.max(4, Math.min(96, y)) / 100) * 82,
+      arriba: 94 - (x / 100) * 88,
+    });
+  }
+  return lugares;
 }
+
+const clampX = (x: number) => Math.max(2, Math.min(94, x));
 
 export default function CanchaArmado({
   once, puestos, ctx, seleccionado, onTocar,
@@ -27,6 +73,8 @@ export default function CanchaArmado({
   onTocar: (j: Jugador) => void;
 }) {
 
+
+  const lugares = ubicarTodos(once, puestos);
 
   return (
     <div className="relative mx-3 flex-1 overflow-hidden rounded-lg"
@@ -48,8 +96,7 @@ export default function CanchaArmado({
 
       {once.map((j) => {
         const pos = puestos.get(j.id) ?? j.posicion;
-        const mismos = once.filter((x) => (puestos.get(x.id) ?? x.posicion) === pos);
-        const { izq, arriba } = ubicar(pos, mismos.indexOf(j), mismos.length);
+        const { izq, arriba } = lugares.get(j.id) ?? { izq: 50, arriba: 50 };
         const elegido = seleccionado === j.id;
         const adaptado = pos !== j.posicion;
         const ef = nivelEf(j, pos, ctx);

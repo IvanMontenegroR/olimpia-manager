@@ -56,7 +56,8 @@ export default function ArmarOnce({
     : 0;
 
   const problema =
-    once.length !== 11 ? `Faltan ${11 - once.length}` :
+    once.length !== 11
+      ? `Faltan ${11 - once.length} · tocá a alguien del banco` :
     arqueros !== 1 ? "Necesitás un arquero" :
     extranjeros > CUPO_EXTRANJEROS ? `${extranjeros} extranjeros, el cupo es ${CUPO_EXTRANJEROS}` :
     null;
@@ -73,13 +74,38 @@ export default function ArmarOnce({
           nivelEf(b, b.posicion, ctx) - nivelEf(a, a.posicion, ctx));
   }, [filtro, sel, ctx, aptos]);
 
-  /** Tocar en la cancha y después en el banco (o al revés) intercambia. */
+  /**
+   * Tocar en la cancha y después en el banco intercambia. Si todavía falta
+   * gente, tocar a uno del banco lo mete directamente: antes la única
+   * operación posible era el intercambio y con diez quedabas trabado.
+   */
   const tocar = (j: Jugador) => {
     const enCancha = sel.has(j.id);
-    if (!marcado) { setMarcado(j.id); return; }
-    if (marcado === j.id) { setMarcado(null); return; }
 
-    const otro = aptos.find((x) => x.id === marcado)!;
+    // falta gente y este está afuera: entra y listo
+    if (!enCancha && sel.size < 11) {
+      setSel((prev) => new Set(prev).add(j.id));
+      setMarcado(null);
+      return;
+    }
+
+    // está en cancha y el once está incompleto: sale
+    if (enCancha && sel.size < 11 && marcado === j.id) {
+      setSel((prev) => { const n = new Set(prev); n.delete(j.id); return n; });
+      setMarcado(null);
+      return;
+    }
+
+    if (!marcado) { setMarcado(j.id); return; }
+    if (marcado === j.id) {
+      // segundo toque sobre el mismo: lo saca de la cancha
+      if (enCancha) setSel((prev) => { const n = new Set(prev); n.delete(j.id); return n; });
+      setMarcado(null);
+      return;
+    }
+
+    const otro = aptos.find((x) => x.id === marcado);
+    if (!otro) { setMarcado(j.id); return; }
     const otroEnCancha = sel.has(otro.id);
     if (enCancha === otroEnCancha) { setMarcado(j.id); return; } // los dos del mismo lado
 
@@ -274,30 +300,48 @@ function Dato({ etiqueta, valor, alerta, fuerte }: {
 
 /** Once inicial sugerido: el mejor posible respetando cupo y Sub-18. */
 function autoOnce(ctx: PartidoUI["ctx"], plantel: Jugador[]): string[] {
-  // Se llena el 4-3-3 puesto por puesto con el mejor de cada uno, en vez de
-  // por línea: así no termina un lateral derecho jugando de izquierdo teniendo
-  // un izquierdo natural en el banco.
-  const molde: Posicion[] =
+  // Se llena el 4-3-3 slot por slot con el mejor de cada uno, en vez de por
+  // línea: así no termina un lateral derecho jugando de izquierdo teniendo un
+  // izquierdo natural en el banco.
+  const slots: Posicion[] =
     ["ARQ", "LD", "DFC", "DFC", "LI", "MCD", "MC", "MC", "ED", "DC", "EI"];
   const elegidos: Jugador[] = [];
+  const usado = new Set<string>();
   let ext = 0;
 
+  const meter = (j: Jugador) => {
+    elegidos.push(j);
+    usado.add(j.id);
+    if (j.extranjero) ext++;
+  };
+
+  // El Sub-18 entra primero y consume el slot que mejor le calza, no uno
+  // cualquiera: si no se descuenta un slot, el molde queda de doce y el último
+  // puesto se pierde al recortar.
   const sub = plantel.filter(esSub18)
     .sort((a, b) => nivelEf(b, b.posicion, ctx) - nivelEf(a, a.posicion, ctx))[0];
-  if (sub) { elegidos.push(sub); if (sub.extranjero) ext++; }
+  if (sub) {
+    meter(sub);
+    const suyo = slots.indexOf(sub.posicion);
+    slots.splice(suyo >= 0 ? suyo : slots.length - 1, 1);
+  }
 
-  for (const puesto of molde) {
-    if (elegidos.length >= 11) break;
-    const yaCubiertos = elegidos.filter((j) => j.posicion === puesto).length;
-    if (yaCubiertos >= molde.filter((x) => x === puesto).length) continue;
+  // Cada vuelta es un slot: contar por puesto natural saltea slots y deja el
+  // once en diez, que es lo que trababa la pantalla.
+  for (const puesto of slots) {
     const cand = plantel
-      .filter((j) => !elegidos.includes(j))
+      .filter((j) => !usado.has(j.id))
       .sort((a, b) => nivelEf(b, puesto, ctx) - nivelEf(a, puesto, ctx));
-    for (const j of cand) {
-      if (j.extranjero && ext >= CUPO_EXTRANJEROS) continue;
-      elegidos.push(j); if (j.extranjero) ext++;
-      break;
-    }
+    const j = cand.find((c) => !c.extranjero || ext < CUPO_EXTRANJEROS);
+    if (j) meter(j);
+  }
+
+  // Red de seguridad por si el cupo de extranjeros dejó algún hueco.
+  for (const j of [...plantel].sort((a, b) => b.nivel - a.nivel)) {
+    if (elegidos.length >= 11) break;
+    if (usado.has(j.id)) continue;
+    if (j.extranjero && ext >= CUPO_EXTRANJEROS) continue;
+    meter(j);
   }
   return elegidos.slice(0, 11).map((j) => j.id);
 }
