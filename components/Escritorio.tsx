@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Escudo from "./Escudo.tsx";
 import Numero from "./Numero.tsx";
+import Dorsal from "./Dorsal.tsx";
 import Asuntos from "./Asuntos.tsx";
 import Mercado from "./Mercado.tsx";
 import { COLOR_POS } from "./PanelPartido.tsx";
@@ -351,10 +352,7 @@ function VistaPlantel({ plantel, partida }: { plantel: ReturnType<typeof plantel
             <div key={j.id} className="mb-1 flex items-center gap-2 rounded-md px-2 py-1.5"
               style={{ background: fuera
                 ? "color-mix(in srgb, #c0392b 16%, var(--carbon))" : "var(--carbon)" }}>
-              <span className="num flex h-6 w-7 shrink-0 items-center justify-center rounded text-[12px]"
-                    style={{ background: COLOR_POS[j.posicion], color: "#0a120d" }}>
-                {j.numero}
-              </span>
+              <Dorsal numero={j.numero} tam={24} />
               <span className="min-w-0 flex-1">
                 <span className="apellido block truncate text-[12px]">
                   {j.apellido}

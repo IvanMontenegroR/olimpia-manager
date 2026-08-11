@@ -13,6 +13,7 @@ import type { CierrePartido } from "@/lib/temporada.ts";
 import MomentoOverlay from "./MomentoOverlay.tsx";
 import { resolverMomento, type Momento, type ResueltoMomento } from "@/engine/momentos.ts";
 import Escudo from "./Escudo.tsx";
+import Dorsal from "./Dorsal.tsx";
 
 const VELOCIDADES = [
   { etiqueta: "▶", ms: 620 },
@@ -618,7 +619,7 @@ function FilaJugador({
         background: marcado ? "var(--linea)" : "var(--carbon)",
         outline: lesionado ? "1px solid #e0902a" : "none",
       }}>
-      <span className="num w-8 text-center text-[18px]">{j.numero}</span>
+      <Dorsal numero={j.numero} tam={26} />
       <span className="min-w-0 flex-1">
         <span className="apellido block truncate text-[14px]">{j.apellido}</span>
         <span className="text-[10px]" style={{ color: "var(--tenue)" }}>

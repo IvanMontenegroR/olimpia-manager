@@ -436,6 +436,25 @@ se sienta viva sin volverse ruidosa:
 
 Todo respeta `prefers-reduced-motion`.
 
+## El dorsal
+
+Los jugadores de Olimpia ya no son un número en un cuadrito de color: son el
+dorsal de la camiseta. Círculo blanco, **franja negra horizontal al medio** y el
+número en **rojo con la línea clara por dentro**, replicando la numeración real
+del club.
+
+La tipografía es Big Shoulders Display en su peso 800, que es la más cercana al
+corte condensado y angular de los números de camiseta, con una inclinación de 9
+grados para la itálica. Va **servida desde el repo** (`public/fuentes/`) y cargada
+con `next/font/local`, no desde Google Fonts: así el build no depende de la red y
+la ruta respeta el `basePath` de GitHub Pages.
+
+La línea interior se logra con `-webkit-text-stroke` claro sobre relleno rojo,
+con `paint-order: fill stroke`, que deja el trazo pisando el borde del glifo.
+
+Los dorsales del rival se quedan con el color de su club, para que no se
+confundan con los propios de un vistazo.
+
 ## Estado de los datos
 
 | Archivo | Estado |

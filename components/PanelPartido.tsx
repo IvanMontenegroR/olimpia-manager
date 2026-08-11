@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { colorCondicion } from "@/lib/juego.ts";
+import Dorsal, { DorsalRival } from "./Dorsal.tsx";
 import { riesgoDeRoja } from "@/engine/riesgo.ts";
 import type { JugadorRival } from "@/engine/rival.ts";
 import type { EventoRelato } from "@/engine/relato.ts";
@@ -119,7 +120,7 @@ export default function PanelPartido({
                     : "var(--carbon)",
                   outline: alarma ? `1px solid color-mix(in srgb, ${alarma} 55%, transparent)` : "none",
                 }}>
-                <Dorsal numero={j.numero} pos={pos} />
+                <Dorsal numero={j.numero} tam={24} />
                 <span className="apellido min-w-0 flex-1 truncate text-[11px]">{j.apellido}</span>
 
                 <span className="flex shrink-0 items-center gap-1">
@@ -151,7 +152,7 @@ export default function PanelPartido({
                 background: e.expulsado ? "color-mix(in srgb, #c0392b 22%, var(--carbon))" : "var(--carbon)",
                 opacity: e.expulsado ? 0.55 : 1,
               }}>
-              <Dorsal numero={r.numero} pos={r.posicion} />
+              <DorsalRival numero={r.numero} color={COLOR_POS[r.posicion]} tam={22} />
               <span className="apellido min-w-0 flex-1 truncate text-[11px]">{r.apellido}</span>
               {e.expulsado && <Chapa texto="EXPULSADO" color="#c0392b" />}
               {e.amarilla && !e.expulsado && (
@@ -177,15 +178,6 @@ export default function PanelPartido({
         )}
       </div>
     </div>
-  );
-}
-
-function Dorsal({ numero, pos }: { numero: number; pos: Posicion }) {
-  return (
-    <span className="num flex h-[22px] w-[26px] shrink-0 items-center justify-center rounded text-[12px]"
-          style={{ background: COLOR_POS[pos], color: "#0a120d" }}>
-      {numero}
-    </span>
   );
 }
 

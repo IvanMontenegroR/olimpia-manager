@@ -1,6 +1,7 @@
 "use client";
 
 import { colorCondicion, esSub18, nivelEf } from "@/lib/juego.ts";
+import Dorsal from "./Dorsal.tsx";
 import type { ContextoPartido, Jugador, Posicion } from "@/engine/tipos.ts";
 
 /** Cancha vertical: se ataca hacia arriba, el arco propio queda abajo. */
@@ -54,15 +55,15 @@ export default function CanchaArmado({
             <button key={j.id} onClick={() => onTocar(j)}
               className="absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center"
               style={{ left: `${xs[i]}%`, top: `${Y_LINEA[pos]}%`, width: 62 }}>
-              <span className="num flex h-[34px] w-[34px] items-center justify-center rounded-full text-[15px]"
-                    style={{
-                      background: elegido ? "var(--medio)" : "var(--blanco)",
-                      color: "var(--negro)",
-                      boxShadow: adaptado
-                        ? "0 0 0 2px var(--medio), 0 2px 6px rgba(0,0,0,0.5)"
-                        : "0 2px 6px rgba(0,0,0,0.5)",
+              <span style={{
+                      borderRadius: 999,
+                      boxShadow: elegido
+                        ? "0 0 0 3px var(--medio), 0 2px 8px rgba(0,0,0,0.55)"
+                        : adaptado
+                          ? "0 0 0 2px var(--medio), 0 2px 6px rgba(0,0,0,0.5)"
+                          : "0 2px 6px rgba(0,0,0,0.5)",
                     }}>
-                {j.numero}
+                <Dorsal numero={j.numero} tam={34} />
               </span>
               <span className="apellido mt-0.5 max-w-full truncate text-[9px] leading-tight"
                     style={{ textShadow: "0 1px 3px rgba(0,0,0,0.9)" }}>

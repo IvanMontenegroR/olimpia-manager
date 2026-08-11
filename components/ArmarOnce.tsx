@@ -8,6 +8,7 @@ import {
 import type { Actitud, Jugador, Posicion } from "@/engine/tipos.ts";
 import Escudo from "./Escudo.tsx";
 import CanchaArmado from "./CanchaArmado.tsx";
+import Dorsal from "./Dorsal.tsx";
 import { ACTITUD } from "./PartidoEnVivo.tsx";
 
 const FILTROS: (Posicion | "TODOS")[] = ["TODOS", "ARQ", "DEF", "MED", "DEL"];
@@ -193,7 +194,7 @@ export default function ArmarOnce({
                   background: elegido ? "var(--medio)" : "var(--carbon)",
                   color: elegido ? "var(--negro)" : "var(--blanco)",
                 }}>
-                <span className="num text-[16px] leading-none">{j.numero}</span>
+                <Dorsal numero={j.numero} tam={26} />
                 <span className="apellido mt-1 max-w-full truncate text-[9px] leading-tight">
                   {j.apellido}
                 </span>
