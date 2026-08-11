@@ -1,6 +1,8 @@
 import { Rng } from "./rng.ts";
-import type {
-  Actitud, Alineacion, ContextoPartido, Forma, Jugador, Posicion, ResultadoPartido,
+import {
+  COORD, LINEA_DE,
+  type Actitud, type Alineacion, type ContextoPartido, type Forma, type Jugador,
+  type Linea, type Posicion, type ResultadoPartido,
 } from "./tipos.ts";
 
 /** Todos los números que hay que balancear viven acá y en ningún otro lado. */
@@ -27,10 +29,12 @@ export const P = {
   lesionVeterano: 1.4,
 
   // --- posición ---
-  posNatural: 1.0,
-  posAdaptado: 0.9,
-  posFueraDePuesto: 0.75,
-  posArqueroDeCampo: 0.35,
+  // La pérdida ya no es un escalón sino una función de cuán lejos queda el
+  // jugador de su puesto natural en la cancha.
+  posPiso: 0.62,           // lo peor que puede rendir un jugador de campo
+  posCaidaPorDistancia: 0.62,
+  posBonoSecundaria: 0.07, // lo que recupera si es un puesto que sabe jugar
+  posArqueroDeCampo: 0.3,
 
   // --- forma ---
   formaRacha: 1.08,
@@ -73,11 +77,25 @@ export function factorForma(f: Forma): number {
   return f === "en_racha" ? P.formaRacha : f === "en_baja" ? P.formaBaja : P.formaNeutral;
 }
 
+/** Distancia entre dos puestos, normalizada a 0..1. */
+export function distanciaPuestos(a: Posicion, b: Posicion): number {
+  const p = COORD[a], q = COORD[b];
+  // la lateralidad pesa un poco menos que la profundidad: un lateral derecho
+  // se arregla mejor de lateral izquierdo que de delantero
+  const dx = (p.x - q.x) / 100;
+  const dy = ((p.y - q.y) / 100) * 0.75;
+  return Math.min(1, Math.hypot(dx, dy));
+}
+
 export function factorPosicion(j: Jugador, puesto: Posicion): number {
-  if (j.posicion === puesto) return P.posNatural;
-  if (j.posiciones_secundarias.includes(puesto)) return P.posAdaptado;
+  if (j.posicion === puesto) return 1;
+  // el arco es otro deporte
   if (j.posicion === "ARQ" || puesto === "ARQ") return P.posArqueroDeCampo;
-  return P.posFueraDePuesto;
+
+  const d = distanciaPuestos(j.posicion, puesto);
+  let f = 1 - d * P.posCaidaPorDistancia;
+  if (j.posiciones_secundarias.includes(puesto)) f += P.posBonoSecundaria;
+  return clamp(f, P.posPiso, 1);
 }
 
 /** Vulnerabilidad al ambiente hostil derivada de edad y partidos internacionales.
@@ -108,15 +126,15 @@ export function nivelEfectivo(j: Jugador, puesto: Posicion, ctx: ContextoPartido
   );
 }
 
-const PESO_ATAQUE: Record<Posicion, number> = { ARQ: 0.0, DEF: 0.5, MED: 2.0, DEL: 3.0 };
-const PESO_DEFENSA: Record<Posicion, number> = { ARQ: 2.0, DEF: 3.0, MED: 1.5, DEL: 0.2 };
+const PESO_ATAQUE: Record<Linea, number> = { ARQ: 0.0, DEF: 0.5, MED: 2.0, DEL: 3.0 };
+const PESO_DEFENSA: Record<Linea, number> = { ARQ: 2.0, DEF: 3.0, MED: 1.5, DEL: 0.2 };
 
 function media(once: Jugador[], puestos: Map<string, Posicion>, ctx: ContextoPartido,
-               pesos: Record<Posicion, number>): number {
+               pesos: Record<Linea, number>): number {
   let num = 0, den = 0;
   for (const j of once) {
     const puesto = puestos.get(j.id) ?? j.posicion;
-    const w = pesos[puesto];
+    const w = pesos[LINEA_DE[puesto]];
     num += nivelEfectivo(j, puesto, ctx) * w;
     den += w;
   }
@@ -191,7 +209,8 @@ export function simularPartido(
     if (a.presionAlta) p *= 1.15;
     if (rng.chance(p)) lesionados.push({ id: j.id, dias: rng.entero(7, 45) });
 
-    const pAmarilla = (j.posicion === "DEF" ? 0.16 : j.posicion === "MED" ? 0.14 : 0.08)
+    const linea = LINEA_DE[j.posicion];
+    const pAmarilla = (linea === "DEF" ? 0.16 : linea === "MED" ? 0.14 : 0.08)
       * (ctx.esClasico ? 1.5 : 1) * (a.presionAlta ? 1.25 : 1);
     if (rng.chance(pAmarilla)) amarillas.push(j.id);
     if (rng.chance(0.006)) rojas.push(j.id);

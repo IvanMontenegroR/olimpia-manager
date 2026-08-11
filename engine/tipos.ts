@@ -1,4 +1,58 @@
-export type Posicion = "ARQ" | "DEF" | "MED" | "DEL";
+/**
+ * Puestos específicos. El documento original pedía solo ARQ/DEF/MED/DEL, pero
+ * con cuatro casilleros el armado del once pierde casi toda su gracia: un
+ * lateral y un central no son lo mismo, y el juego se trata justamente de
+ * decidir el once.
+ */
+export type Posicion =
+  | "ARQ"
+  | "LD" | "DFC" | "LI"
+  | "MCD" | "MC" | "MCO" | "MD" | "MI"
+  | "ED" | "EI" | "SD" | "DC";
+
+/** Línea a la que pertenece cada puesto, para los pesos del motor. */
+export type Linea = "ARQ" | "DEF" | "MED" | "DEL";
+
+export const LINEA_DE: Record<Posicion, Linea> = {
+  ARQ: "ARQ",
+  LD: "DEF", DFC: "DEF", LI: "DEF",
+  MCD: "MED", MC: "MED", MCO: "MED", MD: "MED", MI: "MED",
+  ED: "DEL", EI: "DEL", SD: "DEL", DC: "DEL",
+};
+
+/**
+ * Dónde para cada puesto en la cancha. `x` es profundidad (0 arco propio,
+ * 100 arco rival) e `y` es lateralidad (0 izquierda, 100 derecha). Sirve para
+ * dos cosas: calcular cuánto pierde un jugador fuera de su puesto, y ubicarlo
+ * en la cancha sin tablas aparte.
+ */
+export const COORD: Record<Posicion, { x: number; y: number }> = {
+  ARQ: { x: 3,  y: 50 },
+  LD:  { x: 26, y: 88 },
+  DFC: { x: 20, y: 50 },
+  LI:  { x: 26, y: 12 },
+  MCD: { x: 38, y: 50 },
+  MC:  { x: 50, y: 50 },
+  MCO: { x: 64, y: 50 },
+  MD:  { x: 50, y: 86 },
+  MI:  { x: 50, y: 14 },
+  ED:  { x: 78, y: 86 },
+  EI:  { x: 78, y: 14 },
+  SD:  { x: 78, y: 50 },
+  DC:  { x: 90, y: 50 },
+};
+
+export const POSICIONES: Posicion[] =
+  ["ARQ", "LD", "DFC", "LI", "MCD", "MC", "MCO", "MD", "MI", "ED", "EI", "SD", "DC"];
+
+export const NOMBRE_POSICION: Record<Posicion, string> = {
+  ARQ: "Arquero",
+  LD: "Lateral derecho", DFC: "Defensor central", LI: "Lateral izquierdo",
+  MCD: "Volante de contención", MC: "Volante central", MCO: "Enganche",
+  MD: "Volante por derecha", MI: "Volante por izquierda",
+  ED: "Extremo derecho", EI: "Extremo izquierdo",
+  SD: "Segundo delantero", DC: "Delantero centro",
+};
 export type Forma = "en_racha" | "neutral" | "en_baja";
 export type Actitud = "defensivo" | "equilibrado" | "ofensivo";
 

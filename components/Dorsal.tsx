@@ -1,6 +1,6 @@
 "use client";
 
-import type { Posicion } from "@/engine/tipos.ts";
+import { LINEA_DE, type Posicion } from "@/engine/tipos.ts";
 
 /**
  * El número de camiseta de un jugador de Olimpia: círculo blanco, franja negra
@@ -35,9 +35,11 @@ export function DorsalRival({
   );
 }
 
-export const COLOR_POSICION: Record<Posicion, string> = {
+const COLOR_LINEA = {
   ARQ: "#d9a832",
   DEF: "#4a7fb5",
   MED: "#3fa76a",
   DEL: "#c0392b",
-};
+} as const;
+
+export const colorDe = (pos: Posicion) => COLOR_LINEA[LINEA_DE[pos]];

@@ -1,6 +1,6 @@
 "use client";
 
-import { COLOR_POS } from "./PanelPartido.tsx";
+import { colorDe } from "./Dorsal.tsx";
 import { BANDERA } from "@/lib/juego.ts";
 import { miles, type Partida } from "@/lib/temporada.ts";
 
@@ -30,7 +30,7 @@ export default function Mercado({
           <div key={f.id} className="mb-1.5 rounded-lg p-2.5" style={{ background: "var(--carbon)" }}>
             <div className="flex items-center gap-2">
               <span className="num flex h-6 w-9 shrink-0 items-center justify-center rounded text-[10px]"
-                    style={{ background: COLOR_POS[f.posicion], color: "#0a120d" }}>
+                    style={{ background: colorDe(f.posicion), color: "#0a120d" }}>
                 {f.posicion}
               </span>
               <span className="min-w-0 flex-1">

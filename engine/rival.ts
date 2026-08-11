@@ -1,5 +1,5 @@
 import { Rng } from "./rng.ts";
-import type { Posicion } from "./tipos.ts";
+import { LINEA_DE, type Posicion } from "./tipos.ts";
 
 /**
  * El modelo no guarda planteles rivales, solo una fuerza por club. Para poder
@@ -25,7 +25,8 @@ export interface JugadorRival {
   nivel: number;
 }
 
-const MOLDE: [Posicion, number][] = [["ARQ", 1], ["DEF", 4], ["MED", 4], ["DEL", 2]];
+const MOLDE: Posicion[] =
+  ["ARQ", "LD", "DFC", "DFC", "LI", "MD", "MCD", "MC", "MI", "DC", "DC"];
 
 export function onceRival(clubId: string, fuerza: number): JugadorRival[] {
   const rng = new Rng(`rival-${clubId}`);
@@ -33,8 +34,8 @@ export function onceRival(clubId: string, fuerza: number): JugadorRival[] {
   const usados = new Set<string>();
   let numero = 1;
 
-  for (const [pos, cantidad] of MOLDE) {
-    for (let i = 0; i < cantidad; i++) {
+  for (const pos of MOLDE) {
+    {
       let apellido = rng.elegir(APELLIDOS);
       let intentos = 0;
       while (usados.has(apellido) && intentos++ < 30) apellido = rng.elegir(APELLIDOS);
@@ -45,7 +46,8 @@ export function onceRival(clubId: string, fuerza: number): JugadorRival[] {
         apellido,
         posicion: pos,
         // los del fondo un poco por debajo, los de arriba por encima
-        nivel: Math.round(fuerza + (pos === "DEL" ? 2 : pos === "ARQ" ? -1 : 0) + rng.entre(-4, 4)),
+        nivel: Math.round(
+          fuerza + (LINEA_DE[pos] === "DEL" ? 2 : pos === "ARQ" ? -1 : 0) + rng.entre(-4, 4)),
       });
     }
   }

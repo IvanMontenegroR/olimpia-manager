@@ -455,6 +455,34 @@ con `paint-order: fill stroke`, que deja el trazo pisando el borde del glifo.
 Los dorsales del rival se quedan con el color de su club, para que no se
 confundan con los propios de un vistazo.
 
+## Puestos específicos
+
+El documento pedía cuatro casilleros (ARQ, DEF, MED, DEL) y decía que no hacía
+falta más granularidad. Se cambió a trece: **ARQ, LD, DFC, LI, MCD, MC, MCO, MD,
+MI, ED, EI, SD, DC**. Con cuatro casilleros, elegir el once perdía casi toda su
+gracia: un lateral y un central ocupaban el mismo lugar.
+
+**La afinidad sale de la geometría, no de una tabla.** Cada puesto tiene una
+coordenada en la cancha (`COORD` en `engine/tipos.ts`), y lo que pierde un jugador
+fuera de su puesto es función de la distancia entre el suyo y el que ocupa, con la
+lateralidad pesando un poco menos que la profundidad: un lateral derecho se arregla
+mejor de lateral izquierdo que de delantero. Eso evita una matriz de 13×13 y de
+paso da las coordenadas para dibujar la cancha.
+
+El arco sigue siendo caso aparte: cualquiera que no sea arquero rinde al 30%.
+
+**Los sistemas ahora son listas de once puestos concretos**, no un conteo por
+línea. El 4-3-3 es `ARQ, LD, DFC, DFC, LI, MCD, MC, MC, ED, DC, EI`. Al elegir los
+once, el juego prueba los ocho sistemas y dentro de cada uno reparte a los
+jugadores entre los slots buscando el mejor encaje global, tomando las mejores
+parejas jugador-slot mientras las dos partes estén libres.
+
+El efecto se ve de inmediato: el once sugerido pasó de 63 a 66 de nivel solo por
+dejar de mandar al lateral derecho a jugar de izquierdo teniendo un izquierdo
+natural en el banco.
+
+El balance del motor no se movió: 44,3 puntos rotando contra 31,9 con once fijo.
+
 ## Estado de los datos
 
 | Archivo | Estado |

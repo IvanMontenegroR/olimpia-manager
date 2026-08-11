@@ -12,15 +12,16 @@ export const CUPO_EXTRANJEROS = 4;
 export const SUB18_DESDE = "2007-01-01";
 export const esSub18 = (j: Jugador) => j.fecha_nacimiento >= SUB18_DESDE;
 
-/** Moldes que el sistema puede deducir a partir de los once elegidos. */
-export const MOLDES: { nombre: string; cupos: Record<Posicion, number> }[] = [
-  { nombre: "4-3-3", cupos: { ARQ: 1, DEF: 4, MED: 3, DEL: 3 } },
-  { nombre: "4-4-2", cupos: { ARQ: 1, DEF: 4, MED: 4, DEL: 2 } },
-  { nombre: "4-5-1", cupos: { ARQ: 1, DEF: 4, MED: 5, DEL: 1 } },
-  { nombre: "3-5-2", cupos: { ARQ: 1, DEF: 3, MED: 5, DEL: 2 } },
-  { nombre: "5-3-2", cupos: { ARQ: 1, DEF: 5, MED: 3, DEL: 2 } },
-  { nombre: "5-4-1", cupos: { ARQ: 1, DEF: 5, MED: 4, DEL: 1 } },
-  { nombre: "3-4-3", cupos: { ARQ: 1, DEF: 3, MED: 4, DEL: 3 } },
+/** Cada sistema es una lista de once puestos concretos, no un conteo por línea. */
+export const MOLDES: { nombre: string; puestos: Posicion[] }[] = [
+  { nombre: "4-3-3",   puestos: ["ARQ", "LD", "DFC", "DFC", "LI", "MCD", "MC", "MC", "ED", "DC", "EI"] },
+  { nombre: "4-4-2",   puestos: ["ARQ", "LD", "DFC", "DFC", "LI", "MD", "MC", "MC", "MI", "DC", "DC"] },
+  { nombre: "4-2-3-1", puestos: ["ARQ", "LD", "DFC", "DFC", "LI", "MCD", "MCD", "ED", "MCO", "EI", "DC"] },
+  { nombre: "4-3-1-2", puestos: ["ARQ", "LD", "DFC", "DFC", "LI", "MCD", "MC", "MC", "MCO", "DC", "DC"] },
+  { nombre: "4-5-1",   puestos: ["ARQ", "LD", "DFC", "DFC", "LI", "MD", "MCD", "MC", "MCO", "MI", "DC"] },
+  { nombre: "3-5-2",   puestos: ["ARQ", "DFC", "DFC", "DFC", "MD", "MCD", "MC", "MCO", "MI", "DC", "DC"] },
+  { nombre: "5-3-2",   puestos: ["ARQ", "LD", "DFC", "DFC", "DFC", "LI", "MCD", "MC", "MC", "DC", "DC"] },
+  { nombre: "3-4-3",   puestos: ["ARQ", "DFC", "DFC", "DFC", "MD", "MCD", "MC", "MI", "ED", "DC", "EI"] },
 ];
 
 export interface Asignacion {
@@ -32,45 +33,37 @@ export interface Asignacion {
 }
 
 /**
- * "Once sueltos": el DT elige a los once y el sistema deduce la formación.
- * Prueba todos los moldes y se queda con el que mejor aprovecha a esos once,
- * dejando explícito quién termina jugando adaptado o fuera de puesto.
+ * "Once sueltos": el DT elige a los once y el sistema deduce el sistema.
+ * Prueba todos los moldes, y dentro de cada uno reparte a los once entre los
+ * slots buscando el mejor encaje global. Deja explícito quién termina fuera
+ * de su puesto y cuánto pierde por eso.
  */
 export function asignarPuestos(once: Jugador[], ctx: ContextoPartido): Asignacion | null {
   if (once.length !== 11) return null;
   let mejor: Asignacion | null = null;
 
-  for (const { nombre, cupos } of MOLDES) {
-    const libres = { ...cupos };
-    const puestos = new Map<string, Posicion>();
-    let total = 0;
+  for (const { nombre, puestos: slots } of MOLDES) {
+    // Todas las parejas jugador-slot ordenadas por lo que rinde cada una: se
+    // van tomando de la mejor a la peor mientras los dos lados estén libres.
+    const parejas: { j: Jugador; slot: number; valor: number }[] = [];
+    for (const j of once) {
+      for (let s = 0; s < slots.length; s++) {
+        parejas.push({ j, slot: s, valor: nivelEfectivo(j, slots[s], ctx) });
+      }
+    }
+    parejas.sort((a, b) => b.valor - a.valor);
 
-    // primero los que van a su puesto natural, después el resto por mejor encaje
-    const pendientes = [...once];
-    for (const pos of ["ARQ", "DEF", "MED", "DEL"] as Posicion[]) {
-      for (let i = pendientes.length - 1; i >= 0; i--) {
-        const j = pendientes[i];
-        if (j.posicion === pos && libres[pos] > 0) {
-          libres[pos]--;
-          puestos.set(j.id, pos);
-          total += nivelEfectivo(j, pos, ctx);
-          pendientes.splice(i, 1);
-        }
-      }
+    const puestos = new Map<string, Posicion>();
+    const slotUsado = new Array(slots.length).fill(false);
+    let total = 0;
+    for (const { j, slot, valor } of parejas) {
+      if (puestos.has(j.id) || slotUsado[slot]) continue;
+      puestos.set(j.id, slots[slot]);
+      slotUsado[slot] = true;
+      total += valor;
+      if (puestos.size === 11) break;
     }
-    for (const j of pendientes) {
-      let mejorPos: Posicion | null = null;
-      let mejorVal = -Infinity;
-      for (const pos of ["ARQ", "DEF", "MED", "DEL"] as Posicion[]) {
-        if (libres[pos] <= 0) continue;
-        const v = nivelEfectivo(j, pos, ctx);
-        if (v > mejorVal) { mejorVal = v; mejorPos = pos; }
-      }
-      if (!mejorPos) { total = -Infinity; break; }
-      libres[mejorPos]--;
-      puestos.set(j.id, mejorPos);
-      total += mejorVal;
-    }
+    if (puestos.size !== 11) continue;
 
     if (total > (mejor?.total ?? -Infinity)) {
       const adaptados: Jugador[] = [];

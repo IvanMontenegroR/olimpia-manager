@@ -1,6 +1,6 @@
 import { Rng } from "./rng.ts";
 import { nivelEfectivo } from "./motor.ts";
-import type { Alineacion, ContextoPartido, Jugador, Posicion } from "./tipos.ts";
+import { LINEA_DE, type Alineacion, type ContextoPartido, type Jugador } from "./tipos.ts";
 
 /**
  * Momentos: el partido se detiene y hay que decidir con el reloj corriendo.
@@ -50,9 +50,10 @@ function pateadores(a: Alineacion, ctx: ContextoPartido): Jugador[] {
   const valor = (j: Jugador) => {
     const p = a.puestos.get(j.id) ?? j.posicion;
     let v = nivelEfectivo(j, p, ctx);
-    if (p === "DEL") v += 6;
-    else if (p === "MED") v += 3;
-    else if (p === "ARQ") v -= 40;
+    const l = LINEA_DE[p];
+    if (l === "DEL") v += 6;
+    else if (l === "MED") v += 3;
+    else if (l === "ARQ") v -= 40;
     if (j.rasgos.includes("definidor")) v += 8;
     if (j.rasgos.includes("definicion_irregular")) v -= 2;
     return v;

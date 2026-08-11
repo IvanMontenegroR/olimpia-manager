@@ -5,7 +5,7 @@ import { Rng } from "@/engine/rng.ts";
 import { desgastePorPartido, fuerzas, P } from "@/engine/motor.ts";
 import { ambienteDe, relatarTramo, type EventoRelato, type TipoEvento } from "@/engine/relato.ts";
 import { colorCondicion, nivelEf, nombreCorto, type PartidoUI } from "@/lib/juego.ts";
-import type { Actitud, Alineacion, Jugador, Posicion } from "@/engine/tipos.ts";
+import { LINEA_DE, type Actitud, type Alineacion, type Jugador, type Posicion } from "@/engine/tipos.ts";
 import type { Salida } from "./ArmarOnce.tsx";
 import PanelPartido, { type EstadoJugador } from "./PanelPartido.tsx";
 import { onceRival } from "@/engine/rival.ts";
@@ -314,7 +314,7 @@ export default function PartidoEnVivo({
     if (minuto > 35) {
       for (const j of once) {
         const pos = puestos.get(j.id) ?? j.posicion;
-        if (pos !== "DEL") continue;
+        if (LINEA_DE[pos] !== "DEL") continue;
         if (!visibles.some((e) => e.jugadorId === j.id)) {
           const st = m.get(j.id) ?? base();
           st.apagado = true;

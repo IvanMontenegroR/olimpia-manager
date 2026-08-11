@@ -1,6 +1,6 @@
 import { Rng } from "./rng.ts";
 import { P, clamp, desgastePorPartido, nivelEfectivo, recuperar, simularPartido } from "./motor.ts";
-import { armarOnce, CUPO_EXTRANJEROS, esSub18, type Estrategia, MOLDE, SUB18_META_MINUTOS } from "./dt.ts";
+import { armarOnce, CUPO_EXTRANJEROS, esSub18, type Estrategia, MOLDE_433, SUB18_META_MINUTOS } from "./dt.ts";
 import type { ContextoPartido, Jugador } from "./tipos.ts";
 
 const AMARILLAS_PARA_SUSPENSION = 5;
@@ -72,17 +72,15 @@ export function simularTemporada(
   const once_ideal = new Set<string>();
   {
     let ext = 0;
-    for (const [puesto, n] of Object.entries(MOLDE) as [Jugador["posicion"], number][]) {
+    for (const puesto of MOLDE_433) {
       const cand = plantel
         .filter((j) => j.posicion === puesto && !once_ideal.has(j.id))
         .sort((a, b) => b.nivel - a.nivel);
-      let puestos = 0;
       for (const j of cand) {
-        if (puestos >= n) break;
         if (j.extranjero && ext >= CUPO_EXTRANJEROS) continue;
         once_ideal.add(j.id);
         if (j.extranjero) ext++;
-        puestos++;
+        break;
       }
     }
   }

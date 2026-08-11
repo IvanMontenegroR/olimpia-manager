@@ -6,7 +6,7 @@ import Numero from "./Numero.tsx";
 import Dorsal from "./Dorsal.tsx";
 import Asuntos from "./Asuntos.tsx";
 import Mercado from "./Mercado.tsx";
-import { COLOR_POS } from "./PanelPartido.tsx";
+import { colorDe } from "./Dorsal.tsx";
 import { colorCondicion, esSub18, nombreCorto, partidosDeOlimpia } from "@/lib/juego.ts";
 import RIVALES_COPA from "@/data/rivales_internacionales.json";
 import {

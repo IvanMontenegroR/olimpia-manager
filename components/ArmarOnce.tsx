@@ -5,14 +5,16 @@ import {
   asignarPuestos, colorCondicion, CUPO_EXTRANJEROS, esSub18,
   nivelEf, nombreCorto, type PartidoUI,
 } from "@/lib/juego.ts";
-import type { Actitud, Jugador, Posicion } from "@/engine/tipos.ts";
+import { LINEA_DE, type Actitud, type Jugador, type Linea, type Posicion } from "@/engine/tipos.ts";
 import Escudo from "./Escudo.tsx";
 import CanchaArmado from "./CanchaArmado.tsx";
 import Dorsal from "./Dorsal.tsx";
 import { ACTITUD } from "./PartidoEnVivo.tsx";
 
-const FILTROS: (Posicion | "TODOS")[] = ["TODOS", "ARQ", "DEF", "MED", "DEL"];
-const ORDEN: Record<Posicion, number> = { ARQ: 0, DEF: 1, MED: 2, DEL: 3 };
+const FILTROS = ["TODOS", "ARQ", "DEF", "MED", "DEL"] as const;
+type Filtro = (typeof FILTROS)[number];
+const ORDEN: Record<Linea, number> = { ARQ: 0, DEF: 1, MED: 2, DEL: 3 };
+const orden = (p: Posicion) => ORDEN[LINEA_DE[p]];
 
 export interface Salida {
   once: Jugador[];
@@ -34,14 +36,14 @@ export default function ArmarOnce({
   const aptos = useMemo(
     () => plantel.filter((j) => !j.suspendido && !j.lesionado_hasta), [plantel]);
   const [sel, setSel] = useState<Set<string>>(() => new Set(autoOnce(ctx, aptos)));
-  const [filtro, setFiltro] = useState<Posicion | "TODOS">("TODOS");
+  const [filtro, setFiltro] = useState<Filtro>("TODOS");
   const [actitud, setActitud] = useState<Actitud>(ctx.esLocal ? "ofensivo" : "equilibrado");
   const [presionAlta, setPresion] = useState(ctx.esLocal);
   /** Jugador tocado, esperando con quién intercambiarse. */
   const [marcado, setMarcado] = useState<string | null>(null);
 
   const once = useMemo(
-    () => aptos.filter((j) => sel.has(j.id)).sort((a, b) => ORDEN[a.posicion] - ORDEN[b.posicion]),
+    () => aptos.filter((j) => sel.has(j.id)).sort((a, b) => orden(a.posicion) - orden(b.posicion)),
     [sel, aptos]);
 
   const asign = useMemo(() => asignarPuestos(once, ctx), [once, ctx]);
@@ -61,13 +63,13 @@ export default function ArmarOnce({
 
   const banco = useMemo(() => {
     const fuera = aptos.filter((j) => !sel.has(j.id));
-    const base = filtro === "TODOS" ? fuera : fuera.filter((j) => j.posicion === filtro);
+    const base = filtro === "TODOS" ? fuera : fuera.filter((j) => LINEA_DE[j.posicion] === filtro);
     // Sin filtro conviene ver primero a los mejores: si ordenara por puesto,
     // los tres arqueros suplentes se comerían el arranque del banco.
     return [...base].sort((a, b) =>
       filtro === "TODOS"
         ? nivelEf(b, b.posicion, ctx) - nivelEf(a, a.posicion, ctx)
-        : ORDEN[a.posicion] - ORDEN[b.posicion] ||
+        : orden(a.posicion) - orden(b.posicion) ||
           nivelEf(b, b.posicion, ctx) - nivelEf(a, a.posicion, ctx));
   }, [filtro, sel, ctx, aptos]);
 
@@ -272,22 +274,30 @@ function Dato({ etiqueta, valor, alerta, fuerte }: {
 
 /** Once inicial sugerido: el mejor posible respetando cupo y Sub-18. */
 function autoOnce(ctx: PartidoUI["ctx"], plantel: Jugador[]): string[] {
-  const cupos: Record<Posicion, number> = { ARQ: 1, DEF: 4, MED: 3, DEL: 3 };
+  // Se llena el 4-3-3 puesto por puesto con el mejor de cada uno, en vez de
+  // por línea: así no termina un lateral derecho jugando de izquierdo teniendo
+  // un izquierdo natural en el banco.
+  const molde: Posicion[] =
+    ["ARQ", "LD", "DFC", "DFC", "LI", "MCD", "MC", "MC", "ED", "DC", "EI"];
   const elegidos: Jugador[] = [];
   let ext = 0;
+
   const sub = plantel.filter(esSub18)
     .sort((a, b) => nivelEf(b, b.posicion, ctx) - nivelEf(a, a.posicion, ctx))[0];
-  if (sub) { elegidos.push(sub); cupos[sub.posicion]--; }
+  if (sub) { elegidos.push(sub); if (sub.extranjero) ext++; }
 
-  for (const pos of ["ARQ", "DEF", "MED", "DEL"] as Posicion[]) {
+  for (const puesto of molde) {
+    if (elegidos.length >= 11) break;
+    const yaCubiertos = elegidos.filter((j) => j.posicion === puesto).length;
+    if (yaCubiertos >= molde.filter((x) => x === puesto).length) continue;
     const cand = plantel
-      .filter((j) => j.posicion === pos && !elegidos.includes(j))
-      .sort((a, b) => nivelEf(b, pos, ctx) - nivelEf(a, pos, ctx));
+      .filter((j) => !elegidos.includes(j))
+      .sort((a, b) => nivelEf(b, puesto, ctx) - nivelEf(a, puesto, ctx));
     for (const j of cand) {
-      if (cupos[pos] <= 0) break;
       if (j.extranjero && ext >= CUPO_EXTRANJEROS) continue;
-      elegidos.push(j); cupos[pos]--; if (j.extranjero) ext++;
+      elegidos.push(j); if (j.extranjero) ext++;
+      break;
     }
   }
-  return elegidos.map((j) => j.id);
+  return elegidos.slice(0, 11).map((j) => j.id);
 }

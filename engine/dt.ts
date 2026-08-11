@@ -1,7 +1,9 @@
 import { nivelEfectivo } from "./motor.ts";
-import type { Alineacion, ContextoPartido, Jugador, Posicion } from "./tipos.ts";
+import { LINEA_DE, type Alineacion, type ContextoPartido, type Jugador, type Linea, type Posicion } from "./tipos.ts";
 
-export const MOLDE: Record<Posicion, number> = { ARQ: 1, DEF: 4, MED: 3, DEL: 3 };
+/** El 4-3-3 con el que arma el DT automático del simulador. */
+export const MOLDE_433: Posicion[] =
+  ["ARQ", "LD", "DFC", "DFC", "LI", "MCD", "MC", "MC", "ED", "DC", "EI"];
 export const CUPO_EXTRANJEROS = 4;
 export const SUB18_DESDE = "2007-01-01";
 export const SUB18_META_MINUTOS = 900;
@@ -84,19 +86,18 @@ export function armarOnce(
     if (sub) meter(sub, sub.posicion);
   }
 
-  for (const puesto of ["ARQ", "DEF", "MED", "DEL"] as Posicion[]) {
-    const yaEnPuesto = once.filter((j) => puestos.get(j.id) === puesto).length;
-    const faltan = MOLDE[puesto] - yaEnPuesto;
-    if (faltan <= 0) continue;
+  // se llena el 4-3-3 slot por slot, con el mejor disponible para cada uno
+  for (const puesto of MOLDE_433) {
+    const yaCubierto = once.filter((j) => puestos.get(j.id) === puesto).length;
+    const necesarios = MOLDE_433.filter((x) => x === puesto).length;
+    if (yaCubierto >= necesarios) continue;
     const candidatos = aptos
       .filter((j) => !usado.has(j.id))
       .sort((a, b) => valor(b, puesto) - valor(a, puesto));
-    let puestos_ = 0;
     for (const j of candidatos) {
-      if (puestos_ >= faltan) break;
       if (j.extranjero && extranjeros >= CUPO_EXTRANJEROS) continue;
       meter(j, puesto);
-      puestos_++;
+      break;
     }
   }
 

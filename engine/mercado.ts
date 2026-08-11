@@ -49,7 +49,8 @@ export interface FichajeGenerado {
 
 export function generarMercado(semilla: string, cantidad = 6): FichajeGenerado[] {
   const rng = new Rng(`mercado-${semilla}`);
-  const posiciones: Posicion[] = ["ARQ", "DEF", "DEF", "MED", "MED", "DEL", "DEL"];
+  const posiciones: Posicion[] =
+    ["ARQ", "LD", "DFC", "DFC", "LI", "MCD", "MC", "MCO", "ED", "EI", "DC", "DC"];
   const lista: FichajeGenerado[] = [];
 
   for (let i = 0; i < cantidad; i++) {

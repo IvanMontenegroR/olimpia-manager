@@ -2,7 +2,7 @@ import { Rng } from "./rng.ts";
 import { P, clamp, fuerzas, nivelEfectivo } from "./motor.ts";
 import { generarMomento, type Momento } from "./momentos.ts";
 import type { JugadorRival } from "./rival.ts";
-import type { Alineacion, ContextoPartido, Jugador, Posicion } from "./tipos.ts";
+import { LINEA_DE, type Alineacion, type ContextoPartido, type Jugador, type Posicion } from "./tipos.ts";
 
 export type TipoEvento =
   | "inicio" | "gol" | "gol_rival" | "ocasion" | "ocasion_rival"
@@ -165,7 +165,8 @@ export function ambienteDe(ctx: ContextoPartido): string {
 function elegirGoleador(a: Alineacion, ctx: ContextoPartido, rng: Rng): Jugador {
   const peso = (j: Jugador) => {
     const p = a.puestos.get(j.id) ?? j.posicion;
-    const base = p === "DEL" ? 5 : p === "MED" ? 2.2 : p === "DEF" ? 0.6 : 0;
+    const base = LINEA_DE[p] === "DEL" ? 5 : LINEA_DE[p] === "MED" ? 2.2
+      : LINEA_DE[p] === "DEF" ? 0.6 : 0;
     let w = base * (nivelEfectivo(j, p, ctx) / 65);
     if (j.rasgos.includes("definidor")) w *= 1.25;
     if (j.rasgos.includes("definicion_irregular")) w *= 0.85;
@@ -217,7 +218,7 @@ export function relatarTramo(
       const j = elegirGoleador(a, ctx, rng);
       gO++;
       const p = a.puestos.get(j.id) ?? j.posicion;
-      const banco = p === "DEF" ? GOL_DEF : p === "MED" ? GOL_MED
+      const banco = LINEA_DE[p] === "DEF" ? GOL_DEF : LINEA_DE[p] === "MED" ? GOL_MED
         : j.rasgos.includes("juego_aereo") && rng.chance(0.45) ? GOL_AEREO : GOL_DEL;
       push(m, "gol", "GOL. " + texto(rng, banco, j), { jugadorId: j.id });
     }});
@@ -236,7 +237,7 @@ export function relatarTramo(
     sucesos.push({ min: m, hacer: () => push(m, "ocasion_rival", texto(rng, OCASION_RIVAL)) });
 
   for (const j of a.once) {
-    const pAm = ((j.posicion === "DEF" ? 0.16 : j.posicion === "MED" ? 0.14 : 0.08)
+    const pAm = ((LINEA_DE[j.posicion] === "DEF" ? 0.16 : LINEA_DE[j.posicion] === "MED" ? 0.14 : 0.08)
       * (ctx.esClasico ? 1.5 : 1) * (a.presionAlta ? 1.25 : 1)) * parte;
     if (rng.chance(pAm)) {
       const m = rng.entero(desde + 1, Math.max(hasta, desde + 1));
@@ -281,7 +282,7 @@ export function relatarTramo(
 
   // El rival también recibe tarjetas: sirve para leer por dónde está sufriendo.
   for (const r of rival11) {
-    const pAm = (r.posicion === "DEF" ? 0.15 : r.posicion === "MED" ? 0.13 : 0.07) * parte;
+    const pAm = (LINEA_DE[r.posicion] === "DEF" ? 0.15 : LINEA_DE[r.posicion] === "MED" ? 0.13 : 0.07) * parte;
     if (rng.chance(pAm)) {
       const m = rng.entero(desde + 1, Math.max(hasta, desde + 1));
       sucesos.push({ min: m, hacer: () =>

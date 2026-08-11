@@ -107,8 +107,10 @@
   "nombre": "Tim",
   "apellido": "Payne",
   "numero": 4,
-  "posicion": "DEF",
-  "posiciones_secundarias": [],
+  "posicion": "LD",
+  "posiciones_secundarias": [
+   "DFC"
+  ],
   "edad": 32,
   "fecha_nacimiento": "1994-01-10",
   "nacionalidad": "NZL",
@@ -136,9 +138,10 @@
   "nombre": "Raúl",
   "apellido": "Cáceres",
   "numero": 27,
-  "posicion": "DEF",
+  "posicion": "LD",
   "posiciones_secundarias": [
-   "MED"
+   "MD",
+   "DFC"
   ],
   "edad": 34,
   "fecha_nacimiento": "1991-09-18",
@@ -165,7 +168,7 @@
   "nombre": "Mateo",
   "apellido": "Gamarra",
   "numero": 15,
-  "posicion": "DEF",
+  "posicion": "DFC",
   "posiciones_secundarias": [],
   "edad": 25,
   "fecha_nacimiento": "2000-10-20",
@@ -192,8 +195,10 @@
   "nombre": "Alan",
   "apellido": "Rodríguez",
   "numero": 30,
-  "posicion": "DEF",
-  "posiciones_secundarias": [],
+  "posicion": "DFC",
+  "posiciones_secundarias": [
+   "LI"
+  ],
   "edad": 25,
   "fecha_nacimiento": "2000-08-15",
   "nacionalidad": "PAR",
@@ -217,7 +222,7 @@
   "nombre": "Juan Ángel",
   "apellido": "Vera",
   "numero": 22,
-  "posicion": "DEF",
+  "posicion": "DFC",
   "posiciones_secundarias": [],
   "edad": 27,
   "fecha_nacimiento": "1999-02-05",
@@ -242,8 +247,10 @@
   "nombre": "Bryan",
   "apellido": "Bentaberry",
   "numero": 2,
-  "posicion": "DEF",
-  "posiciones_secundarias": [],
+  "posicion": "LI",
+  "posiciones_secundarias": [
+   "DFC"
+  ],
   "edad": 29,
   "fecha_nacimiento": "1997-01-21",
   "nacionalidad": "URU",
@@ -267,7 +274,7 @@
   "nombre": "Esteban",
   "apellido": "Matus",
   "numero": 17,
-  "posicion": "DEF",
+  "posicion": "LI",
   "posiciones_secundarias": [],
   "edad": 24,
   "fecha_nacimiento": "2002-03-01",
@@ -293,7 +300,7 @@
   "nombre": "Gustavo",
   "apellido": "Vargas",
   "numero": 14,
-  "posicion": "DEF",
+  "posicion": "DFC",
   "posiciones_secundarias": [],
   "edad": 24,
   "fecha_nacimiento": "2001-09-29",
@@ -318,8 +325,10 @@
   "nombre": "César",
   "apellido": "Olmedo",
   "numero": 21,
-  "posicion": "DEF",
-  "posiciones_secundarias": [],
+  "posicion": "DFC",
+  "posiciones_secundarias": [
+   "LD"
+  ],
   "edad": 23,
   "fecha_nacimiento": "2003-02-28",
   "nacionalidad": "PAR",
@@ -344,8 +353,10 @@
   "nombre": "Richard",
   "apellido": "Sánchez",
   "numero": 26,
-  "posicion": "MED",
-  "posiciones_secundarias": [],
+  "posicion": "MC",
+  "posiciones_secundarias": [
+   "MCO"
+  ],
   "edad": 30,
   "fecha_nacimiento": "1996-03-29",
   "nacionalidad": "PAR",
@@ -369,9 +380,9 @@
   "nombre": "Richard",
   "apellido": "Ortiz",
   "numero": 6,
-  "posicion": "MED",
+  "posicion": "MCD",
   "posiciones_secundarias": [
-   "DEF"
+   "DFC"
   ],
   "edad": 36,
   "fecha_nacimiento": "1990-05-22",
@@ -399,9 +410,9 @@
   "nombre": "Juan Fernando",
   "apellido": "Alfaro",
   "numero": 5,
-  "posicion": "MED",
+  "posicion": "MCD",
   "posiciones_secundarias": [
-   "DEF"
+   "DFC"
   ],
   "edad": 26,
   "fecha_nacimiento": "1999-10-16",
@@ -426,9 +437,9 @@
   "nombre": "Rubén",
   "apellido": "Lezcano",
   "numero": 19,
-  "posicion": "MED",
+  "posicion": "MCO",
   "posiciones_secundarias": [
-   "DEL"
+   "EI"
   ],
   "edad": 22,
   "fecha_nacimiento": "2004-02-09",
@@ -453,8 +464,10 @@
   "nombre": "Alex",
   "apellido": "Franco",
   "numero": 8,
-  "posicion": "MED",
-  "posiciones_secundarias": [],
+  "posicion": "MC",
+  "posiciones_secundarias": [
+   "MCD"
+  ],
   "edad": 25,
   "fecha_nacimiento": "2001-07-20",
   "nacionalidad": "PAR",
@@ -478,8 +491,10 @@
   "nombre": "Víctor Sebastián",
   "apellido": "Quintana",
   "numero": 18,
-  "posicion": "MED",
-  "posiciones_secundarias": [],
+  "posicion": "MCD",
+  "posiciones_secundarias": [
+   "MC"
+  ],
   "edad": 23,
   "fecha_nacimiento": "2003-01-15",
   "nacionalidad": "PAR",
@@ -504,7 +519,7 @@
   "nombre": "Hugo",
   "apellido": "Quintana",
   "numero": 28,
-  "posicion": "MED",
+  "posicion": "MC",
   "posiciones_secundarias": [],
   "edad": 24,
   "fecha_nacimiento": "2001-11-10",
@@ -529,7 +544,7 @@
   "nombre": "Luis",
   "apellido": "Abreu",
   "numero": 39,
-  "posicion": "MED",
+  "posicion": "MC",
   "posiciones_secundarias": [],
   "edad": 22,
   "fecha_nacimiento": "2004-02-16",
@@ -555,9 +570,10 @@
   "nombre": "Derlis",
   "apellido": "González",
   "numero": 10,
-  "posicion": "DEL",
+  "posicion": "ED",
   "posiciones_secundarias": [
-   "MED"
+   "MCO",
+   "SD"
   ],
   "edad": 32,
   "fecha_nacimiento": "1994-03-20",
@@ -589,8 +605,10 @@
   "nombre": "Braian",
   "apellido": "Romero",
   "numero": 31,
-  "posicion": "DEL",
-  "posiciones_secundarias": [],
+  "posicion": "DC",
+  "posiciones_secundarias": [
+   "SD"
+  ],
   "edad": 35,
   "fecha_nacimiento": "1991-02-27",
   "nacionalidad": "ARG",
@@ -618,7 +636,7 @@
   "nombre": "Sebastián",
   "apellido": "Ferreira",
   "numero": 11,
-  "posicion": "DEL",
+  "posicion": "DC",
   "posiciones_secundarias": [],
   "edad": 28,
   "fecha_nacimiento": "1998-02-13",
@@ -643,9 +661,9 @@
   "nombre": "Fernando",
   "apellido": "Cardozo",
   "numero": 7,
-  "posicion": "DEL",
+  "posicion": "EI",
   "posiciones_secundarias": [
-   "MED"
+   "SD"
   ],
   "edad": 25,
   "fecha_nacimiento": "2001-02-08",
@@ -670,8 +688,10 @@
   "nombre": "Iván",
   "apellido": "Leguizamón",
   "numero": 29,
-  "posicion": "DEL",
-  "posiciones_secundarias": [],
+  "posicion": "ED",
+  "posiciones_secundarias": [
+   "SD"
+  ],
   "edad": 24,
   "fecha_nacimiento": "2002-07-03",
   "nacionalidad": "PAR",
@@ -695,8 +715,10 @@
   "nombre": "Hugo",
   "apellido": "Sandoval",
   "numero": 9,
-  "posicion": "DEL",
-  "posiciones_secundarias": [],
+  "posicion": "DC",
+  "posiciones_secundarias": [
+   "SD"
+  ],
   "edad": 26,
   "fecha_nacimiento": "2000-02-09",
   "nacionalidad": "PAR",
@@ -720,8 +742,10 @@
   "nombre": "Romeo",
   "apellido": "Benítez",
   "numero": 37,
-  "posicion": "DEL",
-  "posiciones_secundarias": [],
+  "posicion": "EI",
+  "posiciones_secundarias": [
+   "ED"
+  ],
   "edad": 23,
   "fecha_nacimiento": "2002-11-14",
   "nacionalidad": "PAR",
@@ -748,8 +772,10 @@
   "nombre": "Franco",
   "apellido": "Alfonso",
   "numero": 35,
-  "posicion": "DEL",
-  "posiciones_secundarias": [],
+  "posicion": "ED",
+  "posiciones_secundarias": [
+   "EI"
+  ],
   "edad": 24,
   "fecha_nacimiento": "2002-05-04",
   "nacionalidad": "ARG",
@@ -773,9 +799,9 @@
   "nombre": "Pedro",
   "apellido": "Zarza",
   "numero": 23,
-  "posicion": "DEL",
+  "posicion": "EI",
   "posiciones_secundarias": [
-   "MED"
+   "ED"
   ],
   "edad": 19,
   "fecha_nacimiento": "2007-01-30",
@@ -805,7 +831,7 @@
   "nombre": "Tiago",
   "apellido": "Caballero",
   "numero": 24,
-  "posicion": "DEL",
+  "posicion": "DC",
   "posiciones_secundarias": [],
   "edad": 21,
   "fecha_nacimiento": "2005-05-27",
@@ -831,9 +857,9 @@
   "nombre": "Eduardo",
   "apellido": "Delmas",
   "numero": 20,
-  "posicion": "DEL",
+  "posicion": "MCO",
   "posiciones_secundarias": [
-   "MED"
+   "SD"
   ],
   "edad": 19,
   "fecha_nacimiento": "2007-04-19",
@@ -863,8 +889,10 @@
   "nombre": "Faustino",
   "apellido": "Barone",
   "numero": 33,
-  "posicion": "DEL",
-  "posiciones_secundarias": [],
+  "posicion": "DC",
+  "posiciones_secundarias": [
+   "SD"
+  ],
   "edad": 20,
   "fecha_nacimiento": "2006-06-11",
   "nacionalidad": "URU",

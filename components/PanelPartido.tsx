@@ -2,11 +2,11 @@
 
 import { useMemo, useState } from "react";
 import { colorCondicion } from "@/lib/juego.ts";
-import Dorsal, { DorsalRival } from "./Dorsal.tsx";
+import Dorsal, { DorsalRival, colorDe } from "./Dorsal.tsx";
 import { riesgoDeRoja } from "@/engine/riesgo.ts";
 import type { JugadorRival } from "@/engine/rival.ts";
 import type { EventoRelato } from "@/engine/relato.ts";
-import type { Alineacion, ContextoPartido, Jugador, Posicion } from "@/engine/tipos.ts";
+import { LINEA_DE, type Alineacion, type ContextoPartido, type Jugador, type Posicion } from "@/engine/tipos.ts";
 
 export interface EstadoJugador {
   amarilla: boolean;
@@ -16,12 +16,7 @@ export interface EstadoJugador {
   apagado: boolean;
 }
 
-export const COLOR_POS: Record<Posicion, string> = {
-  ARQ: "#d9a832",
-  DEF: "#4a7fb5",
-  MED: "#3fa76a",
-  DEL: "#c0392b",
-};
+export { colorDe as COLOR_POS_FN } from "./Dorsal.tsx";
 
 type Pestania = "olimpia" | "rival" | "stats";
 
@@ -60,7 +55,8 @@ export default function PanelPartido({
     };
   }, [eventos, dominio, minuto]);
 
-  const orden: Posicion[] = ["ARQ", "DEF", "MED", "DEL"];
+  const orden = ["ARQ", "DEF", "MED", "DEL"] as const;
+  const linea = (p: Posicion) => orden.indexOf(LINEA_DE[p]);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col px-3">
@@ -98,8 +94,8 @@ export default function PanelPartido({
 
       <div className="scroll-y min-h-0 flex-1">
         {pestania === "olimpia" && [...once]
-          .sort((a, b) => orden.indexOf(puestos.get(a.id) ?? a.posicion) -
-                          orden.indexOf(puestos.get(b.id) ?? b.posicion))
+          .sort((a, b) => linea(puestos.get(a.id) ?? a.posicion) -
+                          linea(puestos.get(b.id) ?? b.posicion))
           .map((j) => {
             const pos = puestos.get(j.id) ?? j.posicion;
             const e = estado.get(j.id) ?? {
@@ -152,7 +148,7 @@ export default function PanelPartido({
                 background: e.expulsado ? "color-mix(in srgb, #c0392b 22%, var(--carbon))" : "var(--carbon)",
                 opacity: e.expulsado ? 0.55 : 1,
               }}>
-              <DorsalRival numero={r.numero} color={COLOR_POS[r.posicion]} tam={22} />
+              <DorsalRival numero={r.numero} color={colorDe(r.posicion)} tam={22} />
               <span className="apellido min-w-0 flex-1 truncate text-[11px]">{r.apellido}</span>
               {e.expulsado && <Chapa texto="EXPULSADO" color="#c0392b" />}
               {e.amarilla && !e.expulsado && (
