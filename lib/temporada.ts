@@ -14,7 +14,7 @@ const EQUIPOS = equiposJson as any[];
 const FIXTURE = fixtureJson as any[];
 const RIVALES = rivalesJson as any[];
 const CLAVE = "olimpia-manager-clausura-2026";
-const VERSION = 7;
+const VERSION = 8;
 
 export const DIA_INICIAL = "2026-07-20";
 export const TOTAL_FECHAS = 22;
@@ -104,6 +104,10 @@ export interface Partida {
   sponsorConBonus: boolean;
   /** Puntos que sacó la APF por incumplir la regla Sub-18. */
   puntosDescontados: number;
+  /** Cuánto te banca la dirigencia, 0 a 100. En cero te echan. */
+  paciencia: number;
+  /** Si te echaron, por qué. */
+  despedido: string | null;
 
   copa: EstadoCopa;
   ofertas: Oferta[];
@@ -158,6 +162,8 @@ export function partidaNueva(): Partida {
     precioEntrada: 60,
     sponsorConBonus: false,
     puntosDescontados: 0,
+    paciencia: 70,
+    despedido: null,
     copa: { ronda: "octavos", rivalId: "vasco_da_gama", globalO: 0, globalR: 0, jugadosEnRonda: 0 },
     ofertas: [],
     fichajes: generarMercado(DIA_INICIAL),
@@ -450,6 +456,8 @@ export function cerrarPartido(p: Partida, partido: PartidoUI, c: CierrePartido):
   n.bitacora.push({ dia: p.dia, texto:
     `${partido.ctx.esLocal ? "" : "De visitante. "}Olimpia ${c.golesOlimpia} - ${c.golesRival} ${partido.rivalNombre}.` });
 
+  actualizarPaciencia(n, { gano, empate, esCopa, esClasico: partido.ctx.esClasico });
+
   if (esCopa) {
     avanzarLlave(n, c, partido);
   } else {
@@ -534,6 +542,43 @@ function avanzarLlave(n: Partida, c: CierrePartido, partido: PartidoUI) {
   copa.jugadosEnRonda = 0;
 }
 
+/**
+ * La dirigencia te banca mientras haya resultados. Pesa el resultado, la
+ * posición en la tabla y el humor de la gente: si perdés y encima la hinchada
+ * está en contra, la silla se calienta el doble.
+ */
+function actualizarPaciencia(
+  n: Partida,
+  { gano, empate, esCopa, esClasico }: { gano: boolean; empate: boolean; esCopa: boolean; esClasico: boolean },
+) {
+  let delta = gano ? 5 : empate ? -1 : -7;
+  if (esClasico) delta += gano ? 6 : empate ? 0 : -7;
+  if (esCopa && gano) delta += 3;
+
+  // la tabla manda: el objetivo es salir campeón
+  const pos = posicionDe(n);
+  if (pos === 1) delta += 3;
+  else if (pos <= 3) delta += 1;
+  else if (pos >= 8) delta -= 4;
+  else if (pos >= 5) delta -= 2;
+
+  // con la gente en contra, la dirigencia se pone nerviosa
+  if (n.hinchada < 40) delta -= 3;
+  if (n.hinchada > 75) delta += 2;
+
+  n.paciencia = clamp(n.paciencia + delta, 0, 100);
+
+  if (n.paciencia <= 0 && !n.despedido) {
+    n.despedido =
+      `Olimpia terminó el ciclo en la fecha ${n.fechaActual}, ${pos}° en la tabla.`;
+    n.bitacora.push({ dia: n.dia, texto:
+      "La dirigencia decidió cortar el ciclo. Gracias por todo." });
+  } else if (n.paciencia < 25) {
+    n.bitacora.push({ dia: n.dia, texto:
+      "La dirigencia se reunió de urgencia. El puesto está en discusión." });
+  }
+}
+
 export const miles = (usd: number) =>
   usd >= 1_000_000 ? `USD ${(usd / 1_000_000).toFixed(2)}M` : `USD ${Math.round(usd / 1000)}k`;
 
@@ -577,6 +622,8 @@ export function avanzarUnDia(p: Partida): ResultadoAvance {
     // La moral de cada uno tiende al clima del vestuario: un plantel roto
     // arrastra a todos, uno unido levanta al que está caído.
     e.moral = clamp(e.moral + (n.ambiente - e.moral) * 0.06, 0, 100);
+    // con el vestuario partido, además se cae solo
+    if (n.ambiente < 30) e.moral = clamp(e.moral - 0.8, 0, 100);
 
     // Los juveniles crecen con minutos y con el trabajo individual. Su margen
     // es exactamente la incertidumbre de Nivel que traen.

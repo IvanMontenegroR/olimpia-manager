@@ -149,6 +149,90 @@ const PLANTILLAS: Plantilla[] = [
     }),
   },
   {
+    id: "referente_quiere_irse",
+    cuando: (c) => c.ambiente < 32 && c.plantel.some((j) => j.nivel >= 66),
+    armar: (c, rng) => {
+      const j = rng.elegir(c.plantel.filter((x) => x.nivel >= 66));
+      return {
+        s: {
+          id: "referente_quiere_irse",
+          titulo: "Un referente quiere irse",
+          contexto: `${j.apellido} dice que el grupo está roto y pidió permiso para buscar club.`,
+          opciones: [
+            { id: "retener", etiqueta: "No lo dejo salir",
+              detalle: "Se queda a la fuerza y el vestuario empeora" },
+            { id: "escuchar", etiqueta: "Escucharlo y ceder en algo",
+              detalle: "Cuesta plata, pero se recompone el grupo" },
+            { id: "listar", etiqueta: "Ponerlo en la lista de transferibles",
+              detalle: "Se corta el problema de raíz, la gente no lo va a entender" },
+          ],
+        },
+        efectos: {
+          retener: { ambiente: -9, moralDe: { id: j.id, delta: -18 },
+            texto: `${j.apellido} se queda obligado. El vestuario quedó peor que antes.` },
+          escuchar: { ambiente: 11, dineroUsd: -180_000, moralDe: { id: j.id, delta: 16 },
+            texto: `Se habló con ${j.apellido} y se le mejoró el contrato. El grupo respiró.` },
+          listar: { ambiente: 6, hinchada: -8, moralDe: { id: j.id, delta: -10 },
+            texto: `${j.apellido} quedó afuera del grupo. La hinchada no lo tomó bien.` },
+        },
+      };
+    },
+  },
+  {
+    id: "filtracion",
+    cuando: (c) => c.ambiente < 38,
+    armar: () => ({
+      s: {
+        id: "filtracion",
+        titulo: "Se filtró la interna",
+        contexto: "Un programa contó lo que se habló puertas adentro. Hay un buchón en el plantel.",
+        opciones: [
+          { id: "buscar", etiqueta: "Buscar al responsable",
+            detalle: "El plantel se siente investigado" },
+          { id: "puertas", etiqueta: "Cerrar el predio a la prensa",
+            detalle: "Se corta la filtración, la prensa se ensaña" },
+          { id: "nada", etiqueta: "Dejarlo pasar",
+            detalle: "No se hace nada y sigue el goteo" },
+        ],
+      },
+      efectos: {
+        buscar: { ambiente: -8, texto: "Se buscó al responsable y no apareció. Quedó todo peor." },
+        puertas: { ambiente: 8, hinchada: -6,
+          texto: "Predio cerrado. Adentro bajó la tensión, afuera subió." },
+        nada: { ambiente: -4, hinchada: -3, texto: "Nadie dijo nada y la interna siguió saliendo." },
+      },
+    }),
+  },
+  {
+    id: "entrenamiento_tenso",
+    cuando: (c) => c.ambiente < 28,
+    armar: (c, rng) => {
+      const dos = [...c.plantel].sort(() => rng.next() - 0.5).slice(0, 2);
+      return {
+        s: {
+          id: "entrenamiento_tenso",
+          titulo: "Se agarraron en la práctica",
+          contexto: `${dos[0]?.apellido} y ${dos[1]?.apellido} terminaron a los golpes en el entrenamiento.`,
+          opciones: [
+            { id: "multar", etiqueta: "Multar a los dos",
+              detalle: "Entra plata de la multa, el plantel se cierra más" },
+            { id: "charla", etiqueta: "Charla de grupo",
+              detalle: "Se pierde un día de trabajo, se recompone algo" },
+            { id: "tapar", etiqueta: "Que no salga de acá",
+              detalle: "No cambia nada, pero nadie se entera" },
+          ],
+        },
+        efectos: {
+          multar: { dineroUsd: 60_000, ambiente: -7,
+            texto: "Se los multó. El plantel entendió el mensaje pero quedó más frío." },
+          charla: { ambiente: 12, condicionTodos: -3,
+            texto: "Se paró el entrenamiento para hablar. Salió bien." },
+          tapar: { ambiente: -2, texto: "Quedó puertas adentro. Por ahora." },
+        },
+      };
+    },
+  },
+  {
     id: "camiseta",
     cuando: (c) => c.plantel.some((j) => (j.valor_comercial ?? 1) >= 3),
     armar: (c, rng) => {

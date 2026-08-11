@@ -513,6 +513,40 @@ constante.
 efectos como chips (`+USD 980k`, `−9 hinchada`, `−6 ánimo de Olveira`), y los
 medidores muestran el delta flotante cuando cambian.
 
+## El vestuario se rompe y la dirigencia te echa
+
+**Crisis de vestuario.** Con el ambiente por debajo de ciertos umbrales aparecen
+situaciones que antes no existían, y que solo salen cuando el grupo está mal:
+
+- Por debajo de 38: **se filtró la interna** a la prensa.
+- Por debajo de 32: **un referente pide irse** porque el grupo está roto.
+- Por debajo de 28: **dos jugadores se agarran a golpes** en la práctica.
+
+Además, con el ambiente bajo 30 la moral de todos cae sola cada día, aparte de la
+deriva normal. El vestuario roto pasó de ser un número feo a una espiral.
+
+**La dirigencia te banca hasta que deja de hacerlo.** Un cuarto medidor,
+`paciencia`, que se mueve después de cada partido según tres cosas: el resultado
+(ganar +5, empatar −1, perder −7, y el clásico duplica), la posición en la tabla
+(puntero +3, del octavo para abajo −4) y el humor de la hinchada (por debajo de 40,
+−3 extra). Ganar la copa suma.
+
+Calibración medida:
+
+| Racha | Partidos hasta el despido |
+|---|---|
+| Perdiendo siempre, 9° | 6 |
+| Perdiendo siempre, 6° | 7 |
+| Empatando siempre, 9° | 12 |
+| Empatando siempre, 6° | 20 |
+| Ganando | nunca |
+
+Por debajo de 25 aparece un aviso rojo permanente en el escritorio. En cero
+termina la partida con una pantalla de cierre y el resumen del ciclo.
+
+Con esto el objetivo de la dirigencia dejó de ser una frase al pie: ahora todo lo
+demás tiene por qué importar.
+
 ## Estado de los datos
 
 | Archivo | Estado |

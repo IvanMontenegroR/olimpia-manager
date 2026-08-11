@@ -40,6 +40,41 @@ export default function Escritorio({
   const ocupacion = ocupacionDe(partida, partido?.ctx.esClasico);
   const sub18 = estadoSub18(partida);
 
+  if (partida.despedido) {
+    return (
+      <div className="app pantalla">
+        <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
+          <Escudo id="olimpia" nombre="Olimpia" tam={64} />
+          <h1 className="apellido text-[26px] leading-tight" style={{ color: "#c0392b" }}>
+            Te agradecieron los servicios
+          </h1>
+          <p className="text-[13px] leading-snug" style={{ color: "var(--tenue)" }}>
+            {partida.despedido}
+          </p>
+          <div className="mt-2 w-full rounded-lg p-3" style={{ background: "var(--carbon)" }}>
+            {[
+              ["Partidos dirigidos", String(partida.resultados.length)],
+              ["Puntos", String(yo.pts)],
+              ["Posición final", `${posicion}°`],
+              ["Copa Sudamericana", partida.copa.ronda === "campeon" ? "Campeón"
+                : partida.copa.ronda === "eliminado" ? "Eliminado" : "En carrera"],
+            ].map(([k, v]) => (
+              <div key={k} className="flex items-baseline justify-between py-0.5 text-[12px]">
+                <span style={{ color: "var(--tenue)" }}>{k}</span>
+                <span className="num">{v}</span>
+              </div>
+            ))}
+          </div>
+          <button onClick={() => { borrar(); onReiniciar(); }}
+            className="mt-3 w-full rounded-lg py-3.5 text-[14px] font-extrabold uppercase tracking-[0.14em]"
+            style={{ background: "var(--blanco)", color: "var(--negro)" }}>
+            Empezar de nuevo
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (vista !== "escritorio") {
     return (
       <Sub titulo={{
@@ -95,7 +130,9 @@ export default function Escritorio({
         <div className="mt-2 flex gap-2">
           <Medidor etiqueta="Vestuario" valor={partida.ambiente} color="#3fa76a" />
           <Medidor etiqueta="Hinchada" valor={partida.hinchada} color="#d9a832" />
-          <div className="w-[72px] shrink-0">
+          <Medidor etiqueta="Dirigencia" valor={partida.paciencia}
+                   color={partida.paciencia < 25 ? "#c0392b" : "#4a7fb5"} />
+          <div className="w-[58px] shrink-0">
             <div className="mb-1 flex items-baseline justify-between">
               <span className="text-[8px] uppercase tracking-[0.14em]" style={{ color: "var(--apagado)" }}>
                 Estadio
@@ -112,6 +149,13 @@ export default function Escritorio({
           </div>
         </div>
       </header>
+
+      {partida.paciencia < 25 && !partida.despedido && (
+        <div className="respirar mx-3 mb-2 rounded-md px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider"
+             style={{ background: "color-mix(in srgb, #c0392b 24%, var(--carbon))", color: "#c0392b" }}>
+          La dirigencia está evaluando tu continuidad
+        </div>
+      )}
 
       {/* ---------- la semana ---------- */}
       <div key={partida.dia} className="correr-tira scroll-x flex gap-1 px-3 pb-2">
