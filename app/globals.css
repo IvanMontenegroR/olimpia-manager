@@ -1,17 +1,27 @@
 @import "tailwindcss";
 
+/* Paleta de cancha, no de tablero de control: verde noche, césped, oro de
+   copa y ladrillo. El violeta y el cyan de dashboard quedaron afuera. */
 :root {
-  --negro: #0b0b0c;
-  --carbon: #141417;
-  --linea: #26262b;
+  --negro: #0a120d;
+  --carbon: #15221b;
+  --carbon-alto: #1c2c23;
+  --linea: #27392e;
   --blanco: #ffffff;
-  --tenue: #8b8b95;
-  --apagado: #5a5a63;
+  --tenue: #8fa396;
+  --apagado: #5d7167;
 
-  --ok: #4ade80;
-  --medio: #fbbf24;
-  --bajo: #fb923c;
-  --critico: #f87171;
+  --cesped: #3fa76a;
+  --cesped-hondo: #1f6b42;
+  --oro: #d9a832;
+  --ladrillo: #c0392b;
+  --ambar: #e0902a;
+  --pizarra: #4a7fb5;
+
+  --ok: #3fa76a;
+  --medio: #d9a832;
+  --bajo: #e0902a;
+  --critico: #c0392b;
   --acento: #ffffff;
 }
 
@@ -31,7 +41,6 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* La app ocupa exactamente el viewport. Nada scrollea salvo lo que lo pida. */
 .app {
   height: 100dvh;
   display: flex;
@@ -40,6 +49,13 @@ body {
   max-width: 32rem;
   margin-inline: auto;
   position: relative;
+  /* textura de fondo: franjas anchas como la camiseta, casi imperceptibles */
+  background-image:
+    repeating-linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.017) 0 22px,
+      transparent 22px 44px),
+    radial-gradient(120% 70% at 50% 0%, rgba(63, 167, 106, 0.09), transparent 70%);
 }
 
 .scroll-y {
@@ -49,8 +65,16 @@ body {
 }
 .scroll-y::-webkit-scrollbar { display: none; }
 
-/* Números de camiseta y marcadores: el peso tipográfico es la identidad visual,
-   porque no hay caras. */
+.scroll-x {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.scroll-x::-webkit-scrollbar { display: none; }
+
+/* Los números de camiseta y los marcadores son la identidad visual, porque
+   no hay caras. */
 .num {
   font-variant-numeric: tabular-nums;
   font-weight: 800;
@@ -64,18 +88,32 @@ body {
   text-transform: uppercase;
 }
 
-/* franja de Olimpia */
-.franjas {
-  background-image: repeating-linear-gradient(
-    90deg, var(--blanco) 0 3px, transparent 3px 9px);
-}
-
 .marcador {
   font-variant-numeric: tabular-nums;
   font-weight: 800;
   letter-spacing: -0.06em;
   line-height: 0.85;
 }
+
+.franjas {
+  background-image: repeating-linear-gradient(
+    90deg, var(--blanco) 0 3px, transparent 3px 9px);
+}
+
+/* Relieve: las superficies dejan de ser rectángulos planos. */
+.relieve {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.relieve-alto {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.09),
+    0 6px 18px rgba(0, 0, 0, 0.5);
+}
+
+/* ---------------------------------------------------------------- animación */
 
 @keyframes entrar {
   from { opacity: 0; transform: translateY(6px); }
@@ -96,10 +134,48 @@ body {
   100% { opacity: 0; }
 }
 
-.scroll-x {
-  overflow-x: auto;
-  overscroll-behavior-x: contain;
-  scrollbar-width: none;
-  -webkit-overflow-scrolling: touch;
+/* El día que pasa: el bloque de hoy se hunde y vuelve. */
+@keyframes pasa-el-dia {
+  0%   { transform: scale(0.82) translateY(-6px); opacity: 0; }
+  55%  { transform: scale(1.06) translateY(0); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
 }
-.scroll-x::-webkit-scrollbar { display: none; }
+.pasa-el-dia { animation: pasa-el-dia 420ms cubic-bezier(0.2, 0.9, 0.25, 1); }
+
+/* Toda la tira se corre un lugar. */
+@keyframes correr-tira {
+  from { transform: translateX(22px); opacity: 0.35; }
+  to   { transform: none; opacity: 1; }
+}
+.correr-tira { animation: correr-tira 380ms cubic-bezier(0.2, 0.9, 0.25, 1); }
+
+/* Un asunto que aparece: entra desde abajo y da un golpe de luz. */
+@keyframes llega-asunto {
+  0%   { transform: translateY(28px) scale(0.97); opacity: 0; }
+  60%  { transform: translateY(-3px) scale(1.005); opacity: 1; }
+  100% { transform: none; opacity: 1; }
+}
+.llega-asunto { animation: llega-asunto 460ms cubic-bezier(0.2, 0.85, 0.25, 1); }
+
+@keyframes golpe-de-luz {
+  0%   { opacity: 0.55; }
+  100% { opacity: 0; }
+}
+.golpe-de-luz {
+  animation: golpe-de-luz 620ms ease-out forwards;
+  pointer-events: none;
+}
+
+/* Las alertas respiran. */
+@keyframes respirar {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.06); }
+}
+.respirar { animation: respirar 2.2s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .entrar, .latir, .pasa-el-dia, .correr-tira,
+  .llega-asunto, .golpe-de-luz, .respirar {
+    animation: none;
+  }
+}

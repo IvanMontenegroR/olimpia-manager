@@ -101,8 +101,8 @@ export default function MomentoOverlay({
           <>
             <div className="mb-3 rounded-lg px-3.5 py-3"
                  style={{
-                   background: `color-mix(in srgb, ${resuelto.exito ? "#22c55e" : "#ef4444"} 16%, var(--carbon))`,
-                   outline: `1px solid color-mix(in srgb, ${resuelto.exito ? "#22c55e" : "#ef4444"} 50%, transparent)`,
+                   background: `color-mix(in srgb, ${resuelto.exito ? "#3fa76a" : "#c0392b"} 16%, var(--carbon))`,
+                   outline: `1px solid color-mix(in srgb, ${resuelto.exito ? "#3fa76a" : "#c0392b"} 50%, transparent)`,
                  }}>
               <span className="apellido block text-[15px] leading-snug"
                     style={{ color: resuelto.exito ? "var(--ok)" : "var(--critico)" }}>

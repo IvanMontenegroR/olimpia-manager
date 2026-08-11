@@ -21,29 +21,29 @@ const VELOCIDADES = [
 ];
 
 export const ACTITUD: Record<Actitud, { nombre: string; color: string; sobre: string; nota: string }> = {
-  defensivo:   { nombre: "Aguantar",     color: "#3b82f6", sobre: "#ffffff",
+  defensivo:   { nombre: "Aguantar",     color: "#4a7fb5", sobre: "#ffffff",
                  nota: "Mucho menos peligro en contra, casi no vas a atacar" },
-  equilibrado: { nombre: "Parejo",       color: "#a1a1aa", sobre: "#0b0b0c",
+  equilibrado: { nombre: "Parejo",       color: "#a1a1aa", sobre: "#0a120d",
                  nota: "Sin ventajas ni riesgos extra" },
-  ofensivo:    { nombre: "Ir al frente", color: "#f97316", sobre: "#0b0b0c",
+  ofensivo:    { nombre: "Ir al frente", color: "#e0902a", sobre: "#0a120d",
                  nota: "Más peligro arriba, quedás más expuesto atrás" },
 };
 
 /** Cada tipo de evento con su color y su etiqueta, para que se lea de un golpe. */
 const ESTILO_EVENTO: Record<string, { color: string; etiqueta?: string; fuerte?: boolean }> = {
-  gol:            { color: "#22c55e", etiqueta: "GOL", fuerte: true },
-  gol_rival:      { color: "#ef4444", etiqueta: "GOL RIVAL", fuerte: true },
-  ocasion:        { color: "#a3e635", etiqueta: "OCASIÓN" },
-  ocasion_rival:  { color: "#fb923c", etiqueta: "PELIGRO" },
+  gol:            { color: "#3fa76a", etiqueta: "GOL", fuerte: true },
+  gol_rival:      { color: "#c0392b", etiqueta: "GOL RIVAL", fuerte: true },
+  ocasion:        { color: "#6aa84f", etiqueta: "OCASIÓN" },
+  ocasion_rival:  { color: "#e0902a", etiqueta: "PELIGRO" },
   amarilla:       { color: "#facc15", etiqueta: "AMARILLA" },
-  roja:           { color: "#ef4444", etiqueta: "ROJA", fuerte: true },
-  lesion:         { color: "#fb923c", etiqueta: "LESIÓN", fuerte: true },
-  aviso_condicion:{ color: "#fb923c", etiqueta: "FUNDIDO" },
-  cambio:         { color: "#60a5fa", etiqueta: "CAMBIO" },
-  momento:        { color: "#a78bfa", etiqueta: "DECISIÓN" },
-  entretiempo:    { color: "#8b8b95", etiqueta: "DESCANSO" },
+  roja:           { color: "#c0392b", etiqueta: "ROJA", fuerte: true },
+  lesion:         { color: "#e0902a", etiqueta: "LESIÓN", fuerte: true },
+  aviso_condicion:{ color: "#e0902a", etiqueta: "FUNDIDO" },
+  cambio:         { color: "#4a7fb5", etiqueta: "CAMBIO" },
+  momento:        { color: "#d9a832", etiqueta: "DECISIÓN" },
+  entretiempo:    { color: "#8fa396", etiqueta: "DESCANSO" },
   final:          { color: "#ffffff", etiqueta: "FINAL" },
-  inicio:         { color: "#8b8b95" },
+  inicio:         { color: "#8fa396" },
 };
 
 export default function PartidoEnVivo({
@@ -442,7 +442,7 @@ export default function PartidoEnVivo({
                 <span className="min-w-0 flex-1">
                   {est.etiqueta && (
                     <span className="mr-1.5 inline-block rounded px-1 align-middle text-[8px] font-extrabold uppercase tracking-wider"
-                          style={{ background: est.color, color: "#0b0b0c" }}>
+                          style={{ background: est.color, color: "#0a120d" }}>
                       {est.etiqueta}
                     </span>
                   )}
@@ -616,7 +616,7 @@ function FilaJugador({
       className="mb-1 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left"
       style={{
         background: marcado ? "var(--linea)" : "var(--carbon)",
-        outline: lesionado ? "1px solid #fb923c" : "none",
+        outline: lesionado ? "1px solid #e0902a" : "none",
       }}>
       <span className="num w-8 text-center text-[18px]">{j.numero}</span>
       <span className="min-w-0 flex-1">

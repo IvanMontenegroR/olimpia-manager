@@ -74,19 +74,19 @@ export default function Escritorio({
               {formatoDia(partida.dia)}
             </div>
           </div>
-          <div className="num text-[13px]" style={{ color: "#22c55e" }}>
+          <div className="num text-[13px]" style={{ color: "#3fa76a" }}>
             {miles(partida.dineroUsd)}
           </div>
         </div>
 
         <div className="mt-2 flex gap-2">
-          <Medidor etiqueta="Vestuario" valor={partida.ambiente} color="#22c55e" />
-          <Medidor etiqueta="Hinchada" valor={partida.hinchada} color="#f59e0b" />
+          <Medidor etiqueta="Vestuario" valor={partida.ambiente} color="#3fa76a" />
+          <Medidor etiqueta="Hinchada" valor={partida.hinchada} color="#d9a832" />
         </div>
       </header>
 
       {/* ---------- la semana ---------- */}
-      <div className="scroll-x flex gap-1 px-3 pb-2">
+      <div key={partida.dia} className="correr-tira scroll-x flex gap-1 px-3 pb-2">
         {Array.from({ length: 14 }, (_, i) => {
           const dia = sumarDias(partida.dia, i);
           const m = partidosDeOlimpia().find((x) => x.ctx.fecha === dia);
@@ -96,11 +96,12 @@ export default function Escritorio({
           const hoy = i === 0;
           return (
             <div key={dia}
-              className="flex w-[38px] shrink-0 flex-col items-center gap-0.5 rounded-md py-1"
+              className={`flex w-[38px] shrink-0 flex-col items-center gap-0.5 rounded-md py-1 ${
+                hoy ? "pasa-el-dia relieve-alto" : "relieve"}`}
               style={{
                 background: hoy ? "var(--blanco)"
-                  : copaHoy ? "color-mix(in srgb, #a78bfa 30%, var(--carbon))"
-                  : m ? "color-mix(in srgb, #22c55e 24%, var(--carbon))"
+                  : copaHoy ? "color-mix(in srgb, #d9a832 30%, var(--carbon))"
+                  : m ? "color-mix(in srgb, #3fa76a 24%, var(--carbon))"
                   : "var(--carbon)",
                 color: hoy ? "var(--negro)" : "var(--blanco)",
               }}>
@@ -110,7 +111,7 @@ export default function Escritorio({
               </span>
               <span className="num text-[13px] leading-none">{dia.slice(8, 10)}</span>
               <span className="flex h-3.5 items-center">
-                {copaHoy ? <Punto color="#a78bfa" />
+                {copaHoy ? <Punto color="#d9a832" />
                   : m ? <Escudo id={m.rivalId} nombre={m.rivalNombre} tam={13} />
                   : null}
               </span>
@@ -121,34 +122,36 @@ export default function Escritorio({
 
       {/* ---------- lo que pasa si hay algo que decidir ---------- */}
       {pendiente ? (
-        <div className="min-h-0 flex-1 px-3">
+        <div key={pendiente.id} className="llega-asunto relative min-h-0 flex-1 px-3">
           <Asuntos asunto={pendiente} partida={partida} onResolver={onResolver} />
+          <span className="golpe-de-luz absolute inset-0 rounded-xl"
+                style={{ background: "radial-gradient(60% 40% at 50% 40%, rgba(255,255,255,0.28), transparent 70%)" }} />
         </div>
       ) : (
         <div className="flex min-h-0 flex-1 flex-col px-3">
           {/* tablero del club */}
           <div className="grid shrink-0 grid-cols-2 gap-1.5">
-            <Modulo titulo="Plantel" color="#22c55e" onClick={() => setVista("plantel")}
+            <Modulo titulo="Plantel" color="#3fa76a" onClick={() => setVista("plantel")}
               principal={`${condMedia}%`} pie="condición media"
               alerta={bajas.length ? `${bajas.length} baja${bajas.length > 1 ? "s" : ""}` : undefined} />
 
-            <Modulo titulo="Sudamericana" color="#a78bfa" onClick={() => setVista("copa")}
+            <Modulo titulo="Sudamericana" color="#d9a832" onClick={() => setVista("copa")}
               principal={NOMBRE_RONDA[partida.copa.ronda]}
               pie={rivalCopa ? `vs ${rivalCopa.nombre}` : "sin rival"}
               escudo={partida.copa.ronda !== "eliminado" && partida.copa.ronda !== "campeon"
                 ? partida.copa.rivalId : undefined} />
 
-            <Modulo titulo="Tabla" color="#3b82f6" onClick={() => setVista("tabla")}
+            <Modulo titulo="Tabla" color="#4a7fb5" onClick={() => setVista("tabla")}
               principal={`${posicion}°`}
               pie={difLider === 0 ? "puntero" : `a ${difLider} del líder`} />
 
-            <Modulo titulo="Pases" color="#22d3ee" onClick={() => setVista("mercado")}
+            <Modulo titulo="Pases" color="#e0902a" onClick={() => setVista("mercado")}
               principal={String(partida.fichajes.length)} pie="disponibles"
               alerta={partida.ofertas.length ? `${partida.ofertas.length} oferta` : undefined} />
           </div>
 
           {/* último movimiento */}
-          <div className="scroll-y mt-1.5 min-h-0 flex-1 rounded-lg p-2.5"
+          <div className="scroll-y relieve mt-1.5 min-h-0 flex-1 rounded-lg p-2.5"
                style={{ background: "var(--carbon)" }}>
             <div className="mb-1 flex items-center justify-between">
               <span className="text-[9px] uppercase tracking-[0.14em]" style={{ color: "var(--apagado)" }}>
@@ -174,7 +177,7 @@ export default function Escritorio({
         <div className="px-3 pt-2">
           {esHoy && partido ? (
             <button onClick={onDirigir}
-              className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5"
+              className="relieve-alto flex w-full items-center gap-3 rounded-lg px-3 py-2.5"
               style={{ background: "var(--blanco)", color: "var(--negro)" }}>
               <Escudo id={partido.rivalId} nombre={partido.rivalNombre} tam={30} />
               <span className="min-w-0 flex-1 text-left">
@@ -191,8 +194,8 @@ export default function Escritorio({
             </button>
           ) : partido ? (
             <button onClick={onAvanzar}
-              className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5"
-              style={{ background: "var(--carbon)" }}>
+              className="relieve flex w-full items-center gap-3 rounded-lg px-3 py-2.5"
+              style={{ background: "linear-gradient(160deg, var(--carbon-alto), var(--carbon))" }}>
               <span className="num flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[13px]"
                     style={{ background: "var(--blanco)", color: "var(--negro)" }}>
                 +1
@@ -226,8 +229,8 @@ export default function Escritorio({
 
       {/* ---------- resto ---------- */}
       <div className="grid grid-cols-3 gap-1 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-1.5">
-        {([["fixture", "Fixture", "#f59e0b"], ["plantel", "Plantel", "#22c55e"],
-           ["bitacora", "Diario", "#8b8b95"]] as const).map(([id, texto, color]) => (
+        {([["fixture", "Fixture", "#d9a832"], ["plantel", "Plantel", "#3fa76a"],
+           ["bitacora", "Diario", "#8fa396"]] as const).map(([id, texto, color]) => (
           <button key={id} onClick={() => setVista(id)}
             className="rounded-md py-2 text-[9px] font-bold uppercase tracking-wider"
             style={{ background: `color-mix(in srgb, ${color} 14%, var(--carbon))`, color }}>
@@ -251,8 +254,12 @@ function Modulo({ titulo, color, principal, pie, alerta, escudo, onClick }: {
   alerta?: string; escudo?: string; onClick: () => void;
 }) {
   return (
-    <button onClick={onClick} className="rounded-lg p-2.5 text-left"
-            style={{ background: `color-mix(in srgb, ${color} 13%, var(--carbon))` }}>
+    <button onClick={onClick} className="relieve rounded-lg p-2.5 text-left"
+            style={{
+              background: `linear-gradient(160deg,
+                color-mix(in srgb, ${color} 20%, var(--carbon-alto)),
+                color-mix(in srgb, ${color} 8%, var(--carbon)))`,
+            }}>
       <div className="flex items-center justify-between">
         <span className="text-[9px] uppercase tracking-[0.14em]" style={{ color }}>{titulo}</span>
         {escudo && <Escudo id={escudo} nombre={titulo} tam={16} />}
@@ -260,8 +267,8 @@ function Modulo({ titulo, color, principal, pie, alerta, escudo, onClick }: {
       <div className="apellido mt-1 truncate text-[19px] leading-none">{principal}</div>
       <div className="mt-0.5 truncate text-[10px]" style={{ color: "var(--tenue)" }}>{pie}</div>
       {alerta && (
-        <div className="mt-1.5 inline-block rounded px-1.5 py-0.5 text-[8px] font-extrabold uppercase tracking-wider"
-             style={{ background: "#ef4444", color: "#0b0b0c" }}>
+        <div className="respirar mt-1.5 inline-block rounded px-1.5 py-0.5 text-[8px] font-extrabold uppercase tracking-wider"
+             style={{ background: "#c0392b", color: "#ffffff" }}>
           {alerta}
         </div>
       )}
@@ -313,7 +320,7 @@ function VistaPlantel({ plantel, partida }: { plantel: ReturnType<typeof plantel
         <div className="mt-1.5 h-1 overflow-hidden rounded-full" style={{ background: "var(--linea)" }}>
           <div className="h-full rounded-full"
                style={{ width: `${Math.min(100, (partida.minutosSub18 / 900) * 100)}%`,
-                        background: partida.minutosSub18 >= 900 ? "#22c55e" : "#f59e0b" }} />
+                        background: partida.minutosSub18 >= 900 ? "#3fa76a" : "#d9a832" }} />
         </div>
       </div>
 
@@ -326,9 +333,9 @@ function VistaPlantel({ plantel, partida }: { plantel: ReturnType<typeof plantel
           return (
             <div key={j.id} className="mb-1 flex items-center gap-2 rounded-md px-2 py-1.5"
               style={{ background: fuera
-                ? "color-mix(in srgb, #ef4444 16%, var(--carbon))" : "var(--carbon)" }}>
+                ? "color-mix(in srgb, #c0392b 16%, var(--carbon))" : "var(--carbon)" }}>
               <span className="num flex h-6 w-7 shrink-0 items-center justify-center rounded text-[12px]"
-                    style={{ background: COLOR_POS[j.posicion], color: "#0b0b0c" }}>
+                    style={{ background: COLOR_POS[j.posicion], color: "#0a120d" }}>
                 {j.numero}
               </span>
               <span className="min-w-0 flex-1">
@@ -336,7 +343,7 @@ function VistaPlantel({ plantel, partida }: { plantel: ReturnType<typeof plantel
                   {j.apellido}
                   {esSub18(j) && (
                     <span className="ml-1.5 rounded px-1 text-[8px] font-extrabold"
-                          style={{ background: "#22c55e", color: "#0b0b0c" }}>S18</span>
+                          style={{ background: "#3fa76a", color: "#0a120d" }}>S18</span>
                   )}
                 </span>
                 <span className="text-[9px]" style={{ color: "var(--apagado)" }}>
@@ -347,7 +354,7 @@ function VistaPlantel({ plantel, partida }: { plantel: ReturnType<typeof plantel
               </span>
               {fuera && (
                 <span className="rounded px-1 text-[8px] font-extrabold uppercase"
-                      style={{ background: "#ef4444", color: "#0b0b0c" }}>{fuera}</span>
+                      style={{ background: "#c0392b", color: "#0a120d" }}>{fuera}</span>
               )}
               <span className="w-10 text-right">
                 <span className="num block text-[11px]" style={{ color: colorCondicion(j.condicion) }}>
@@ -380,7 +387,7 @@ function VistaTabla({ tabla }: { tabla: ReturnType<typeof tablaDe> }) {
           style={{ background: f.id === "olimpia"
             ? "color-mix(in srgb, #ffffff 15%, var(--carbon))" : "var(--carbon)" }}>
           <span className="num w-4 text-[11px]"
-                style={{ color: i < 1 ? "#22c55e" : i >= 10 ? "#ef4444" : "var(--apagado)" }}>{i + 1}</span>
+                style={{ color: i < 1 ? "#3fa76a" : i >= 10 ? "#c0392b" : "var(--apagado)" }}>{i + 1}</span>
           <Escudo id={f.id} nombre={f.nombre} tam={18} />
           <span className="apellido min-w-0 flex-1 truncate text-[11px]">
             {nombreCorto(f.id, f.nombre)}
@@ -404,8 +411,8 @@ function VistaFixture({ partida }: { partida: Partida }) {
         const r = partida.resultados.find((x) => x.fechaNumero === n);
         const esProximo = n === partida.fechaActual;
         const color = r
-          ? r.golesOlimpia > r.golesRival ? "#22c55e"
-            : r.golesOlimpia === r.golesRival ? "#8b8b95" : "#ef4444"
+          ? r.golesOlimpia > r.golesRival ? "#3fa76a"
+            : r.golesOlimpia === r.golesRival ? "#8fa396" : "#c0392b"
           : null;
         return (
           <div key={p.etiqueta} className="mb-1 flex items-center gap-2 rounded-md px-2 py-1.5"
@@ -414,7 +421,7 @@ function VistaFixture({ partida }: { partida: Partida }) {
               opacity: r ? 0.75 : 1 }}>
             <span className="num w-5 text-[11px]" style={{ color: "var(--apagado)" }}>{n}</span>
             <span className="w-4 text-center text-[9px] font-bold"
-                  style={{ color: p.ctx.esLocal ? "#22c55e" : "#f59e0b" }}>
+                  style={{ color: p.ctx.esLocal ? "#3fa76a" : "#d9a832" }}>
               {p.ctx.esLocal ? "L" : "V"}
             </span>
             <Escudo id={p.rivalId} nombre={p.rivalNombre} tam={18} />
@@ -423,7 +430,7 @@ function VistaFixture({ partida }: { partida: Partida }) {
             </span>
             {r ? (
               <span className="num rounded px-1.5 py-0.5 text-[11px]"
-                    style={{ background: color!, color: "#0b0b0c" }}>
+                    style={{ background: color!, color: "#0a120d" }}>
                 {r.golesOlimpia}-{r.golesRival}
               </span>
             ) : (
@@ -449,8 +456,8 @@ function VistaCopa({ partida }: { partida: Partida }) {
 
   return (
     <>
-      <div className="mb-3 rounded-xl p-3" style={{ background: "color-mix(in srgb, #a78bfa 14%, var(--carbon))" }}>
-        <div className="text-[9px] uppercase tracking-[0.16em]" style={{ color: "#a78bfa" }}>
+      <div className="mb-3 rounded-xl p-3" style={{ background: "color-mix(in srgb, #d9a832 14%, var(--carbon))" }}>
+        <div className="text-[9px] uppercase tracking-[0.16em]" style={{ color: "#d9a832" }}>
           Copa Sudamericana 2026
         </div>
         <div className="apellido mt-1 text-[18px]">
@@ -472,7 +479,7 @@ function VistaCopa({ partida }: { partida: Partida }) {
         return (
           <div key={r} className="mb-1.5 rounded-lg p-2.5"
                style={{
-                 background: actual ? "color-mix(in srgb, #a78bfa 18%, var(--carbon))" : "var(--carbon)",
+                 background: actual ? "color-mix(in srgb, #d9a832 18%, var(--carbon))" : "var(--carbon)",
                  opacity: !actual && !pasada && c.ronda !== "eliminado" ? 0.55 : 1,
                }}>
             <div className="flex items-center gap-2">
@@ -486,11 +493,11 @@ function VistaCopa({ partida }: { partida: Partida }) {
               </span>
               {pasada && (
                 <span className="rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase"
-                      style={{ background: "#22c55e", color: "#0b0b0c" }}>Pasó</span>
+                      style={{ background: "#3fa76a", color: "#0a120d" }}>Pasó</span>
               )}
               {actual && c.ronda !== "eliminado" && (
                 <span className="rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase"
-                      style={{ background: "#a78bfa", color: "#0b0b0c" }}>Ahora</span>
+                      style={{ background: "#d9a832", color: "#0a120d" }}>Ahora</span>
               )}
             </div>
           </div>

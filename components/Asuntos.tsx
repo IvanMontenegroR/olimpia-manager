@@ -4,11 +4,11 @@ import { miles, type Asunto, type Partida } from "@/lib/temporada.ts";
 import { PLANTEL } from "@/lib/juego.ts";
 
 const COLOR: Record<Asunto["tipo"], string> = {
-  entrenamiento: "#22c55e",
-  evento: "#a78bfa",
-  oferta: "#f59e0b",
-  marketing: "#3b82f6",
-  prensa: "#a78bfa",
+  entrenamiento: "#3fa76a",
+  evento: "#d9a832",
+  oferta: "#d9a832",
+  marketing: "#4a7fb5",
+  prensa: "#d9a832",
 };
 
 /** Lo que hay que resolver antes de que el día siga. */
@@ -23,8 +23,12 @@ export default function Asuntos({
   const opciones = opcionesDe(asunto, partida);
 
   return (
-    <div className="flex h-full flex-col justify-center rounded-xl p-4"
-         style={{ background: `color-mix(in srgb, ${color} 12%, var(--carbon))` }}>
+    <div className="relieve-alto flex h-full flex-col justify-center rounded-xl p-4"
+         style={{
+           background: `linear-gradient(165deg,
+             color-mix(in srgb, ${color} 22%, var(--carbon-alto)),
+             color-mix(in srgb, ${color} 7%, var(--carbon)))`,
+         }}>
       <span className="text-[10px] uppercase tracking-[0.18em]" style={{ color }}>
         {asunto.tipo === "entrenamiento" ? "Semana de trabajo"
           : asunto.tipo === "oferta" ? "Mercado"
@@ -41,8 +45,9 @@ export default function Asuntos({
           <button key={o.id} onClick={() => onResolver(asunto.id, o.id)}
             className="w-full rounded-lg px-3.5 py-3 text-left"
             style={{
-              background: "var(--carbon)",
-              outline: `1px solid color-mix(in srgb, ${color} 40%, transparent)`,
+              background: "var(--carbon-alto)",
+              boxShadow: `inset 0 1px 0 rgba(255,255,255,0.07),
+                          0 0 0 1px color-mix(in srgb, ${color} 38%, transparent)`,
             }}>
             <span className="apellido block text-[14px] leading-tight">{o.etiqueta}</span>
             <span className="block text-[11px]" style={{ color: "var(--tenue)" }}>{o.detalle}</span>

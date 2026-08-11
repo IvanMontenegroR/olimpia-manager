@@ -390,6 +390,32 @@ que importa.
 temporada guardada. Ahora se completa lo que falte con los valores de una partida
 nueva: el jugador no pierde su Clausura cada vez que se actualiza el juego.
 
+## Paleta y movimiento
+
+La paleta anterior era de tablero de control: violeta, cyan y verde neón sobre
+negro puro. Se cambió por una de cancha.
+
+| Antes | Ahora | Dónde |
+|---|---|---|
+| `#0b0b0c` negro puro | `#0a120d` verde noche | Fondo |
+| `#a78bfa` violeta | `#d9a832` oro | Copa, decisiones |
+| `#22d3ee` cyan | `#e0902a` ámbar | Mercado, alertas tibias |
+| `#22c55e` verde neón | `#3fa76a` césped | Plantel, aciertos |
+| `#ef4444` rojo neón | `#c0392b` ladrillo | Bajas, expulsiones |
+| `#3b82f6` azul eléctrico | `#4a7fb5` pizarra | Tabla, defensores |
+
+Contra lo plano: el fondo lleva franjas verticales apenas visibles, como la
+camiseta, más un halo verde arriba; las tarjetas pasaron de color liso a
+degradado diagonal con luz superior y sombra propia.
+
+**Animaciones**, todas respetando `prefers-reduced-motion`:
+
+- Al avanzar el día, la tira de fechas se corre y el bloque de hoy entra con un
+  rebote corto.
+- Cuando llega un asunto, la tarjeta sube desde abajo y le pasa un golpe de luz
+  por encima.
+- Las alertas rojas de los módulos respiran.
+
 ## Estado de los datos
 
 | Archivo | Estado |

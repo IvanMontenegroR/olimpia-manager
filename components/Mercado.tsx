@@ -13,7 +13,7 @@ export default function Mercado({
       <div className="mb-2 flex items-baseline justify-between rounded-lg px-3 py-2"
            style={{ background: "var(--carbon)" }}>
         <span className="text-[11px]" style={{ color: "var(--tenue)" }}>Caja disponible</span>
-        <span className="num text-[15px]" style={{ color: "#22c55e" }}>
+        <span className="num text-[15px]" style={{ color: "#3fa76a" }}>
           {miles(partida.dineroUsd)}
         </span>
       </div>
@@ -30,7 +30,7 @@ export default function Mercado({
           <div key={f.id} className="mb-1.5 rounded-lg p-2.5" style={{ background: "var(--carbon)" }}>
             <div className="flex items-center gap-2">
               <span className="num flex h-6 w-9 shrink-0 items-center justify-center rounded text-[10px]"
-                    style={{ background: COLOR_POS[f.posicion], color: "#0b0b0c" }}>
+                    style={{ background: COLOR_POS[f.posicion], color: "#0a120d" }}>
                 {f.posicion}
               </span>
               <span className="min-w-0 flex-1">
@@ -52,8 +52,8 @@ export default function Mercado({
               <button onClick={() => onFichar(f.id)} disabled={!alcanza}
                 className="rounded-md px-3 py-1.5 text-[11px] font-extrabold uppercase tracking-wider"
                 style={{
-                  background: alcanza ? "#a78bfa" : "var(--linea)",
-                  color: alcanza ? "#0b0b0c" : "var(--apagado)",
+                  background: alcanza ? "#d9a832" : "var(--linea)",
+                  color: alcanza ? "#0a120d" : "var(--apagado)",
                 }}>
                 {alcanza ? "Fichar" : "No alcanza"}
               </button>

@@ -16,10 +16,10 @@ export interface EstadoJugador {
 }
 
 export const COLOR_POS: Record<Posicion, string> = {
-  ARQ: "#f59e0b",
-  DEF: "#3b82f6",
-  MED: "#22c55e",
-  DEL: "#ef4444",
+  ARQ: "#d9a832",
+  DEF: "#4a7fb5",
+  MED: "#3fa76a",
+  DEL: "#c0392b",
 };
 
 type Pestania = "olimpia" | "rival" | "stats";
@@ -65,17 +65,17 @@ export default function PanelPartido({
     <div className="flex min-h-0 flex-1 flex-col px-3">
       {/* dominio */}
       <div className="mb-1.5 flex items-center gap-2">
-        <span className="num w-7 text-[10px]" style={{ color: "#22c55e" }}>
+        <span className="num w-7 text-[10px]" style={{ color: "#3fa76a" }}>
           {stats.posesion}%
         </span>
         <span className="flex h-1.5 flex-1 overflow-hidden rounded-full"
               style={{ background: "var(--linea)" }}>
-          <span style={{ width: `${dominio * 100}%`, background: "#22c55e",
+          <span style={{ width: `${dominio * 100}%`, background: "#3fa76a",
                          transition: "width 700ms ease-out" }} />
-          <span style={{ width: `${(1 - dominio) * 100}%`, background: "#ef4444",
+          <span style={{ width: `${(1 - dominio) * 100}%`, background: "#c0392b",
                          transition: "width 700ms ease-out" }} />
         </span>
-        <span className="num w-7 text-right text-[10px]" style={{ color: "#ef4444" }}>
+        <span className="num w-7 text-right text-[10px]" style={{ color: "#c0392b" }}>
           {100 - stats.posesion}%
         </span>
       </div>
@@ -105,9 +105,9 @@ export default function PanelPartido({
               amarilla: false, goles: 0, lesionado: false, encendido: false, apagado: false };
             const c = condicionDe(j);
             const riesgo = riesgoDeRoja(j, e.amarilla, minuto, alineacion, ctx);
-            const alarma = e.lesionado ? "#fb923c"
-              : riesgo > 0.05 ? "#ef4444"
-              : c < 50 ? "#fb923c"
+            const alarma = e.lesionado ? "#e0902a"
+              : riesgo > 0.05 ? "#c0392b"
+              : c < 50 ? "#e0902a"
               : null;
 
             return (
@@ -123,15 +123,15 @@ export default function PanelPartido({
                 <span className="apellido min-w-0 flex-1 truncate text-[11px]">{j.apellido}</span>
 
                 <span className="flex shrink-0 items-center gap-1">
-                  {e.encendido && <Chapa texto="EN LLAMAS" color="#f97316" />}
-                  {e.apagado && <Chapa texto="APAGADO" color="#64748b" />}
-                  {e.goles > 0 && <Chapa texto={e.goles > 1 ? `${e.goles} GOLES` : "GOL"} color="#22c55e" />}
-                  {e.lesionado && <Chapa texto="LESIÓN" color="#fb923c" />}
+                  {e.encendido && <Chapa texto="EN LLAMAS" color="#e0902a" />}
+                  {e.apagado && <Chapa texto="APAGADO" color="#5d7167" />}
+                  {e.goles > 0 && <Chapa texto={e.goles > 1 ? `${e.goles} GOLES` : "GOL"} color="#3fa76a" />}
+                  {e.lesionado && <Chapa texto="LESIÓN" color="#e0902a" />}
                   {e.amarilla && (
                     <span className="inline-block h-3 w-[7px] rounded-[1px]" style={{ background: "#facc15" }} />
                   )}
                   {riesgo > 0.01 && (
-                    <span className="num text-[9px]" style={{ color: "#ef4444" }}>
+                    <span className="num text-[9px]" style={{ color: "#c0392b" }}>
                       {Math.round(riesgo * 100)}%
                     </span>
                   )}
@@ -148,12 +148,12 @@ export default function PanelPartido({
             <div key={r.id}
               className="mb-[3px] flex w-full items-center gap-2 rounded-md px-1.5 py-[3px]"
               style={{
-                background: e.expulsado ? "color-mix(in srgb, #ef4444 22%, var(--carbon))" : "var(--carbon)",
+                background: e.expulsado ? "color-mix(in srgb, #c0392b 22%, var(--carbon))" : "var(--carbon)",
                 opacity: e.expulsado ? 0.55 : 1,
               }}>
               <Dorsal numero={r.numero} pos={r.posicion} />
               <span className="apellido min-w-0 flex-1 truncate text-[11px]">{r.apellido}</span>
-              {e.expulsado && <Chapa texto="EXPULSADO" color="#ef4444" />}
+              {e.expulsado && <Chapa texto="EXPULSADO" color="#c0392b" />}
               {e.amarilla && !e.expulsado && (
                 <span className="inline-block h-3 w-[7px] rounded-[1px]" style={{ background: "#facc15" }} />
               )}
@@ -183,7 +183,7 @@ export default function PanelPartido({
 function Dorsal({ numero, pos }: { numero: number; pos: Posicion }) {
   return (
     <span className="num flex h-[22px] w-[26px] shrink-0 items-center justify-center rounded text-[12px]"
-          style={{ background: COLOR_POS[pos], color: "#0b0b0c" }}>
+          style={{ background: COLOR_POS[pos], color: "#0a120d" }}>
       {numero}
     </span>
   );
@@ -192,7 +192,7 @@ function Dorsal({ numero, pos }: { numero: number; pos: Posicion }) {
 function Chapa({ texto, color }: { texto: string; color: string }) {
   return (
     <span className="rounded px-1 text-[8px] font-extrabold uppercase tracking-wider"
-          style={{ background: color, color: "#0b0b0c" }}>
+          style={{ background: color, color: "#0a120d" }}>
       {texto}
     </span>
   );
@@ -221,15 +221,15 @@ function Fila({ etiqueta, a, b, proporcion }: {
   return (
     <div className="mb-2">
       <div className="flex items-baseline justify-between text-[11px]">
-        <span className="num" style={{ color: "#22c55e" }}>{a}</span>
+        <span className="num" style={{ color: "#3fa76a" }}>{a}</span>
         <span className="uppercase tracking-wider" style={{ color: "var(--apagado)", fontSize: 9 }}>
           {etiqueta}
         </span>
-        <span className="num" style={{ color: "#ef4444" }}>{b}</span>
+        <span className="num" style={{ color: "#c0392b" }}>{b}</span>
       </div>
       <div className="mt-1 flex h-1 overflow-hidden rounded-full" style={{ background: "var(--linea)" }}>
-        <span style={{ width: `${p * 100}%`, background: "#22c55e", transition: "width 500ms" }} />
-        <span style={{ width: `${(1 - p) * 100}%`, background: "#ef4444", transition: "width 500ms" }} />
+        <span style={{ width: `${p * 100}%`, background: "#3fa76a", transition: "width 500ms" }} />
+        <span style={{ width: `${(1 - p) * 100}%`, background: "#c0392b", transition: "width 500ms" }} />
       </div>
     </div>
   );
