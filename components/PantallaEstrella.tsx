@@ -31,10 +31,11 @@ const ESTILO: Record<CategoriaEstrella, { acento: string; fondo: string; rotulo:
   },
 };
 
-export default function PantallaEstrella({ partida, onFichar, onRechazar }: {
+export default function PantallaEstrella({ partida, onFichar, onRechazar, onVolver }: {
   partida: Partida;
   onFichar: () => void;
   onRechazar: () => void;
+  onVolver: () => void;
 }) {
   const e = ESTRELLAS.find((x) => x.id === partida.estrella?.id);
   if (!e || !partida.estrella) return null;
@@ -50,8 +51,11 @@ export default function PantallaEstrella({ partida, onFichar, onRechazar }: {
       <div className="scroll-y flex min-h-0 flex-1 flex-col px-4 pb-3 pt-4">
 
         {/* ---------- de qué se trata ---------- */}
-        <div className="flex items-center justify-between">
-          <span className="text-[10px] uppercase tracking-[0.24em]" style={{ color: est.acento }}>
+        <div className="flex items-center justify-between gap-2">
+          <button onClick={onVolver} className="shrink-0 rounded px-1.5 py-0.5 text-[11px]"
+                  style={{ background: "var(--carbon)" }}>←</button>
+          <span className="min-w-0 flex-1 truncate text-[10px] uppercase tracking-[0.24em]"
+                style={{ color: est.acento }}>
             {est.rotulo}
           </span>
           <span className="num rounded px-2 py-0.5 text-[10px]"
@@ -120,8 +124,8 @@ export default function PantallaEstrella({ partida, onFichar, onRechazar }: {
 
         {!alcanza && (
           <p className="mt-3 text-[11px] leading-relaxed" style={{ color: "var(--apagado)" }}>
-            Para juntarlo: vender a alguien, la taquilla de los partidos de local y lo
-            que paga avanzar en la copa.{" "}
+            Podés salir de acá, vender a alguien o jugar los partidos que vienen, y
+            volver antes de que se cierre.{" "}
             {dias === 0 ? "Se define hoy." : dias === 1 ? "Te queda un día." : `Te quedan ${dias} días.`}
           </p>
         )}
@@ -138,11 +142,18 @@ export default function PantallaEstrella({ partida, onFichar, onRechazar }: {
           }}>
           {alcanza ? `Traerlo por ${miles(e.precioUsd)}` : `Faltan ${miles(falta)}`}
         </button>
-        <button onClick={onRechazar}
-          className="mt-1.5 w-full rounded-lg py-2.5 text-[11px] font-bold uppercase tracking-[0.12em]"
-          style={{ background: "var(--carbon)", color: "var(--tenue)" }}>
-          {alcanza ? "Dejarlo pasar" : "Seguir sin él"}
-        </button>
+        <div className="mt-1.5 flex gap-1.5">
+          <button onClick={onVolver}
+            className="flex-1 rounded-lg py-2.5 text-[11px] font-bold uppercase tracking-[0.12em]"
+            style={{ background: "var(--carbon)", color: "var(--blanco)" }}>
+            {alcanza ? "Pensarlo" : "Ir a juntar la plata"}
+          </button>
+          <button onClick={onRechazar}
+            className="flex-1 rounded-lg py-2.5 text-[11px] font-bold uppercase tracking-[0.12em]"
+            style={{ background: "var(--carbon)", color: "var(--apagado)" }}>
+            Dejarlo pasar
+          </button>
+        </div>
       </div>
     </div>
   );

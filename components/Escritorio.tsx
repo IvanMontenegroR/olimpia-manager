@@ -11,16 +11,19 @@ import { colorCondicion, esSub18, nombreCorto, partidosDeOlimpia } from "@/lib/j
 import RIVALES_COPA from "@/data/rivales_internacionales.json";
 import {
   CALENDARIO_COPA, OBJETIVO, TOTAL_FECHAS, borrar, diasAlPartido, esPartidoDeCopa,
-  estadoSub18, formatoDia, hayPartidoHoy, miles, ocupacionDe, partidoDe, plantelDe,
+  diasEntre, estadoSub18, formatoDia, hayPartidoHoy, miles, ocupacionDe, partidoDe, plantelDe,
   posicionDe, sumarDias,
   tablaDe, type EquipoGuardado, type Partida,
 } from "@/lib/temporada.ts";
 import Alineador, { type EstadoAlineacion } from "./Alineador.tsx";
 import FichaJugador from "./FichaJugador.tsx";
+import PantallaEstrella from "./PantallaEstrella.tsx";
+import { ESTRELLAS } from "@/engine/estrellas.ts";
 import { TEXTO_ANIMO, animoDe } from "@/engine/tipos.ts";
 import { mejorMolde, MOLDE_DE, repartirEnMolde } from "@/lib/juego.ts";
 
-type Vista = "escritorio" | "plantel" | "tabla" | "fixture" | "mercado" | "bitacora" | "copa";
+type Vista = "escritorio" | "plantel" | "tabla" | "fixture" | "mercado" | "bitacora"
+  | "copa" | "estrella";
 type Ayuda = "estadio" | "vestuario" | "hinchada" | "dirigencia";
 
 /** Qué mide cada barra del encabezado y qué la mueve. */
@@ -74,7 +77,7 @@ const AYUDAS: Record<Ayuda, { titulo: string; texto: string; mueve: string[] }> 
 
 export default function Escritorio({
   partida, onAvanzar, onDirigir, onResolver, onFichar, onReiniciar, onGuardarEquipos,
-  onMoverReserva,
+  onMoverReserva, onFicharEstrella, onRechazarEstrella,
 }: {
   partida: Partida;
   onAvanzar: () => void;
@@ -82,6 +85,8 @@ export default function Escritorio({
   onResolver: (asuntoId: string, opcionId: string) => void;
   onGuardarEquipos: (e: EquipoGuardado[]) => void;
   onMoverReserva: (id: string, aReserva: boolean) => void;
+  onFicharEstrella: () => void;
+  onRechazarEstrella: () => void;
   onFichar: (fichajeId: string) => void;
   onReiniciar: () => void;
 }) {
@@ -133,11 +138,23 @@ export default function Escritorio({
     );
   }
 
+  // La oportunidad de un crack tiene pantalla completa propia, pero no bloquea
+  // el juego: podés salir, vender a alguien y volver con la plata.
+  if (vista === "estrella" && partida.estrella) {
+    return (
+      <PantallaEstrella partida={partida}
+        onVolver={() => setVista("escritorio")}
+        onFichar={() => { onFicharEstrella(); setVista("escritorio"); }}
+        onRechazar={() => { onRechazarEstrella(); setVista("escritorio"); }} />
+    );
+  }
+
   if (vista !== "escritorio") {
     return (
       <Sub titulo={{
         plantel: "Plantel", tabla: "Tabla", fixture: "Fixture",
         mercado: "Mercado", bitacora: "Bitácora", copa: "Sudamericana",
+        estrella: "Mercado",
       }[vista]} onVolver={() => setVista("escritorio")}>
         {vista === "plantel" && (
           <VistaPlantel plantel={plantel} partida={partida} onGuardarEquipos={onGuardarEquipos}
@@ -218,6 +235,38 @@ export default function Escritorio({
           )}
         </div>
       </header>
+
+      {partida.estrella && (() => {
+        const e = ESTRELLAS.find((x) => x.id === partida.estrella!.id);
+        if (!e) return null;
+        const dias = Math.max(0, diasEntre(partida.dia, partida.estrella.venceEl));
+        const alcanza = partida.dineroUsd >= e.precioUsd;
+        return (
+          <button onClick={() => setVista("estrella")}
+            className="relieve-alto respirar mx-3 mb-2 flex items-center gap-2.5 rounded-lg px-3 py-2"
+            style={{
+              background: `linear-gradient(160deg,
+                color-mix(in srgb, #e8c25a 30%, var(--carbon-alto)),
+                color-mix(in srgb, #e8c25a 10%, var(--carbon)))`,
+            }}>
+            <span className="num shrink-0 rounded-md px-2 py-1 text-[15px] leading-none"
+                  style={{ background: "#e8c25a", color: "#0a120d" }}>
+              {e.nivel}
+            </span>
+            <span className="min-w-0 flex-1 text-left">
+              <span className="block text-[8px] uppercase tracking-[0.16em]" style={{ color: "#e8c25a" }}>
+                {dias === 0 ? "Se define hoy" : dias === 1 ? "Queda un día" : `Quedan ${dias} días`}
+              </span>
+              <span className="apellido block truncate text-[13px] leading-tight">{e.titular}</span>
+              <span className="block text-[9px]" style={{ color: alcanza ? "var(--cesped)" : "var(--medio)" }}>
+                {alcanza ? `Podés pagarlo: ${miles(e.precioUsd)}` : `Faltan ${miles(e.precioUsd - partida.dineroUsd)}`}
+              </span>
+            </span>
+            <span className="shrink-0 text-[10px] font-extrabold uppercase tracking-wider"
+                  style={{ color: "#e8c25a" }}>Ver →</span>
+          </button>
+        );
+      })()}
 
       {partida.paciencia < 25 && !partida.despedido && (
         <div className="respirar mx-3 mb-2 rounded-md px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider"

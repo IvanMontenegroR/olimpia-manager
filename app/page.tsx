@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import ArmarOnce, { type Salida } from "@/components/ArmarOnce.tsx";
 import PantallaHito from "@/components/PantallaHito.tsx";
-import PantallaEstrella from "@/components/PantallaEstrella.tsx";
 import PartidoEnVivo from "@/components/PartidoEnVivo.tsx";
 import Escritorio from "@/components/Escritorio.tsx";
 import {
@@ -38,16 +37,6 @@ export default function Page() {
     return (
       <PantallaHito hito={partida.hito}
         onCerrar={() => setPartida((p) => (p ? { ...p, hito: null } : p))} />
-    );
-  }
-
-  // La oportunidad de un crack manda sobre todo lo demás: es la decisión más
-  // grande del juego y tiene su propia pantalla.
-  if (partida.estrella) {
-    return (
-      <PantallaEstrella partida={partida}
-        onFichar={() => setPartida((p) => (p ? ficharEstrella(p) : p))}
-        onRechazar={() => setPartida((p) => (p ? rechazarEstrella(p) : p))} />
     );
   }
 
@@ -91,6 +80,8 @@ export default function Page() {
         setPartida((p) => (p ? resolverAsunto(p, asuntoId, opcionId) : p))}
       onFichar={(id) => setPartida((p) => (p ? fichar(p, id) ?? p : p))}
       onGuardarEquipos={(equipos) => setPartida((p) => (p ? { ...p, equipos } : p))}
+      onFicharEstrella={() => setPartida((p) => (p ? ficharEstrella(p) : p))}
+      onRechazarEstrella={() => setPartida((p) => (p ? rechazarEstrella(p) : p))}
       onMoverReserva={(id, aReserva) => setPartida((p) => (p ? {
         ...p,
         enReserva: aReserva
