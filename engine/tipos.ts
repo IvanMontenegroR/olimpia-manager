@@ -53,7 +53,15 @@ export const NOMBRE_POSICION: Record<Posicion, string> = {
   ED: "Extremo derecho", EI: "Extremo izquierdo",
   SD: "Segundo delantero", DC: "Delantero centro",
 };
-export type Forma = "en_racha" | "neutral" | "en_baja";
+/** Cómo se lee el ánimo en pantalla. */
+export type Animo = "en_racha" | "bien" | "normal" | "bajoneado";
+
+export const animoDe = (n: number): Animo =>
+  n >= 78 ? "en_racha" : n >= 60 ? "bien" : n >= 40 ? "normal" : "bajoneado";
+
+export const TEXTO_ANIMO: Record<Animo, string> = {
+  en_racha: "En racha", bien: "Bien", normal: "Normal", bajoneado: "Bajoneado",
+};
 export type Actitud = "defensivo" | "equilibrado" | "ofensivo";
 
 export type Rasgo =
@@ -79,7 +87,14 @@ export interface Jugador {
   nivel: number;
   nivel_incertidumbre: number;
   condicion: number;
-  forma: Forma;
+  /**
+   * Cómo está anímicamente, 0 a 100. Junta lo que antes eran dos cosas
+   * separadas, la moral y la forma, que medían lo mismo (si viene bien o mal),
+   * se movían con lo mismo (resultados y lo que pasa en el vestuario) y encima
+   * se multiplicaban entre sí. Un solo número es un concepto menos que
+   * entender y el mismo juego.
+   */
+  animo: number;
   partidos_internacionales: number;
   rasgos: Rasgo[];
   lesionado_hasta: string | null;
@@ -87,7 +102,6 @@ export interface Jugador {
   suspendido: boolean;
   historial_lesion_grave?: boolean;
   /** 0 a 100. Se mueve con lo que le pasa al jugador y al vestuario. */
-  moral?: number;
   /**
    * Está en la reserva: entrena aparte y no aparece en el banco salvo que lo
    * subas. Existe para que la pantalla de armar el equipo no tenga treinta y

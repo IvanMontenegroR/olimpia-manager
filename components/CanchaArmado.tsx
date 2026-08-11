@@ -94,15 +94,18 @@ export default function CanchaArmado({
                       style={{ fontSize: 9 * escala, textShadow: "0 1px 3px rgba(0,0,0,0.9)" }}>
                   {j.apellido}
                 </span>
+                {/* Un solo dato por jugador: el nivel con el que sale a la
+                    cancha, coloreado por cómo llega. El puesto solo aparece
+                    cuando no es el suyo, que es cuando hay algo que decidir. */}
                 <span className="flex items-center gap-1 leading-tight" style={{ fontSize: 8 * escala }}>
-                  <span className="font-bold" style={{ color: adaptado ? "var(--medio)" : "var(--tenue)" }}>
-                    {c.puesto}
-                  </span>
-                  <span className="num" style={{ textShadow: "0 1px 3px rgba(0,0,0,0.9)" }}>
+                  {adaptado && (
+                    <span className="font-bold" style={{ color: "var(--medio)" }}>{c.puesto}</span>
+                  )}
+                  <span className="num"
+                        style={{ color: colorCondicion(j.condicion),
+                                 textShadow: "0 1px 3px rgba(0,0,0,0.9)" }}>
                     {nivelEf(j, c.puesto, ctx)}
                   </span>
-                  <span className="inline-block h-1 w-1 rounded-full"
-                        style={{ background: colorCondicion(j.condicion) }} />
                   {esSub18(j) && <span className="font-bold" style={{ color: "var(--ok)" }}>S18</span>}
                 </span>
               </>

@@ -1,7 +1,10 @@
 "use client";
 
 import { BANDERA, colorCondicion, esSub18, MOLDE_DE, MOLDES, nivelEf } from "@/lib/juego.ts";
-import { COORD, LINEA_DE, type ContextoPartido, type Jugador, type Posicion } from "@/engine/tipos.ts";
+import {
+  COORD, TEXTO_ANIMO, animoDe,
+  type ContextoPartido, type Jugador, type Posicion,
+} from "@/engine/tipos.ts";
 import type { EstadoPlantel } from "@/lib/temporada.ts";
 import Dorsal from "./Dorsal.tsx";
 
@@ -95,15 +98,12 @@ export default function FichaJugador({
         </div>
 
         {/* ---------- cómo está hoy ---------- */}
-        <div className="mt-3 grid grid-cols-3 gap-1.5">
+        <div className="mt-3 grid grid-cols-2 gap-1.5">
           <Caja etiqueta="Condición" valor={`${j.condicion}%`} color={colorCondicion(j.condicion)} />
-          <Caja etiqueta="Moral" valor={String(Math.round(j.moral ?? 70))}
-                color={(j.moral ?? 70) >= 70 ? "var(--ok)"
-                  : (j.moral ?? 70) >= 45 ? "var(--medio)" : "var(--critico)"} />
-          <Caja etiqueta="Forma"
-                valor={j.forma === "en_racha" ? "En racha" : j.forma === "en_baja" ? "En baja" : "Normal"}
-                color={j.forma === "en_racha" ? "var(--ok)"
-                  : j.forma === "en_baja" ? "var(--critico)" : "var(--tenue)"} />
+          <Caja etiqueta="Ánimo" valor={TEXTO_ANIMO[animoDe(j.animo)]}
+                color={j.animo >= 78 ? "var(--ok)"
+                  : j.animo >= 60 ? "var(--blanco)"
+                  : j.animo >= 40 ? "var(--medio)" : "var(--critico)"} />
         </div>
 
         {/* ---------- la temporada ---------- */}

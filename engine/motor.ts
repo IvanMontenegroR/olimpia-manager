@@ -1,7 +1,7 @@
 import { Rng } from "./rng.ts";
 import {
   COORD, LINEA_DE,
-  type Actitud, type Alineacion, type ContextoPartido, type Forma, type Jugador,
+  type Actitud, type Alineacion, type ContextoPartido, type Jugador,
   type Linea, type Posicion, type ResultadoPartido,
 } from "./tipos.ts";
 
@@ -36,16 +36,14 @@ export const P = {
   posBonoSecundaria: 0.07, // lo que recupera si es un puesto que sabe jugar
   posArqueroDeCampo: 0.3,
 
-  // --- forma ---
-  formaRacha: 1.08,
-  formaNeutral: 1.0,
-  formaBaja: 0.92,
-
-  // --- moral ---
-  // Un jugador dolido rinde por debajo de lo suyo. Pesa menos que la forma
-  // porque la moral se mueve más seguido.
-  moralPiso: 0.94,
-  moralRango: 0.12,
+  // --- ánimo ---
+  // Reemplaza a los dos factores que había antes, forma y moral, que medían lo
+  // mismo y se multiplicaban entre sí. Se centra en 70, que es donde arranca
+  // todo el mundo y donde el factor vale exactamente 1: así el ánimo no regala
+  // ni descuenta rendimiento por existir, solo por moverse.
+  animoNeutro: 70,
+  animoPorPunto: 0.003, // 100 de ánimo rinde +9%, 40 rinde -9%
+  animoMinimo: 0.88,
 
   // --- la gente ---
   // Cuánto del bonus de local se cobra según cómo esté el estadio. Con la
@@ -98,14 +96,14 @@ export function factorCondicion(condicion: number): number {
   return P.condPiso + P.condRango * Math.pow(clamp(condicion, 0, 100) / 100, P.condExp);
 }
 
-export function factorForma(f: Forma): number {
-  return f === "en_racha" ? P.formaRacha : f === "en_baja" ? P.formaBaja : P.formaNeutral;
-}
-
-/** Moral 0..100 a multiplicador de rendimiento. */
-export function factorMoral(moral: number | undefined): number {
-  if (moral === undefined) return 1;
-  return P.moralPiso + (clamp(moral, 0, 100) / 100) * P.moralRango;
+/**
+ * Ánimo 0..100 a multiplicador. Reemplaza a los dos factores que había antes,
+ * moral y forma, que se multiplicaban entre sí: el rango de este es el
+ * producto de aquellos, así que el juego rinde igual con un concepto menos.
+ */
+export function factorAnimo(animo: number): number {
+  const f = 1 + (clamp(animo, 0, 100) - P.animoNeutro) * P.animoPorPunto;
+  return Math.max(P.animoMinimo, f);
 }
 
 /**
@@ -167,8 +165,7 @@ export function nivelEfectivo(j: Jugador, puesto: Posicion, ctx: ContextoPartido
     j.nivel *
     factorCondicion(j.condicion) *
     factorPosicion(j, puesto) *
-    factorForma(j.forma) *
-    factorMoral(j.moral) *
+    factorAnimo(j.animo) *
     factorAmbienteHostil(j, ctx) *
     factorAltura(ctx)
   );

@@ -205,11 +205,14 @@ export function simularTemporada(
     }
     for (const id of res.rojas) porId.get(id)!.suspendido = true;
 
-    // forma: se mueve con el resultado
-    for (const j of alineacion.once) {
-      if (res.golesOlimpia > res.golesRival + 1) j.forma = "en_racha";
-      else if (res.golesRival > res.golesOlimpia + 1) j.forma = "en_baja";
-      else j.forma = "neutral";
+    // El ánimo se mueve con el resultado y siempre tira hacia el medio. Sin
+    // ese retorno una racha lo clavaba en el techo y no bajaba más; con él, un
+    // equipo que gana seguido se estabiliza cerca de 86 y uno que pierde en 54.
+    const dif = res.golesOlimpia - res.golesRival;
+    const delta = dif >= 2 ? 4 : dif === 1 ? 2 : dif === 0 ? 0 : dif === -1 ? -2 : -4;
+    for (const j of plantel) {
+      const propio = alineacion.once.includes(j) ? delta : 0;
+      j.animo = clamp(j.animo + propio + (70 - j.animo) * 0.25, 0, 100);
     }
 
     if (ev.competencia === "clausura") {

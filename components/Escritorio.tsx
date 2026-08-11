@@ -17,6 +17,7 @@ import {
 } from "@/lib/temporada.ts";
 import Alineador, { type EstadoAlineacion } from "./Alineador.tsx";
 import FichaJugador from "./FichaJugador.tsx";
+import { TEXTO_ANIMO, animoDe } from "@/engine/tipos.ts";
 import { mejorMolde, MOLDE_DE, repartirEnMolde } from "@/lib/juego.ts";
 
 type Vista = "escritorio" | "plantel" | "tabla" | "fixture" | "mercado" | "bitacora" | "copa";
@@ -195,6 +196,9 @@ export default function Escritorio({
           <Medidor etiqueta="Dirigencia" valor={partida.paciencia}
                    color={partida.paciencia < 25 ? "#c0392b" : "#4a7fb5"}
                    onClick={() => setAyuda("dirigencia")} />
+          {/* La ocupación es del próximo partido de local: de visitante no
+              significa nada, así que no ocupa lugar. */}
+          {partido?.ctx.esLocal && (
           <button className="w-[64px] shrink-0 text-left" onClick={() => setAyuda("estadio")}>
             <div className="mb-1 flex items-baseline justify-between">
               <span className="mr-1 text-[8px] uppercase tracking-[0.14em]"
@@ -211,6 +215,7 @@ export default function Escritorio({
                             background: "linear-gradient(90deg, #7a5a1e, var(--oro))" }} />
             </div>
           </button>
+          )}
         </div>
       </header>
 
@@ -631,8 +636,9 @@ function VistaPlantel({ plantel, partida, onGuardarEquipos, onMoverReserva }: {
                 <span className="num block text-[11px]" style={{ color: colorCondicion(j.condicion) }}>
                   {j.condicion}%
                 </span>
-                <span className="block text-[8px]" style={{ color: "var(--apagado)" }}>
-                  moral {Math.round(e?.moral ?? 70)}
+                <span className="block text-[8px]"
+                      style={{ color: (e?.animo ?? 70) < 45 ? "var(--medio)" : "var(--apagado)" }}>
+                  {TEXTO_ANIMO[animoDe(e?.animo ?? 70)].toLowerCase()}
                 </span>
               </span>
               <span className="num w-6 text-right text-[15px]">{j.nivel}</span>

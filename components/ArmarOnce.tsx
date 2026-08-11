@@ -124,13 +124,18 @@ export default function ArmarOnce({
       {/* ---------- cómo llega cada uno ---------- */}
       <ComoLlegan partido={partido} />
 
-      {/* ---------- estado del once ---------- */}
+      {/* ---------- estado del once ----------
+          Las dos reglas (cupo y Sub-18) solo se muestran cuando hay algo que
+          mirar. El resto del tiempo son ruido: nunca vas a tocar nada por
+          tener 2 de 4 extranjeros. */}
       <div className="flex items-stretch border-y" style={{ borderColor: "var(--linea)" }}>
         <Dato etiqueta="Once" valor={`${once.length}/11`} alerta={once.length !== 11} />
         <Dato etiqueta="Formación" valor={estado.formacion} />
-        <Dato etiqueta="Extranj." valor={`${extranjeros}/${CUPO_EXTRANJEROS}`}
-              alerta={extranjeros > CUPO_EXTRANJEROS} />
-        <Dato etiqueta="Sub-18" valor={String(sub18)} alerta={sub18 === 0} />
+        {extranjeros >= CUPO_EXTRANJEROS && (
+          <Dato etiqueta="Extranj." valor={`${extranjeros}/${CUPO_EXTRANJEROS}`}
+                alerta={extranjeros > CUPO_EXTRANJEROS} />
+        )}
+        {sub18 === 0 && <Dato etiqueta="Sub-18" valor="0" alerta />}
         <Dato etiqueta="Nivel" valor={nivelOnce ? String(nivelOnce) : "—"} fuerte />
       </div>
 

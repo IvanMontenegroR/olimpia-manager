@@ -18,7 +18,7 @@ const EQUIPOS = equiposJson as any[];
 const FIXTURE = fixtureJson as any[];
 const RIVALES = rivalesJson as any[];
 const CLAVE = "olimpia-manager-clausura-2026";
-const VERSION = 11;
+const VERSION = 12;
 
 export const DIA_INICIAL = "2026-07-20";
 export const TOTAL_FECHAS = 22;
@@ -60,8 +60,8 @@ export interface EstadoPlantel {
   lesionadoHasta: string | null; // día ISO
   golesTorneo: number;
   minutos: number;
-  moral: number;
-  forma: "en_racha" | "neutral" | "en_baja";
+  /** Cómo está anímicamente, 0 a 100. Junta lo que eran moral y forma. */
+  animo: number;
   /** Cuánto subió de Nivel con minutos y trabajo individual. */
   crecimiento: number;
 }
@@ -220,8 +220,7 @@ export function partidaNueva(): Partida {
       lesionadoHasta: null,
       golesTorneo: 0,
       minutos: 0,
-      moral: 70,
-      forma: j.forma,
+      animo: 70,
       crecimiento: 0,
     }])),
     minutosSub18: 0,
@@ -266,7 +265,14 @@ export function cargar(): Partida {
     p.copa = { ...base.copa, ...(guardada.copa ?? {}) };
     p.plantel = { ...base.plantel };
     for (const [id, e] of Object.entries(guardada.plantel ?? {})) {
-      if (p.plantel[id]) p.plantel[id] = { ...p.plantel[id], ...e };
+      if (!p.plantel[id]) continue;
+      p.plantel[id] = { ...p.plantel[id], ...e };
+      // partidas de antes de fusionar moral y forma en ánimo
+      const viejo = e as unknown as { moral?: number; forma?: string };
+      if (p.plantel[id].animo === undefined && viejo.moral !== undefined) {
+        const empuje = viejo.forma === "en_racha" ? 12 : viejo.forma === "en_baja" ? -12 : 0;
+        p.plantel[id].animo = clamp(viejo.moral + empuje, 0, 100);
+      }
     }
     p.resultados ??= [];
     p.ofertas ??= [];
@@ -307,8 +313,7 @@ export function plantelDe(p: Partida): Jugador[] {
       suspendido: e.suspendidoFechas > 0,
       lesionado_hasta: e.lesionadoHasta && e.lesionadoHasta > p.dia ? e.lesionadoHasta : null,
       tarjetas_amarillas: e.amarillas,
-      moral: Math.round(e.moral),
-      forma: e.forma,
+      animo: Math.round(e.animo),
     };
   });
 }
@@ -514,14 +519,17 @@ export function cerrarPartido(p: Partida, partido: PartidoUI, c: CierrePartido):
       e.condicion = clamp(e.condicion - desgaste, 0, 100);
       e.minutos += min;
       if (j.fecha_nacimiento >= "2007-01-01" && min >= 90) n.minutosSub18 += 90;
-      e.moral = clamp(e.moral + (gano ? 4 : empate ? 0 : -4) + empujeCancha, 0, 100);
-      // la forma se mueve con lo que hizo el equipo estando él en cancha
+      // El ánimo se mueve con el resultado y con lo que hizo él: el que
+      // convierte se levanta más que el que solo estuvo en cancha. Tira al
+      // medio para que una racha no lo deje clavado arriba para siempre.
       const golesSuyos = c.goleadores.filter((g) => g === j.id).length;
-      e.forma = golesSuyos > 0 || (gano && min >= 60) ? "en_racha"
-        : (!gano && !empate && min >= 60) ? "en_baja"
-        : "neutral";
+      const dif = c.golesOlimpia - c.golesRival;
+      const porResultado = dif >= 2 ? 4 : dif === 1 ? 2 : dif === 0 ? 0 : dif === -1 ? -2 : -4;
+      const suyo = golesSuyos > 0 ? 5 : 0;
+      e.animo = clamp(
+        e.animo + porResultado + suyo + empujeCancha + (70 - e.animo) * 0.25, 0, 100);
     } else {
-      e.moral = clamp(e.moral - 1.8, 0, 100); // el que no juega se calienta
+      e.animo = clamp(e.animo - 1.8, 0, 100); // el que no juega se calienta
     }
 
     if (e.suspendidoFechas > 0) e.suspendidoFechas--;
@@ -722,11 +730,13 @@ export function avanzarUnDia(p: Partida): ResultadoAvance {
     if (entrena === "individual") tasa *= 0.9;
     e.condicion = clamp(e.condicion + tasa, 0, 100);
 
-    // La moral de cada uno tiende al clima del vestuario: un plantel roto
+    // El ánimo de cada uno tiende al clima del vestuario: un plantel roto
     // arrastra a todos, uno unido levanta al que está caído.
-    e.moral = clamp(e.moral + (n.ambiente - e.moral) * 0.06, 0, 100);
+    // tira al clima del vestuario y, si no pasa nada, al medio: el ánimo no
+    // se queda clavado arriba por una racha vieja
+    e.animo = clamp(e.animo + (n.ambiente - e.animo) * 0.06 + (70 - e.animo) * 0.04, 0, 100);
     // con el vestuario partido, además se cae solo
-    if (n.ambiente < 30) e.moral = clamp(e.moral - 0.8, 0, 100);
+    if (n.ambiente < 30) e.animo = clamp(e.animo - 0.8, 0, 100);
 
     // Los juveniles crecen con minutos y con el trabajo individual. Su margen
     // es exactamente la incertidumbre de Nivel que traen.
@@ -887,7 +897,7 @@ export function resolverAsunto(p: Partida, asuntoId: string, opcionId: string): 
         `${j.apellido} se va a ${oferta.club} por ${miles(oferta.montoUsd)}.` });
     } else {
       n.ambiente = clamp(n.ambiente + 2, 0, 100);
-      n.plantel[oferta.jugadorId].moral = clamp(n.plantel[oferta.jugadorId].moral - 6, 0, 100);
+      n.plantel[oferta.jugadorId].animo = clamp(n.plantel[oferta.jugadorId].animo - 6, 0, 100);
       n.bitacora.push({ dia: n.dia, texto: `Se rechazó la oferta por ${j.apellido}.` });
     }
     return n;
@@ -903,7 +913,7 @@ export function resolverAsunto(p: Partida, asuntoId: string, opcionId: string): 
     if (efecto.dineroUsd) n.dineroUsd += efecto.dineroUsd;
     if (efecto.moralDe) {
       const e = n.plantel[efecto.moralDe.id];
-      if (e) e.moral = clamp(e.moral + efecto.moralDe.delta, 0, 100);
+      if (e) e.animo = clamp(e.animo + efecto.moralDe.delta, 0, 100);
     }
     if (efecto.condicionTodos) {
       for (const id of Object.keys(n.plantel)) {
@@ -941,7 +951,7 @@ export function fichar(p: Partida, fichajeId: string): Partida | null {
     nivel: f.nivel,
     nivel_incertidumbre: f.edad <= 21 ? 8 : 0,
     condicion: 88,
-    forma: "neutral",
+    animo: 70,
     partidos_internacionales: f.extranjero ? 12 : 4,
     rasgos: [],
     lesionado_hasta: null,
@@ -952,7 +962,7 @@ export function fichar(p: Partida, fichajeId: string): Partida | null {
   n.incorporados = [...(n.incorporados ?? []), jugador];
   n.plantel[jugador.id] = {
     condicion: 88, amarillas: 0, suspendidoFechas: 0, lesionadoHasta: null,
-    golesTorneo: 0, minutos: 0, moral: 78, forma: "neutral", crecimiento: 0,
+    golesTorneo: 0, minutos: 0, animo: 78, crecimiento: 0,
   };
   n.ambiente = clamp(n.ambiente + 2, 0, 100);
   n.bitacora.push({ dia: n.dia, texto:
