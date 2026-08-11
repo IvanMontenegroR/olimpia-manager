@@ -1,6 +1,7 @@
 import { Rng } from "./rng.ts";
 import {
   COORD, LINEA_DE,
+  aprieta,
   type Actitud, type Alineacion, type ContextoPartido, type Jugador,
   type Linea, type Posicion, type ResultadoPartido,
 } from "./tipos.ts";
@@ -192,7 +193,7 @@ export function fuerzas(a: Alineacion, ctx: ContextoPartido) {
 
   ataque += P.actitudAtaque[a.actitud];
   defensa += P.actitudDefensa[a.actitud];
-  if (a.presionAlta) {
+  if (aprieta(a.actitud)) {
     // apretar arriba rinde de verdad contra piernas cansadas
     const gastado = clamp((92 - (ctx.rivalCondicion ?? 100)) / 25, 0, 1);
     ataque += P.presionAtaque + P.presionContraCansado * gastado;
@@ -260,12 +261,12 @@ export function simularPartido(
     else if (j.condicion < 60) p *= P.lesionCond60;
     if (j.rasgos.includes("fragil")) p *= P.lesionFragil;
     if (j.edad >= 33) p *= P.lesionVeterano;
-    if (a.presionAlta) p *= 1.15;
+    if (aprieta(a.actitud)) p *= 1.15;
     if (rng.chance(p)) lesionados.push({ id: j.id, dias: rng.entero(7, 45) });
 
     const linea = LINEA_DE[j.posicion];
     const pAmarilla = (linea === "DEF" ? 0.16 : linea === "MED" ? 0.14 : 0.08)
-      * (ctx.esClasico ? 1.5 : 1) * (a.presionAlta ? 1.25 : 1);
+      * (ctx.esClasico ? 1.5 : 1) * (aprieta(a.actitud) ? 1.25 : 1);
     if (rng.chance(pAmarilla)) amarillas.push(j.id);
     if (rng.chance(0.006)) rojas.push(j.id);
   }
@@ -276,12 +277,12 @@ export function simularPartido(
 // ---------------------------------------------------------------- fatiga
 
 export function desgastePorPartido(j: Jugador, minutos: number, ctx: ContextoPartido,
-                                   presionAlta: boolean): number {
+                                   actitud: Actitud): number {
   let d = P.desgaste90 * (minutos / 90);
   // viajar con tiempo también ahorra piernas, no solo pulmón
   const aclimatado = clamp(ctx.aclimatacion ?? 0, 0, 1);
   d += (ctx.viajeKm / 1000) * P.desgasteViajeKm * (1 - P.viajeAclimataMax * aclimatado);
-  if (presionAlta) d += P.desgastePresionAlta * (minutos / 90);
+  if (aprieta(actitud)) d += P.desgastePresionAlta * (minutos / 90);
   if (j.edad >= 33) d += P.desgasteVeterano * (minutos / 90);
   return d;
 }

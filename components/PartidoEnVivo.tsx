@@ -27,7 +27,8 @@ export const ACTITUD: Record<Actitud, { nombre: string; color: string; sobre: st
   equilibrado: { nombre: "Parejo",       color: "#a1a1aa", sobre: "#0a120d",
                  nota: "Sin ventajas ni riesgos extra" },
   ofensivo:    { nombre: "Ir al frente", color: "#e0902a", sobre: "#0a120d",
-                 nota: "Más peligro arriba, quedás más expuesto atrás" },
+                 nota: "Presionás arriba: más peligro y más piernas gastadas. " +
+                       "Rinde el doble si el rival llega cansado" },
 };
 
 /** Cada tipo de evento con su color y su etiqueta, para que se lea de un golpe. */
@@ -92,16 +93,15 @@ export default function PartidoEnVivo({
 
   const condAhora = (j: Jugador) =>
     Math.max(0, Math.round(
-      j.condicion - desgastePorPartido(j, Math.min(minuto, 90), ctx, salida.presionAlta)));
+      j.condicion - desgastePorPartido(j, Math.min(minuto, 90), ctx, actitud)));
 
   const alineacion = useMemo<Alineacion>(
-    () => ({ once, suplentes: banco, actitud, presionAlta: salida.presionAlta, puestos }),
-    [once, banco, actitud, puestos, salida.presionAlta]);
+    () => ({ once, suplentes: banco, actitud, puestos }),
+    [once, banco, actitud, puestos]);
 
   const [pendientes, setPendientes] = useState<EventoRelato[]>(() =>
     relatarTramo(
-      { once: salida.once, suplentes: salida.suplentes, actitud: salida.actitud,
-        presionAlta: salida.presionAlta, puestos: salida.puestos },
+      { once: salida.once, suplentes: salida.suplentes, actitud: salida.actitud, puestos: salida.puestos },
       ctx, new Rng(`${ctx.fecha}-${ctx.rivalNombre}-0`), 0, 90, 0, 0,
       new Set(), onceRival(partido.rivalId, ctx.rivalFuerza)));
 
@@ -195,8 +195,7 @@ export default function PartidoEnVivo({
       texto: encabezado + detalle.charAt(0).toUpperCase() + detalle.slice(1) + ".",
       golesOlimpia: gO, golesRival: gR,
     }]);
-    resimular(minuto, { once: nuevoOnce, suplentes: nuevoBanco, actitud,
-                        presionAlta: salida.presionAlta, puestos: nuevosPuestos });
+    resimular(minuto, { once: nuevoOnce, suplentes: nuevoBanco, actitud, puestos: nuevosPuestos });
     setPanel(null); setSalen([]); setEntran({}); setEligiendoPara(null); setCorriendo(true);
   };
 
@@ -243,8 +242,7 @@ export default function PartidoEnVivo({
     semilla.current++;
     cursor.current = 0;
     setPendientes(relatarTramo(
-      { once: nuevoOnce, suplentes: nuevoBanco, actitud,
-        presionAlta: salida.presionAlta, puestos: nuevosPuestos },
+      { once: nuevoOnce, suplentes: nuevoBanco, actitud, puestos: nuevosPuestos },
       ctx, new Rng(`${ctx.fecha}-${ctx.rivalNombre}-${semilla.current}`),
       momento.minuto, 90, nuevoO, nuevoR, amonestados, rival11));
   };

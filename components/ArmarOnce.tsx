@@ -16,7 +16,6 @@ export interface Salida {
   once: Jugador[];
   suplentes: Jugador[];
   actitud: Actitud;
-  presionAlta: boolean;
   puestos: Map<string, Posicion>;
 }
 
@@ -46,7 +45,6 @@ export default function ArmarOnce({
 
   const [estado, setEstado] = useState<EstadoAlineacion>(inicial);
   const [actitud, setActitud] = useState<Actitud>(ctx.esLocal ? "ofensivo" : "equilibrado");
-  const [presionAlta, setPresion] = useState(ctx.esLocal);
   const [verEquipos, setVerEquipos] = useState(false);
   const [nombreNuevo, setNombreNuevo] = useState("");
 
@@ -92,7 +90,7 @@ export default function ArmarOnce({
       ...(arquero ? [arquero] : []),
       ...libres.filter((j) => j.posicion !== "ARQ").sort(porNivel).slice(0, 6),
     ];
-    onJugar({ once, suplentes, actitud, presionAlta, puestos });
+    onJugar({ once, suplentes, actitud, puestos });
   };
 
   return (
@@ -167,15 +165,6 @@ export default function ArmarOnce({
               </button>
             );
           })}
-          <button onClick={() => setPresion((p) => !p)}
-            title="Apretar arriba rinde mucho más contra un rival que llega cansado, y desgasta igual contra uno entero"
-            className="rounded px-2.5 py-2 text-[10px] font-bold uppercase tracking-wider"
-            style={{
-              background: presionAlta ? "var(--blanco)" : "var(--carbon)",
-              color: presionAlta ? "var(--negro)" : "var(--tenue)",
-            }}>
-            Presión
-          </button>
         </div>
 
         <button onClick={jugar} disabled={!!problema}

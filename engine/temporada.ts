@@ -184,7 +184,7 @@ export function simularTemporada(
       minutos.set(j.id, (minutos.get(j.id) ?? 0) + min);
       if (esSub18(j) && min === 90) minutosSub18 += 90;
       j.condicion = clamp(
-        j.condicion - desgastePorPartido(j, min, ctx, alineacion.presionAlta), 0, 100);
+        j.condicion - desgastePorPartido(j, min, ctx, alineacion.actitud), 0, 100);
       if (min === 90) condicionMinima = Math.min(condicionMinima, j.condicion);
     }
     condiciones.push(plantel.reduce((s, j) => s + j.condicion, 0) / plantel.length);

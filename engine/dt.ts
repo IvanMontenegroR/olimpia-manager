@@ -129,16 +129,16 @@ export function armarOnce(
   }
 
   // De visitante en copa se aguanta y se define en casa. De local en copa se sale
-  // a buscarlo, que es donde el Defensores pesa.
+  // a buscarlo, que es donde el Defensores pesa. Salir a buscarlo ya implica
+  // apretar arriba: no son dos decisiones distintas.
   const actitud = ctx.competencia === "sudamericana"
     ? (ctx.esLocal ? "ofensivo" : "defensivo")
-    : (ctx.esLocal ? "ofensivo" : "equilibrado");
+    : (ctx.esLocal && ctx.rivalFuerza < 66 ? "ofensivo" : "equilibrado");
 
   return {
     once,
     suplentes,
     actitud,
-    presionAlta: ctx.esLocal && ctx.rivalFuerza < 66,
     puestos,
   };
 }

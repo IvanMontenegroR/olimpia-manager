@@ -2,7 +2,7 @@ import { Rng } from "./rng.ts";
 import { P, clamp, fuerzas, nivelEfectivo } from "./motor.ts";
 import { generarMomento, type Momento } from "./momentos.ts";
 import type { JugadorRival } from "./rival.ts";
-import { LINEA_DE, type Alineacion, type ContextoPartido, type Jugador, type Posicion } from "./tipos.ts";
+import { LINEA_DE, type Alineacion, type ContextoPartido, type Jugador, type Posicion , aprieta } from "./tipos.ts";
 
 export type TipoEvento =
   | "inicio" | "gol" | "gol_rival" | "ocasion" | "ocasion_rival"
@@ -238,7 +238,7 @@ export function relatarTramo(
 
   for (const j of a.once) {
     const pAm = ((LINEA_DE[j.posicion] === "DEF" ? 0.16 : LINEA_DE[j.posicion] === "MED" ? 0.14 : 0.08)
-      * (ctx.esClasico ? 1.5 : 1) * (a.presionAlta ? 1.25 : 1)) * parte;
+      * (ctx.esClasico ? 1.5 : 1) * (aprieta(a.actitud) ? 1.25 : 1)) * parte;
     if (rng.chance(pAm)) {
       const m = rng.entero(desde + 1, Math.max(hasta, desde + 1));
       sucesos.push({ min: m, hacer: () => push(m, "amarilla", texto(rng, AMARILLA, j), { jugadorId: j.id }) });
@@ -257,7 +257,7 @@ export function relatarTramo(
     let pRoja = 0.005;
     if (amonestados.has(j.id)) {
       pRoja = 0.055;
-      if (a.presionAlta) pRoja += 0.025;
+      if (aprieta(a.actitud)) pRoja += 0.025;
       if (a.actitud === "defensivo") pRoja += 0.015;
       if (j.condicion < 55) pRoja += 0.02;
       if (ctx.esClasico) pRoja += 0.02;

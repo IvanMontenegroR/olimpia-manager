@@ -64,6 +64,15 @@ export const TEXTO_ANIMO: Record<Animo, string> = {
 };
 export type Actitud = "defensivo" | "equilibrado" | "ofensivo";
 
+/**
+ * Ir al frente es apretar arriba. Antes eran dos decisiones separadas, la
+ * actitud y un botón de presión, que en la práctica se tomaban juntas: nadie
+ * se mete atrás y presiona en campo rival al mismo tiempo. Ahora salir a
+ * buscarlo trae lo suyo y lo que cuesta: más situaciones, más piernas
+ * gastadas y más riesgo de que te expulsen a alguien.
+ */
+export const aprieta = (a: Actitud) => a === "ofensivo";
+
 export type Rasgo =
   | "desequilibrante"
   | "definicion_irregular"
@@ -143,7 +152,6 @@ export interface Alineacion {
   /** Los tres que entran. El documento fija tres cambios y ni uno más. */
   suplentes: Jugador[];
   actitud: Actitud;
-  presionAlta: boolean;
   /** Puesto efectivo asignado a cada jugador, puede no ser su posición natural. */
   puestos: Map<string, Posicion>;
 }

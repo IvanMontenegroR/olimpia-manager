@@ -1,4 +1,4 @@
-import type { Alineacion, ContextoPartido, Jugador } from "./tipos.ts";
+import { aprieta, type Alineacion, type ContextoPartido, type Jugador } from "./tipos.ts";
 
 /**
  * Chance de que lo echen antes del final, para mostrarla en pantalla.
@@ -10,7 +10,7 @@ export function riesgoDeRoja(
 ): number {
   if (!tieneAmarilla) return 0;
   let p = 0.055;
-  if (a.presionAlta) p += 0.025;
+  if (aprieta(a.actitud)) p += 0.025;
   if (a.actitud === "defensivo") p += 0.015;
   if (j.condicion < 55) p += 0.02;
   if (ctx.esClasico) p += 0.02;
