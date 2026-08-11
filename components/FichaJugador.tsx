@@ -90,10 +90,25 @@ export default function FichaJugador({
             </div>
           </div>
           <div className="shrink-0 text-right">
-            <div className="num text-[30px] leading-none">{j.nivel}</div>
-            <div className="text-[8px] uppercase tracking-widest" style={{ color: "var(--apagado)" }}>
-              nivel
-            </div>
+            {/* Al pibe que nadie vio jugar se le muestra el rango, no el número:
+                el nivel real recién se sabe cuando debuta. */}
+            {j.aRevelar && j.rangoNivel ? (
+              <>
+                <div className="num text-[20px] leading-none" style={{ color: "var(--medio)" }}>
+                  {j.rangoNivel[0]}–{j.rangoNivel[1]}
+                </div>
+                <div className="text-[8px] uppercase tracking-widest" style={{ color: "var(--medio)" }}>
+                  sin debutar
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="num text-[30px] leading-none">{j.nivel}</div>
+                <div className="text-[8px] uppercase tracking-widest" style={{ color: "var(--apagado)" }}>
+                  nivel
+                </div>
+              </>
+            )}
           </div>
         </div>
 

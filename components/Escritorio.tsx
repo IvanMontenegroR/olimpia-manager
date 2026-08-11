@@ -727,7 +727,10 @@ function VistaPlantel({ plantel, partida, onGuardarEquipos, onMoverReserva }: {
                   {TEXTO_ANIMO[animoDe(e?.animo ?? 70)].toLowerCase()}
                 </span>
               </span>
-              <span className="num w-6 text-right text-[15px]">{j.nivel}</span>
+              <span className="num w-6 text-right text-[15px]"
+                    style={{ color: j.aRevelar ? "var(--medio)" : undefined }}>
+                {j.aRevelar ? "?" : j.nivel}
+              </span>
               <span
                 role="button" tabIndex={0}
                 onClick={(ev) => { ev.stopPropagation(); onMoverReserva(j.id, !j.reserva); }}

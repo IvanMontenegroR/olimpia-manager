@@ -19,6 +19,8 @@ export interface Efecto {
   siSaleMal?: Omit<Efecto, "siSaleMal">;
   /** Deja al jugador afuera del próximo partido (expulsión, lesión). */
   suspendeA?: string;
+  /** Suma al plantel un juvenil de nivel desconocido, del pueblo que diga. */
+  traerPibeDe?: string;
 }
 
 export interface OpcionSituacion {
@@ -655,14 +657,17 @@ const PLANTILLAS: Plantilla[] = [
           contexto: `Un veedor habla de un chico de 18 que hace cosas raras en la liga de ${pueblo}. ` +
             "Nadie más lo vio jugar. Piden 90 mil y hay que decidir hoy.",
           opciones: [
+            // No es una apuesta con dos resultados: es una incógnita que se
+            // despeja cuando el pibe debuta, así que el rango va en el detalle.
             { id: "traer", etiqueta: "Traerlo a probarse",
-              detalle: "Puede ser un hallazgo o puede ser plata tirada" },
+              detalle: "Puede salir cualquier cosa entre 54 y 74 de nivel. " +
+                "No lo vas a saber hasta que juegue" },
             { id: "pasar", etiqueta: "Dejarlo pasar",
               detalle: "No se gasta, y si aparece en otro lado te vas a acordar" },
           ],
         },
         efectos: {
-          traer: { dineroUsd: -90_000, hinchada: 2,
+          traer: { dineroUsd: -90_000, hinchada: 2, traerPibeDe: pueblo,
             texto: `Llegó el pibe de ${pueblo} a probarse en el predio.` },
           pasar: { texto: `Se dejó pasar al chico de ${pueblo}.` },
         },

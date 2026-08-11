@@ -124,6 +124,14 @@ export interface Jugador {
    * la realidad y es el costo verdadero de no rotar.
    */
   minutosRecientes?: number;
+  /**
+   * Todavía no se sabe lo que vale. Se usa para el pibe que traés del interior
+   * sin que nadie lo haya visto jugar: el nivel real ya está sorteado, pero
+   * la pantalla muestra un rango hasta que debute.
+   */
+  aRevelar?: boolean;
+  /** El rango que se muestra mientras no debutó. */
+  rangoNivel?: [number, number];
   /** 1 a 5. No toca la simulación deportiva: es la moneda del marketing. */
   valor_comercial?: number;
 }

@@ -211,7 +211,9 @@ export default function Alineador({
                   <span style={{ color: elegido ? "var(--negro)" : "var(--apagado)" }}>
                     {j.posicion}
                   </span>
-                  <span className="num">{nivelEf(j, j.posicion, ctx)}</span>
+                  <span className="num" style={{ color: j.aRevelar ? "var(--medio)" : undefined }}>
+                    {j.aRevelar ? "?" : nivelEf(j, j.posicion, ctx)}
+                  </span>
                   <span className="inline-block h-1 w-1 rounded-full"
                         style={{ background: colorCondicion(j.condicion) }} />
                 </span>

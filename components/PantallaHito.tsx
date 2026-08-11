@@ -51,6 +51,18 @@ const ESTILO: Record<TipoHito, Estilo> = {
     fondoAnimado: "papelitos",
     encabezado: "Mercado de pases",
   },
+  lesion: {
+    fondo: "radial-gradient(120% 90% at 50% 0%, #33222a, #0a120d 70%)",
+    acento: "#c96f6f",
+    fondoAnimado: "lluvia",
+    encabezado: "Parte médico",
+  },
+  revelacion: {
+    fondo: "radial-gradient(120% 90% at 50% 0%, #1c3a2a, #0a120d 70%)",
+    acento: "#3fa76a",
+    fondoAnimado: "rayos",
+    encabezado: "Debut",
+  },
   fin_temporada: {
     fondo: "radial-gradient(120% 90% at 50% 0%, #1e2a24, #0a120d 70%)",
     acento: "#8fa396",

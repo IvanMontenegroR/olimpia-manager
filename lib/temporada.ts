@@ -121,7 +121,7 @@ export interface EntradaDiario {
  */
 export type TipoHito =
   | "campeon_liga" | "campeon_copa" | "eliminado_copa" | "despedido"
-  | "fin_temporada" | "fichaje";
+  | "fin_temporada" | "fichaje" | "lesion" | "revelacion";
 
 export interface Hito {
   tipo: TipoHito;
@@ -586,6 +586,23 @@ export function cerrarPartido(p: Partida, partido: PartidoUI, c: CierrePartido):
       if (j.edad >= 33) desgaste += P.desgasteVeterano * (min / 90);
       e.condicion = clamp(e.condicion - desgaste, 0, 100);
       e.minutos += min;
+      // El pibe del interior deja de ser una incógnita cuando pisa la cancha.
+      const traido = n.incorporados.find((x) => x.id === j.id && x.aRevelar);
+      if (traido && e.minutos >= 20) {
+        traido.aRevelar = false;
+        const bueno = traido.nivel >= 66;
+        n.hito = {
+          tipo: "revelacion",
+          titulo: `${traido.apellido} debutó`,
+          detalle: bueno
+            ? `El pibe que trajiste del interior es mejor de lo que decían. Nadie lo había visto jugar.`
+            : `El pibe que trajiste del interior es de los que hay muchos. Al menos costó poco.`,
+          cifra: String(traido.nivel),
+          pie: "de nivel",
+        };
+        n.bitacora.push({ dia: p.dia, marca: bueno ? "titulo" : undefined,
+          texto: `Debutó ${traido.apellido}: resultó ser nivel ${traido.nivel}.` });
+      }
       if (j.fecha_nacimiento >= "2007-01-01" && min >= 90) n.minutosSub18 += 90;
       // El ánimo se mueve con el resultado y con lo que hizo él: el que
       // convierte se levanta más que el que solo estuvo en cancha. Tira al
@@ -608,7 +625,26 @@ export function cerrarPartido(p: Partida, partido: PartidoUI, c: CierrePartido):
     if (c.rojas.includes(j.id)) e.suspendidoFechas = 1;
 
     const les = c.lesionados.find((l) => l.id === j.id);
-    if (les) e.lesionadoHasta = sumarDias(p.dia, les.dias);
+    if (les) {
+      e.lesionadoHasta = sumarDias(p.dia, les.dias);
+      // Que se te rompa un titular es tan grande como perder una apuesta, así
+      // que se muestra igual y no en una línea del diario. Si hay varias, gana
+      // la más larga.
+      const semanas = Math.round(les.dias / 7);
+      if (!n.hito || (n.hito.tipo === "lesion" && Number(n.hito.cifra) < semanas)) {
+        n.hito = {
+          tipo: "lesion",
+          titulo: `Se rompió ${j.apellido}`,
+          detalle: les.dias >= 30
+            ? `${j.nombre} ${j.apellido} se lesionó y no vuelve hasta dentro de un mes largo.`
+            : `${j.nombre} ${j.apellido} salió lesionado. El parte médico dice que vuelve pronto.`,
+          cifra: String(semanas),
+          pie: semanas === 1 ? "semana afuera" : "semanas afuera",
+        };
+      }
+      n.bitacora.push({ dia: p.dia, marca: "golpe",
+        texto: `${j.apellido} se lesionó: ${semanas} semana${semanas === 1 ? "" : "s"} afuera.` });
+    }
     e.golesTorneo += c.goleadores.filter((g) => g === j.id).length;
   }
 
@@ -1044,6 +1080,56 @@ export function rechazarEstrella(p: Partida): Partida {
   return n;
 }
 
+/**
+ * El pibe que traés del interior sin que nadie lo haya visto.
+ *
+ * El nivel real se sortea acá, pero queda tapado: la ficha muestra un rango
+ * hasta que juegue. Es la única incógnita del juego que se despeja jugando, y
+ * por eso bancarlo aunque hoy no rinda tiene sentido.
+ */
+function sumarPibe(n: Partida, pueblo: string): void {
+  const rng = new Rng(`pibe-${pueblo}-${n.dia}`);
+  const NOMBRES = [["Aldo", "Ayala"], ["Blas", "Cristaldo"], ["Rodrigo", "Ferreira"],
+                   ["Juan", "Ozuna"], ["Marcelo", "Bogado"], ["Diego", "Villalba"]];
+  const [nombre, apellido] = rng.elegir(NOMBRES);
+  const puestos = ["LI", "DFC", "MCD", "MC", "MCO", "ED", "EI", "DC"] as const;
+  const usados = new Set([...PLANTEL, ...n.incorporados].map((j) => j.numero));
+  let numero = 34;
+  while (usados.has(numero)) numero++;
+
+  // El azar está acá y en ningún otro lado: puede salir crack o del montón.
+  const real = rng.entero(54, 74);
+  const j: Jugador = {
+    id: `pibe-${pueblo}-${n.dia}`,
+    numero, nombre, apellido,
+    posicion: rng.elegir(puestos as unknown as string[]) as Jugador["posicion"],
+    posiciones_secundarias: [],
+    edad: 18,
+    fecha_nacimiento: "2008-01-01",
+    nacionalidad: "PAR",
+    extranjero: false,
+    nivel: real,
+    nivel_incertidumbre: 0,
+    condicion: 92,
+    animo: 80,
+    partidos_internacionales: 0,
+    rasgos: [],
+    lesionado_hasta: null,
+    tarjetas_amarillas: 0,
+    suspendido: false,
+    valor_comercial: 2,
+    aRevelar: true,
+    rangoNivel: [54, 74],
+  };
+  n.incorporados.push(j);
+  n.plantel[j.id] = {
+    condicion: j.condicion, amarillas: 0, suspendidoFechas: 0, lesionadoHasta: null,
+    golesTorneo: 0, minutos: 0, animo: j.animo, crecimiento: 0,
+  };
+  // arranca en la reserva: es un pibe que vino a probarse
+  n.enReserva.push(j.id);
+}
+
 // ---------------------------------------------------------------- decisiones
 
 export function resolverAsunto(p: Partida, asuntoId: string, opcionId: string): Partida {
@@ -1151,6 +1237,7 @@ export function resolverAsunto(p: Partida, asuntoId: string, opcionId: string): 
     if (efecto.suspendeA && n.plantel[efecto.suspendeA]) {
       n.plantel[efecto.suspendeA].suspendidoFechas = 1;
     }
+    if (efecto.traerPibeDe) sumarPibe(n, efecto.traerPibeDe);
     n.bitacora.push({
       dia: n.dia,
       texto: efecto.texto,

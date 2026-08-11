@@ -127,7 +127,7 @@ export const P = {
    * 26%), porque en un partido real los equipos se condicionan: si está 0-0 a
    * los ochenta, los dos se cuidan. Con rho negativo suben el 0-0 y el 1-1.
    */
-  rhoEmpates: -0.17,
+  rhoEmpates: -0.28,
   // Meterse atrás tiene que servir de verdad: aguantar en Río y definirla en
   // Asunción es una estrategia legítima, no un suicidio.
   actitudAtaque: { defensivo: -7, equilibrado: 0, ofensivo: 5 } as Record<Actitud, number>,
