@@ -12,7 +12,7 @@ export const CUPO_EXTRANJEROS = 4;
 export const SUB18_DESDE = "2007-01-01";
 export const esSub18 = (j: Jugador) => j.fecha_nacimiento >= SUB18_DESDE;
 
-/** Cada sistema es una lista de once puestos concretos, no un conteo por línea. */
+/** Cada formación es una lista de once puestos concretos, no un conteo por línea. */
 export const MOLDES: { nombre: string; puestos: Posicion[] }[] = [
   { nombre: "4-3-3",   puestos: ["ARQ", "LD", "DFC", "DFC", "LI", "MCD", "MC", "MC", "ED", "DC", "EI"] },
   { nombre: "4-4-2",   puestos: ["ARQ", "LD", "DFC", "DFC", "LI", "MD", "MC", "MC", "MI", "DC", "DC"] },
@@ -30,6 +30,56 @@ export interface Asignacion {
   total: number;
   adaptados: Jugador[];
   fueraDePuesto: Jugador[];
+}
+
+export const MOLDE_DE = (nombre: string) =>
+  MOLDES.find((m) => m.nombre === nombre)?.puestos ?? MOLDES[0].puestos;
+
+/** Una alineación son once casilleros: el jugador que ocupa cada puesto, o nadie. */
+export type Alineado = (string | null)[];
+
+/**
+ * Reparte a estos jugadores entre los casilleros de una formación, buscando el
+ * mejor encaje global. Los que ya vienen con casillero asignado se respetan:
+ * así arrastrar a alguien a un puesto no se deshace al recalcular.
+ */
+export function repartirEnMolde(
+  jugadores: Jugador[], slots: Posicion[], ctx: ContextoPartido,
+): Alineado {
+  const alineado: Alineado = new Array(slots.length).fill(null);
+  const parejas: { id: string; slot: number; valor: number }[] = [];
+  for (const j of jugadores) {
+    for (let s = 0; s < slots.length; s++) {
+      parejas.push({ id: j.id, slot: s, valor: nivelEfectivo(j, slots[s], ctx) });
+    }
+  }
+  parejas.sort((a, b) => b.valor - a.valor);
+
+  const puesto = new Set<string>();
+  for (const { id, slot } of parejas) {
+    if (puesto.has(id) || alineado[slot]) continue;
+    alineado[slot] = id;
+    puesto.add(id);
+  }
+  return alineado;
+}
+
+/** La formación que mejor le calza a estos once, con su reparto. */
+export function mejorMolde(
+  jugadores: Jugador[], ctx: ContextoPartido,
+): { formacion: string; alineado: Alineado } {
+  const porId = new Map(jugadores.map((j) => [j.id, j]));
+  let mejor = { formacion: MOLDES[0].nombre, alineado: [] as Alineado, total: -Infinity };
+  for (const { nombre, puestos } of MOLDES) {
+    const alineado = repartirEnMolde(jugadores, puestos, ctx);
+    let total = 0;
+    alineado.forEach((id, s) => {
+      const j = id ? porId.get(id) : null;
+      if (j) total += nivelEfectivo(j, puestos[s], ctx);
+    });
+    if (total > mejor.total) mejor = { formacion: nombre, alineado, total };
+  }
+  return { formacion: mejor.formacion, alineado: mejor.alineado };
 }
 
 /**

@@ -13,22 +13,76 @@ import {
   CALENDARIO_COPA, OBJETIVO, TOTAL_FECHAS, borrar, diasAlPartido, esPartidoDeCopa,
   estadoSub18, formatoDia, hayPartidoHoy, miles, ocupacionDe, partidoDe, plantelDe,
   posicionDe, sumarDias,
-  tablaDe, type Partida,
+  tablaDe, type EquipoGuardado, type Partida,
 } from "@/lib/temporada.ts";
+import Alineador, { type EstadoAlineacion } from "./Alineador.tsx";
+import { mejorMolde, MOLDE_DE, repartirEnMolde } from "@/lib/juego.ts";
 
 type Vista = "escritorio" | "plantel" | "tabla" | "fixture" | "mercado" | "bitacora" | "copa";
+type Ayuda = "estadio" | "vestuario" | "hinchada" | "dirigencia";
+
+/** Qué mide cada barra del encabezado y qué la mueve. */
+const AYUDAS: Record<Ayuda, { titulo: string; texto: string; mueve: string[] }> = {
+  estadio: {
+    titulo: "Estadio",
+    texto: "Qué parte del Defensores del Chaco se llena cuando jugás de local. " +
+      "No es decoración: la cancha llena empuja al equipo y la vacía lo deja solo.",
+    mueve: [
+      "Precio de la entrada: es lo que más pesa. Popular llena, cara vacía",
+      "Humor de la hinchada: si venís mal, no vienen aunque sea barato",
+      "Clásico: contra Cerro se llena igual, +25%",
+      "Efecto en cancha: de 0.55 con el estadio vacío a 1.35 con el estadio lleno",
+      "Cada partido de local, las entradas entran a la caja del club",
+    ],
+  },
+  vestuario: {
+    titulo: "Vestuario",
+    texto: "El clima interno del plantel. Es el promedio de cómo están los jugadores " +
+      "con vos, y se contagia: si baja mucho, empiezan los problemas solos.",
+    mueve: [
+      "Resultados: ganar suma, perder resta",
+      "Cómo resolvés los asuntos del plantel",
+      "Rechazar una oferta por un jugador que se quería ir",
+      "Abajo de 38 se filtra a la prensa, abajo de 28 hay pelea en la práctica",
+      "Efecto en cancha: la moral de cada jugador multiplica su nivel entre 0.94 y 1.06",
+    ],
+  },
+  hinchada: {
+    titulo: "Hinchada",
+    texto: "El humor de la gente. Se nota en la taquilla y adentro de la cancha.",
+    mueve: [
+      "Resultados: ganar +5, empatar −2, perder −8",
+      "Precios populares la mantienen contenta",
+      "Vender a un ídolo la enoja",
+      "Arrastra al vestuario: si la gente está caliente, adentro se siente",
+    ],
+  },
+  dirigencia: {
+    titulo: "Dirigencia",
+    texto: "Cuánto te bancan. Si llega a cero, te echan y se termina la partida.",
+    mueve: [
+      "Resultados y posición en la tabla",
+      "Avanzar en la Sudamericana la sube fuerte",
+      "Perder el clásico la baja fuerte",
+      "Si la hinchada está por debajo de 40, te bancan menos",
+      "Abajo de 25 aparece el aviso de que evalúan tu continuidad",
+    ],
+  },
+};
 
 export default function Escritorio({
-  partida, onAvanzar, onDirigir, onResolver, onFichar, onReiniciar,
+  partida, onAvanzar, onDirigir, onResolver, onFichar, onReiniciar, onGuardarEquipos,
 }: {
   partida: Partida;
   onAvanzar: () => void;
   onDirigir: () => void;
   onResolver: (asuntoId: string, opcionId: string) => void;
+  onGuardarEquipos: (e: EquipoGuardado[]) => void;
   onFichar: (fichajeId: string) => void;
   onReiniciar: () => void;
 }) {
   const [vista, setVista] = useState<Vista>("escritorio");
+  const [ayuda, setAyuda] = useState<Ayuda | null>(null);
   const tabla = useMemo(() => tablaDe(partida), [partida]);
   const plantel = useMemo(() => plantelDe(partida), [partida]);
   const posicion = useMemo(() => posicionDe(partida), [partida]);
@@ -81,7 +135,9 @@ export default function Escritorio({
         plantel: "Plantel", tabla: "Tabla", fixture: "Fixture",
         mercado: "Mercado", bitacora: "Bitácora", copa: "Sudamericana",
       }[vista]} onVolver={() => setVista("escritorio")}>
-        {vista === "plantel" && <VistaPlantel plantel={plantel} partida={partida} />}
+        {vista === "plantel" && (
+          <VistaPlantel plantel={plantel} partida={partida} onGuardarEquipos={onGuardarEquipos} />
+        )}
         {vista === "tabla" && <VistaTabla tabla={tabla} />}
         {vista === "fixture" && <VistaFixture partida={partida} />}
         {vista === "mercado" && <Mercado partida={partida} onFichar={onFichar} />}
@@ -128,13 +184,17 @@ export default function Escritorio({
         </div>
 
         <div className="mt-2 flex gap-2">
-          <Medidor etiqueta="Vestuario" valor={partida.ambiente} color="#3fa76a" />
-          <Medidor etiqueta="Hinchada" valor={partida.hinchada} color="#d9a832" />
+          <Medidor etiqueta="Vestuario" valor={partida.ambiente} color="#3fa76a"
+                   onClick={() => setAyuda("vestuario")} />
+          <Medidor etiqueta="Hinchada" valor={partida.hinchada} color="#d9a832"
+                   onClick={() => setAyuda("hinchada")} />
           <Medidor etiqueta="Dirigencia" valor={partida.paciencia}
-                   color={partida.paciencia < 25 ? "#c0392b" : "#4a7fb5"} />
-          <div className="w-[58px] shrink-0">
+                   color={partida.paciencia < 25 ? "#c0392b" : "#4a7fb5"}
+                   onClick={() => setAyuda("dirigencia")} />
+          <button className="w-[64px] shrink-0 text-left" onClick={() => setAyuda("estadio")}>
             <div className="mb-1 flex items-baseline justify-between">
-              <span className="text-[8px] uppercase tracking-[0.14em]" style={{ color: "var(--apagado)" }}>
+              <span className="mr-1 text-[8px] uppercase tracking-[0.14em]"
+                    style={{ color: "var(--apagado)" }}>
                 Estadio
               </span>
               <Numero valor={ocupacion * 100} formato={(n) => `${Math.round(n)}%`}
@@ -146,7 +206,7 @@ export default function Escritorio({
                    style={{ width: `${ocupacion * 100}%`,
                             background: "linear-gradient(90deg, #7a5a1e, var(--oro))" }} />
             </div>
-          </div>
+          </button>
         </div>
       </header>
 
@@ -202,27 +262,25 @@ export default function Escritorio({
       ) : (
         <div className="flex min-h-0 flex-1 flex-col px-3">
           {/* tablero del club */}
-          <div className="escalona grid shrink-0 grid-cols-2 gap-1.5">
-            <Modulo titulo="Plantel" color="#3fa76a" onClick={() => setVista("plantel")}
-              numero={condMedia} sufijo="%" pie="condición media"
-              alerta={
-                !sub18.alcanza ? `Sub-18: faltan ${sub18.faltan}'`
-                : bajas.length ? `${bajas.length} baja${bajas.length > 1 ? "s" : ""}`
-                : undefined} />
+          <div className="escalona shrink-0">
+            <ModuloCopa partida={partida} rival={rivalCopa} onClick={() => setVista("copa")} />
 
-            <Modulo titulo="Sudamericana" color="#d9a832" onClick={() => setVista("copa")}
-              principal={NOMBRE_RONDA[partida.copa.ronda]}
-              pie={rivalCopa ? `vs ${rivalCopa.nombre}` : "sin rival"}
-              escudo={partida.copa.ronda !== "eliminado" && partida.copa.ronda !== "campeon"
-                ? partida.copa.rivalId : undefined} />
+            <div className="mt-1.5 grid grid-cols-3 gap-1.5">
+              <Modulo titulo="Plantel" color="#3fa76a" onClick={() => setVista("plantel")}
+                numero={condMedia} sufijo="%" pie="condición"
+                alerta={
+                  !sub18.alcanza ? `Sub-18 ${sub18.faltan}'`
+                  : bajas.length ? `${bajas.length} baja${bajas.length > 1 ? "s" : ""}`
+                  : undefined} />
 
-            <Modulo titulo="Tabla" color="#4a7fb5" onClick={() => setVista("tabla")}
-              numero={posicion} sufijo="°"
-              pie={difLider === 0 ? "puntero" : `a ${difLider} del líder`} />
+              <Modulo titulo="Tabla" color="#4a7fb5" onClick={() => setVista("tabla")}
+                numero={posicion} sufijo="°"
+                pie={difLider === 0 ? "puntero" : `a ${difLider} del líder`} />
 
-            <Modulo titulo="Pases" color="#e0902a" onClick={() => setVista("mercado")}
-              numero={partida.fichajes.length} pie="disponibles"
-              alerta={partida.ofertas.length ? `${partida.ofertas.length} oferta` : undefined} />
+              <Modulo titulo="Pases" color="#e0902a" onClick={() => setVista("mercado")}
+                numero={partida.fichajes.length} pie="disponibles"
+                alerta={partida.ofertas.length ? `${partida.ofertas.length} oferta` : undefined} />
+            </div>
           </div>
 
           {/* último movimiento */}
@@ -316,11 +374,83 @@ export default function Escritorio({
           </button>
         ))}
       </div>
+
+      {ayuda && (
+        <div className="fixed inset-0 z-40 flex flex-col justify-end"
+             style={{ background: "rgba(0,0,0,0.6)" }} onClick={() => setAyuda(null)}>
+          <div className="entra-abajo rounded-t-2xl px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3"
+               style={{ background: "var(--negro)", borderTop: "1px solid var(--linea)",
+                        maxHeight: "82vh", overflowY: "auto",
+                        boxShadow: "0 -12px 40px rgba(0,0,0,0.75)" }}
+               onClick={(e) => e.stopPropagation()}>
+            <div className="mb-2 flex items-center justify-between">
+              <h2 className="apellido text-[17px]">{AYUDAS[ayuda].titulo}</h2>
+              <button onClick={() => setAyuda(null)} className="rounded px-2 py-0.5 text-[11px]"
+                      style={{ background: "var(--carbon)" }}>✕</button>
+            </div>
+            <p className="text-[12px] leading-relaxed" style={{ color: "var(--tenue)" }}>
+              {AYUDAS[ayuda].texto}
+            </p>
+            <div className="mt-3 text-[9px] uppercase tracking-[0.16em]" style={{ color: "var(--apagado)" }}>
+              Qué la mueve
+            </div>
+            <ul className="mt-1.5">
+              {AYUDAS[ayuda].mueve.map((m, i) => (
+                <li key={i} className="mb-1 flex gap-2 text-[11px] leading-snug"
+                    style={{ color: "var(--tenue)" }}>
+                  <span style={{ color: "var(--apagado)" }}>·</span>{m}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 // ---------------------------------------------------------------- piezas
+
+/**
+ * La copa merece más lugar que un cuadradito: es el rival que más pesa y el
+ * que menos seguido aparece, así que se muestra con el escudo grande.
+ */
+function ModuloCopa({ partida, rival, onClick }: {
+  partida: Partida; rival: any; onClick: () => void;
+}) {
+  const c = partida.copa;
+  const vivo = c.ronda !== "eliminado" && c.ronda !== "campeon";
+  const NOMBRES: Record<string, string> = {
+    octavos: "Octavos de final", cuartos: "Cuartos de final",
+    semis: "Semifinal", final: "Final", eliminado: "Eliminado", campeon: "Campeón",
+  };
+  return (
+    <button onClick={onClick} className="relieve flex w-full items-center gap-3 rounded-lg p-3 text-left"
+      style={{
+        background: `linear-gradient(160deg,
+          color-mix(in srgb, #d9a832 26%, var(--carbon-alto)),
+          color-mix(in srgb, #d9a832 9%, var(--carbon)))`,
+      }}>
+      {vivo && <Escudo id={c.rivalId} nombre={rival?.nombre ?? "rival"} tam={46} />}
+      <span className="min-w-0 flex-1">
+        <span className="block text-[9px] uppercase tracking-[0.16em]" style={{ color: "#d9a832" }}>
+          Sudamericana · {NOMBRES[c.ronda]}
+        </span>
+        <span className="apellido block truncate text-[21px] leading-tight">
+          {vivo ? (rival?.nombre ?? "Sin rival") : NOMBRES[c.ronda]}
+        </span>
+        {vivo && (
+          <span className="block truncate text-[10px]" style={{ color: "var(--tenue)" }}>
+            {rival?.pais ? `${rival.pais} · ` : ""}
+            {c.jugadosEnRonda === 1 ? `global ${c.globalO}-${c.globalR}` : "ida y vuelta"}
+          </span>
+        )}
+      </span>
+      <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider"
+            style={{ color: "#d9a832" }}>Ver →</span>
+    </button>
+  );
+}
 
 function Punto({ color }: { color: string }) {
   return <span className="block h-2 w-2 rounded-full" style={{ background: color }} />;
@@ -358,7 +488,9 @@ function Modulo({ titulo, color, principal, numero, sufijo, pie, alerta, escudo,
   );
 }
 
-function Medidor({ etiqueta, valor, color }: { etiqueta: string; valor: number; color: string }) {
+function Medidor({ etiqueta, valor, color, onClick }: {
+  etiqueta: string; valor: number; color: string; onClick?: () => void;
+}) {
   // Cuánto se movió desde la última vez, para mostrarlo al lado del número.
   const previo = useRef(valor);
   const [delta, setDelta] = useState<number | null>(null);
@@ -372,7 +504,7 @@ function Medidor({ etiqueta, valor, color }: { etiqueta: string; valor: number; 
   }, [valor]);
 
   return (
-    <div className="relative flex-1">
+    <button className="relative flex-1 text-left" onClick={onClick}>
       {delta !== null && (
         <span className="delta num absolute right-0 top-3 text-[11px]"
               style={{ color: delta > 0 ? "var(--cesped)" : "var(--ladrillo)" }}>
@@ -390,7 +522,7 @@ function Medidor({ etiqueta, valor, color }: { etiqueta: string; valor: number; 
              style={{ width: `${valor}%`,
                       background: `linear-gradient(90deg, color-mix(in srgb, ${color} 55%, #000), ${color})` }} />
       </div>
-    </div>
+    </button>
   );
 }
 
@@ -409,10 +541,34 @@ function Sub({ titulo, onVolver, children }: {
   );
 }
 
-function VistaPlantel({ plantel, partida }: { plantel: ReturnType<typeof plantelDe>; partida: Partida }) {
+function VistaPlantel({ plantel, partida, onGuardarEquipos }: {
+  plantel: ReturnType<typeof plantelDe>;
+  partida: Partida;
+  onGuardarEquipos: (e: EquipoGuardado[]) => void;
+}) {
   const orden = ["ARQ", "DEF", "MED", "DEL"];
+  const [pestana, setPestana] = useState<"lista" | "equipos">("lista");
+
+  if (pestana === "equipos") {
+    return (
+      <VistaEquipos partida={partida} plantel={plantel}
+        onGuardar={onGuardarEquipos} onVolver={() => setPestana("lista")} />
+    );
+  }
+
   return (
     <>
+      <div className="mb-2 flex gap-1">
+        <button className="flex-1 rounded-md py-1.5 text-[10px] font-bold uppercase tracking-wider"
+                style={{ background: "var(--blanco)", color: "var(--negro)" }}>
+          Plantel
+        </button>
+        <button onClick={() => setPestana("equipos")}
+                className="flex-1 rounded-md py-1.5 text-[10px] font-bold uppercase tracking-wider"
+                style={{ background: "var(--carbon)", color: "var(--tenue)" }}>
+          Equipos{partida.equipos.length ? ` · ${partida.equipos.length}` : ""}
+        </button>
+      </div>
       <div className="mb-2 rounded-lg px-3 py-2" style={{ background: "var(--carbon)" }}>
         <div className="flex items-baseline justify-between text-[11px]">
           <span style={{ color: "var(--tenue)" }}>Minutos Sub-18</span>
@@ -509,30 +665,129 @@ function VistaTabla({ tabla }: { tabla: ReturnType<typeof tablaDe> }) {
   );
 }
 
+/**
+ * El fixture con las dos competencias: el Clausura fecha a fecha y el camino
+ * de la Sudamericana, que antes solo se veía entrando a la copa.
+ */
 function VistaFixture({ partida }: { partida: Partida }) {
+  const [comp, setComp] = useState<"todo" | "clausura" | "copa">("todo");
+
+  const liga = partidosDeOlimpia().map((p, i) => ({
+    clave: `liga-${i}`,
+    orden: p.ctx.fecha,
+    competencia: "clausura" as const,
+    etiqueta: `F${i + 1}`,
+    fecha: p.ctx.fecha,
+    esLocal: p.ctx.esLocal,
+    rivalId: p.rivalId,
+    rivalNombre: p.rivalNombre,
+    resultado: partida.resultados.find((x) => x.fechaNumero === i + 1) ?? null,
+    esProximo: i + 1 === partida.fechaActual,
+  }));
+
+  const RONDAS = ["octavos", "cuartos", "semis", "final"] as const;
+  const NOMBRE: Record<string, string> = {
+    octavos: "8vos", cuartos: "4tos", semis: "Semi", final: "Final",
+  };
+  const indiceActual = RONDAS.indexOf(partida.copa.ronda as "octavos");
+
+  const copa = RONDAS.flatMap((r) => {
+    const cal = CALENDARIO_COPA[r];
+    const esActual = partida.copa.ronda === r;
+    const yaPaso = partida.copa.ronda === "campeon" || indiceActual > RONDAS.indexOf(r);
+    // el rival solo se conoce en la ronda que se está jugando; más adelante se
+    // sabe la fecha pero todavía no contra quién
+    const rival = esActual
+      ? (RIVALES_COPA as any[]).find((x) => x.id === partida.copa.rivalId)
+      : null;
+    // en la final se juega un partido solo, en el resto ida y vuelta
+    const patas = r === "final"
+      ? [{ dia: cal.ida, mano: "único" }]
+      : [{ dia: cal.ida, mano: "ida" }, { dia: cal.vuelta, mano: "vuelta" }];
+    return patas.map((pata, k) => ({
+      clave: `copa-${r}-${k}`,
+      orden: pata.dia,
+      competencia: "copa" as const,
+      etiqueta: NOMBRE[r],
+      fecha: pata.dia,
+      // de local en la vuelta, que es como cayó el sorteo
+      esLocal: r === "final" ? false : pata.mano === "vuelta",
+      neutral: r === "final",
+      rivalId: esActual ? partida.copa.rivalId : "",
+      rivalNombre: r === "final" && !rival
+        ? "Final en Barranquilla"
+        : rival?.nombre ?? "Por definir",
+      resultado: null,
+      esProximo: esActual,
+      mano: pata.mano,
+      yaPaso,
+    }));
+  });
+
+  const eliminado = partida.copa.ronda === "eliminado";
+  const items = (comp === "clausura" ? liga : comp === "copa" ? copa : [...liga, ...copa])
+    .sort((a, b) => a.orden.localeCompare(b.orden));
+
   return (
     <>
-      {partidosDeOlimpia().map((p, i) => {
-        const n = i + 1;
-        const r = partida.resultados.find((x) => x.fechaNumero === n);
-        const esProximo = n === partida.fechaActual;
+      <div className="mb-2 flex gap-1">
+        {([["todo", "Todo"], ["clausura", "Clausura"], ["copa", "Sudamericana"]] as const)
+          .map(([id, texto]) => (
+            <button key={id} onClick={() => setComp(id)}
+              className="flex-1 rounded-md py-1.5 text-[10px] font-bold uppercase tracking-wider"
+              style={{
+                background: comp === id ? "var(--blanco)" : "var(--carbon)",
+                color: comp === id ? "var(--negro)" : "var(--tenue)",
+              }}>
+              {texto}
+            </button>
+          ))}
+      </div>
+
+      {comp !== "clausura" && eliminado && (
+        <div className="mb-2 rounded-md px-2.5 py-2 text-[11px]"
+             style={{ background: "var(--carbon)", color: "var(--tenue)" }}>
+          Olimpia quedó afuera de la Sudamericana.
+        </div>
+      )}
+
+      {items.map((p) => {
+        const r = p.resultado;
         const color = r
           ? r.golesOlimpia > r.golesRival ? "#3fa76a"
             : r.golesOlimpia === r.golesRival ? "#8fa396" : "#c0392b"
           : null;
+        const esCopa = p.competencia === "copa";
         return (
-          <div key={p.etiqueta} className="mb-1 flex items-center gap-2 rounded-md px-2 py-1.5"
-            style={{ background: esProximo
-              ? "color-mix(in srgb, #ffffff 15%, var(--carbon))" : "var(--carbon)",
-              opacity: r ? 0.75 : 1 }}>
-            <span className="num w-5 text-[11px]" style={{ color: "var(--apagado)" }}>{n}</span>
-            <span className="w-4 text-center text-[9px] font-bold"
-                  style={{ color: p.ctx.esLocal ? "#3fa76a" : "#d9a832" }}>
-              {p.ctx.esLocal ? "L" : "V"}
+          <div key={p.clave} className="mb-1 flex items-center gap-2 rounded-md px-2 py-1.5"
+            style={{
+              background: p.esProximo
+                ? "color-mix(in srgb, #ffffff 15%, var(--carbon))"
+                : esCopa ? "color-mix(in srgb, #d9a832 10%, var(--carbon))" : "var(--carbon)",
+              opacity: r ? 0.75 : esCopa && eliminado ? 0.4 : 1,
+            }}>
+            <span className="num w-8 shrink-0 text-[10px]"
+                  style={{ color: esCopa ? "#d9a832" : "var(--apagado)" }}>
+              {p.etiqueta}
             </span>
-            <Escudo id={p.rivalId} nombre={p.rivalNombre} tam={18} />
+            <span className="w-4 shrink-0 text-center text-[9px] font-bold"
+                  style={{ color: "neutral" in p && p.neutral ? "var(--apagado)"
+                    : p.esLocal ? "#3fa76a" : "#d9a832" }}>
+              {"neutral" in p && p.neutral ? "N" : p.esLocal ? "L" : "V"}
+            </span>
+            {p.rivalId
+              ? <Escudo id={p.rivalId} nombre={p.rivalNombre} tam={18} />
+              : <span className="h-[18px] w-[18px] shrink-0 rounded-full"
+                      style={{ background: "var(--linea)" }} />}
             <span className="apellido min-w-0 flex-1 truncate text-[11px]">
-              {nombreCorto(p.rivalId, p.rivalNombre)}
+              {p.rivalId
+                ? nombreCorto(p.rivalId, p.rivalNombre)
+                : p.rivalNombre}
+              {esCopa && "mano" in p && p.mano !== "único" && (
+                <span className="ml-1 text-[9px] font-normal" style={{ color: "var(--apagado)" }}>
+                  {p.mano}
+                </span>
+              )}
             </span>
             {r ? (
               <span className="num rounded px-1.5 py-0.5 text-[11px]"
@@ -541,7 +796,7 @@ function VistaFixture({ partida }: { partida: Partida }) {
               </span>
             ) : (
               <span className="text-[10px]" style={{ color: "var(--apagado)" }}>
-                {p.ctx.fecha.slice(8, 10)}/{p.ctx.fecha.slice(5, 7)}
+                {p.fecha.slice(8, 10)}/{p.fecha.slice(5, 7)}
               </span>
             )}
           </div>
@@ -630,6 +885,166 @@ function VistaBitacora({ partida }: { partida: Partida }) {
           <span style={{ color: "var(--tenue)" }}>{b.texto}</span>
         </div>
       ))}
+    </>
+  );
+}
+
+/**
+ * Equipos guardados: armar un once con calma fuera del día de partido y
+ * ponerlo después de un toque. Sirve para tener listo el equipo alternativo
+ * del Clausura sin desarmar el titular que va a jugar la copa.
+ */
+function VistaEquipos({ partida, plantel, onGuardar, onVolver }: {
+  partida: Partida;
+  plantel: ReturnType<typeof plantelDe>;
+  onGuardar: (e: EquipoGuardado[]) => void;
+  onVolver: () => void;
+}) {
+  const [editando, setEditando] = useState<string | null>(null);
+  const [nombreNuevo, setNombreNuevo] = useState("");
+
+  // Se arma con todo el plantel, no solo con los disponibles hoy: un equipo
+  // guardado es un plan, y para cuando lo uses el lesionado ya puede estar bien.
+  const porId = useMemo(() => new Map(plantel.map((j) => [j.id, j])), [plantel]);
+
+  // Contexto neutro: sirve para ordenar y valorar puestos, no para jugar.
+  const ctx = useMemo(() => {
+    const m = partidoDe(partida);
+    return m?.ctx ?? {
+      fecha: partida.dia, competencia: "clausura" as const, esLocal: true,
+      rivalFuerza: 62, rivalNombre: "—", viajeKm: 0, alturaM: 43,
+      diasDescanso: 6, esClasico: false,
+    };
+  }, [partida]);
+
+  const equipo = partida.equipos.find((e) => e.nombre === editando);
+  const [estado, setEstado] = useState<EstadoAlineacion>(() => {
+    if (equipo) {
+      const vivos = equipo.jugadores.map((id) => porId.get(id)!).filter(Boolean);
+      return { formacion: equipo.formacion, alineado: repartirEnMolde(vivos, MOLDE_DE(equipo.formacion), ctx) };
+    }
+    return { formacion: "4-3-3", alineado: new Array(11).fill(null) };
+  });
+
+  if (editando !== null) {
+    const once = estado.alineado.filter(Boolean).length;
+    return (
+      // h-full porque el contenedor de las subvistas scrollea: sin altura
+      // propia la cancha, que crece con flex-1, colapsaría a cero
+      <div className="flex h-full min-h-0 flex-col overflow-hidden">
+        <div className="mb-1 flex items-center justify-between">
+          <span className="apellido text-[14px]">{editando}</span>
+          <span className="num text-[12px]"
+                style={{ color: once === 11 ? "var(--cesped)" : "var(--medio)" }}>
+            {once}/11
+          </span>
+        </div>
+        <Alineador aptos={plantel} ctx={ctx} estado={estado} onCambio={setEstado} />
+        <div className="flex gap-1.5 pb-2 pt-1.5">
+          <button onClick={() => setEditando(null)}
+            className="flex-1 rounded-lg py-2.5 text-[11px] font-bold uppercase tracking-wider"
+            style={{ background: "var(--carbon)", color: "var(--tenue)" }}>
+            Cancelar
+          </button>
+          <button
+            disabled={once !== 11}
+            onClick={() => {
+              const jugadores = estado.alineado.filter(Boolean) as string[];
+              onGuardar([
+                ...partida.equipos.filter((e) => e.nombre !== editando),
+                { nombre: editando, formacion: estado.formacion, jugadores },
+              ]);
+              setEditando(null);
+            }}
+            className="flex-1 rounded-lg py-2.5 text-[11px] font-extrabold uppercase tracking-wider"
+            style={{
+              background: once === 11 ? "var(--blanco)" : "var(--carbon)",
+              color: once === 11 ? "var(--negro)" : "var(--apagado)",
+            }}>
+            {once === 11 ? "Guardar" : `Faltan ${11 - once}`}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const abrir = (nombre: string) => {
+    const e = partida.equipos.find((x) => x.nombre === nombre);
+    if (e) {
+      const vivos = e.jugadores.map((id) => porId.get(id)!).filter(Boolean);
+      setEstado({ formacion: e.formacion, alineado: repartirEnMolde(vivos, MOLDE_DE(e.formacion), ctx) });
+    } else {
+      // arranca con el mejor once posible, que es más útil que once huecos
+      const mejores = [...plantel].sort((a, b) => b.nivel - a.nivel).slice(0, 11);
+      setEstado(mejorMolde(mejores, ctx));
+    }
+    setEditando(nombre);
+  };
+
+  return (
+    <>
+      <div className="mb-2 flex gap-1">
+        <button onClick={onVolver}
+                className="flex-1 rounded-md py-1.5 text-[10px] font-bold uppercase tracking-wider"
+                style={{ background: "var(--carbon)", color: "var(--tenue)" }}>
+          Plantel
+        </button>
+        <button className="flex-1 rounded-md py-1.5 text-[10px] font-bold uppercase tracking-wider"
+                style={{ background: "var(--blanco)", color: "var(--negro)" }}>
+          Equipos
+        </button>
+      </div>
+
+      <p className="mb-2 text-[11px] leading-relaxed" style={{ color: "var(--tenue)" }}>
+        Dejá armados los onces que más usás y ponelos de un toque antes de cada
+        partido. Un titular para la copa y un alternativo para el Clausura es la
+        forma más rápida de rotar sin rearmar todo cada fecha.
+      </p>
+
+      {partida.equipos.map((e) => {
+        const nivel = Math.round(
+          e.jugadores.reduce((s, id) => s + (porId.get(id)?.nivel ?? 0), 0) /
+          Math.max(1, e.jugadores.length));
+        return (
+          <div key={e.nombre} className="mb-1 flex items-center gap-2 rounded-md px-2.5 py-2"
+               style={{ background: "var(--carbon)" }}>
+            <span className="min-w-0 flex-1">
+              <span className="apellido block truncate text-[13px] leading-tight">{e.nombre}</span>
+              <span className="text-[9px] uppercase tracking-wider" style={{ color: "var(--apagado)" }}>
+                {e.formacion} · nivel medio {nivel}
+              </span>
+            </span>
+            <button onClick={() => abrir(e.nombre)}
+              className="rounded px-2 py-1 text-[9px] font-bold uppercase tracking-wider"
+              style={{ background: "var(--linea)", color: "var(--blanco)" }}>
+              Editar
+            </button>
+            <button onClick={() => onGuardar(partida.equipos.filter((x) => x.nombre !== e.nombre))}
+              className="rounded px-2 py-1 text-[9px] font-bold uppercase tracking-wider"
+              style={{ background: "color-mix(in srgb, #c0392b 30%, var(--carbon))", color: "#e88" }}>
+              Borrar
+            </button>
+          </div>
+        );
+      })}
+
+      <div className="mt-2 flex gap-1.5">
+        <input value={nombreNuevo} onChange={(e) => setNombreNuevo(e.target.value)}
+          placeholder={partida.equipos.length === 0 ? "Titular" : "Nombre del equipo"}
+          className="min-w-0 flex-1 rounded-lg px-3 py-2.5 text-[12px] outline-none"
+          style={{ background: "var(--carbon)", color: "var(--blanco)" }} />
+        <button
+          onClick={() => {
+            const nombre = nombreNuevo.trim() ||
+              (partida.equipos.length === 0 ? "Titular" : `Equipo ${partida.equipos.length + 1}`);
+            setNombreNuevo("");
+            abrir(nombre);
+          }}
+          className="shrink-0 rounded-lg px-4 py-2.5 text-[11px] font-bold uppercase tracking-[0.12em]"
+          style={{ background: "var(--blanco)", color: "var(--negro)" }}>
+          Armar
+        </button>
+      </div>
     </>
   );
 }

@@ -14,7 +14,7 @@ const EQUIPOS = equiposJson as any[];
 const FIXTURE = fixtureJson as any[];
 const RIVALES = rivalesJson as any[];
 const CLAVE = "olimpia-manager-clausura-2026";
-const VERSION = 8;
+const VERSION = 9;
 
 export const DIA_INICIAL = "2026-07-20";
 export const TOTAL_FECHAS = 22;
@@ -84,6 +84,13 @@ export interface Asunto {
   efectos?: Record<string, Efecto>;
 }
 
+/** Un once armado y guardado con nombre, para volver a ponerlo de un toque. */
+export interface EquipoGuardado {
+  nombre: string;
+  formacion: string;
+  jugadores: string[];
+}
+
 export interface Partida {
   version: number;
   /** Refuerzos comprados. Se suman al plantel del JSON. */
@@ -108,6 +115,9 @@ export interface Partida {
   paciencia: number;
   /** Si te echaron, por qué. */
   despedido: string | null;
+
+  /** Alineaciones guardadas por el DT: el titular, el equipo de copa, etc. */
+  equipos: EquipoGuardado[];
 
   copa: EstadoCopa;
   ofertas: Oferta[];
@@ -160,6 +170,7 @@ export function partidaNueva(): Partida {
     entrenamiento: null,
     entrenaA: null,
     precioEntrada: 60,
+    equipos: [],
     sponsorConBonus: false,
     puntosDescontados: 0,
     paciencia: 70,
@@ -199,6 +210,7 @@ export function cargar(): Partida {
     p.fichajes ??= [];
     p.pendientes ??= [];
     p.bitacora ??= [];
+    p.equipos ??= [];
     return p;
   } catch {
     return partidaNueva();

@@ -36,6 +36,12 @@ export default function Page() {
         key={`${partida.dia}-${partida.fechaActual}`}
         partido={partido}
         plantel={plantelDe(partida)}
+        equipos={partida.equipos}
+        onGuardarEquipo={(e) => setPartida((p) => (p ? {
+          ...p,
+          // guardar con un nombre ya usado lo pisa, no lo duplica
+          equipos: [...p.equipos.filter((x) => x.nombre !== e.nombre), e],
+        } : p))}
         onVolver={() => setFase("escritorio")}
         onJugar={(s) => { setSalida(s); setFase("partido"); }} />
     );
@@ -63,6 +69,7 @@ export default function Page() {
       onResolver={(asuntoId, opcionId) =>
         setPartida((p) => (p ? resolverAsunto(p, asuntoId, opcionId) : p))}
       onFichar={(id) => setPartida((p) => (p ? fichar(p, id) ?? p : p))}
+      onGuardarEquipos={(equipos) => setPartida((p) => (p ? { ...p, equipos } : p))}
       onReiniciar={() => { setPartida(partidaNueva()); setFase("escritorio"); }} />
   );
 }

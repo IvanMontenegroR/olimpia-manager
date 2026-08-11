@@ -2,19 +2,14 @@
 
 import { useMemo, useState } from "react";
 import {
-  asignarPuestos, colorCondicion, CUPO_EXTRANJEROS, esSub18,
-  nivelEf, nombreCorto, type PartidoUI,
+  CUPO_EXTRANJEROS, esSub18, mejorMolde, MOLDE_DE, nivelEf, nombreCorto,
+  type PartidoUI, repartirEnMolde,
 } from "@/lib/juego.ts";
-import { LINEA_DE, type Actitud, type Jugador, type Linea, type Posicion } from "@/engine/tipos.ts";
+import type { Actitud, Jugador, Posicion } from "@/engine/tipos.ts";
+import type { EquipoGuardado } from "@/lib/temporada.ts";
 import Escudo from "./Escudo.tsx";
-import CanchaArmado from "./CanchaArmado.tsx";
-import Dorsal from "./Dorsal.tsx";
+import Alineador, { Hoja, type EstadoAlineacion } from "./Alineador.tsx";
 import { ACTITUD } from "./PartidoEnVivo.tsx";
-
-const FILTROS = ["TODOS", "ARQ", "DEF", "MED", "DEL"] as const;
-type Filtro = (typeof FILTROS)[number];
-const ORDEN: Record<Linea, number> = { ARQ: 0, DEF: 1, MED: 2, DEL: 3 };
-const orden = (p: Posicion) => ORDEN[LINEA_DE[p]];
 
 export interface Salida {
   once: Jugador[];
@@ -25,104 +20,67 @@ export interface Salida {
 }
 
 export default function ArmarOnce({
-  partido, plantel, onJugar, onVolver,
+  partido, plantel, equipos, onJugar, onVolver, onGuardarEquipo,
 }: {
   partido: PartidoUI;
   plantel: Jugador[];
+  equipos: EquipoGuardado[];
   onJugar: (s: Salida) => void;
   onVolver: () => void;
+  onGuardarEquipo: (e: EquipoGuardado) => void;
 }) {
   const { ctx } = partido;
   const aptos = useMemo(
     () => plantel.filter((j) => !j.suspendido && !j.lesionado_hasta), [plantel]);
-  const [sel, setSel] = useState<Set<string>>(() => new Set(autoOnce(ctx, aptos)));
-  const [filtro, setFiltro] = useState<Filtro>("TODOS");
+  const porId = useMemo(() => new Map(aptos.map((j) => [j.id, j])), [aptos]);
+
+  // El once vive como once casilleros, no como un conjunto: así se puede elegir
+  // formación, arrastrar de un puesto a otro y guardar equipos armados.
+  const inicial = useMemo<EstadoAlineacion>(() => {
+    const once = autoOnce(ctx, aptos).map((id) => porId.get(id)!).filter(Boolean);
+    return mejorMolde(once, ctx);
+  }, [ctx, aptos, porId]);
+
+  const [estado, setEstado] = useState<EstadoAlineacion>(inicial);
   const [actitud, setActitud] = useState<Actitud>(ctx.esLocal ? "ofensivo" : "equilibrado");
   const [presionAlta, setPresion] = useState(ctx.esLocal);
-  /** Jugador tocado, esperando con quién intercambiarse. */
-  const [marcado, setMarcado] = useState<string | null>(null);
+  const [verEquipos, setVerEquipos] = useState(false);
+  const [nombreNuevo, setNombreNuevo] = useState("");
 
-  const once = useMemo(
-    () => aptos.filter((j) => sel.has(j.id)).sort((a, b) => orden(a.posicion) - orden(b.posicion)),
-    [sel, aptos]);
+  const slots = MOLDE_DE(estado.formacion);
+  const once = estado.alineado
+    .map((id) => (id ? porId.get(id) : null))
+    .filter(Boolean) as Jugador[];
+  const puestos = new Map<string, Posicion>();
+  estado.alineado.forEach((id, s) => { if (id) puestos.set(id, slots[s]); });
 
-  const asign = useMemo(() => asignarPuestos(once, ctx), [once, ctx]);
   const extranjeros = once.filter((j) => j.extranjero).length;
   const sub18 = once.filter(esSub18).length;
   const arqueros = once.filter((j) => j.posicion === "ARQ").length;
-
-  const nivelOnce = asign
-    ? Math.round(once.reduce((s, j) => s + nivelEf(j, asign.puestos.get(j.id)!, ctx), 0) / 11)
+  const nivelOnce = once.length === 11
+    ? Math.round(once.reduce((s, j) => s + nivelEf(j, puestos.get(j.id)!, ctx), 0) / 11)
     : 0;
 
   const problema =
     once.length !== 11
-      ? `Faltan ${11 - once.length} · tocá a alguien del banco` :
+      ? `Faltan ${11 - once.length} · tocá un hueco de la cancha` :
     arqueros !== 1 ? "Necesitás un arquero" :
     extranjeros > CUPO_EXTRANJEROS ? `${extranjeros} extranjeros, el cupo es ${CUPO_EXTRANJEROS}` :
     null;
 
-  const banco = useMemo(() => {
-    const fuera = aptos.filter((j) => !sel.has(j.id));
-    const base = filtro === "TODOS" ? fuera : fuera.filter((j) => LINEA_DE[j.posicion] === filtro);
-    // Sin filtro conviene ver primero a los mejores: si ordenara por puesto,
-    // los tres arqueros suplentes se comerían el arranque del banco.
-    return [...base].sort((a, b) =>
-      filtro === "TODOS"
-        ? nivelEf(b, b.posicion, ctx) - nivelEf(a, a.posicion, ctx)
-        : orden(a.posicion) - orden(b.posicion) ||
-          nivelEf(b, b.posicion, ctx) - nivelEf(a, a.posicion, ctx));
-  }, [filtro, sel, ctx, aptos]);
-
-  /**
-   * Tocar en la cancha y después en el banco intercambia. Si todavía falta
-   * gente, tocar a uno del banco lo mete directamente: antes la única
-   * operación posible era el intercambio y con diez quedabas trabado.
-   */
-  const tocar = (j: Jugador) => {
-    const enCancha = sel.has(j.id);
-
-    // falta gente y este está afuera: entra y listo
-    if (!enCancha && sel.size < 11) {
-      setSel((prev) => new Set(prev).add(j.id));
-      setMarcado(null);
-      return;
-    }
-
-    // está en cancha y el once está incompleto: sale
-    if (enCancha && sel.size < 11 && marcado === j.id) {
-      setSel((prev) => { const n = new Set(prev); n.delete(j.id); return n; });
-      setMarcado(null);
-      return;
-    }
-
-    if (!marcado) { setMarcado(j.id); return; }
-    if (marcado === j.id) {
-      // segundo toque sobre el mismo: lo saca de la cancha
-      if (enCancha) setSel((prev) => { const n = new Set(prev); n.delete(j.id); return n; });
-      setMarcado(null);
-      return;
-    }
-
-    const otro = aptos.find((x) => x.id === marcado);
-    if (!otro) { setMarcado(j.id); return; }
-    const otroEnCancha = sel.has(otro.id);
-    if (enCancha === otroEnCancha) { setMarcado(j.id); return; } // los dos del mismo lado
-
-    setSel((prev) => {
-      const n = new Set(prev);
-      const sale = enCancha ? j : otro;
-      const entra = enCancha ? otro : j;
-      n.delete(sale.id);
-      n.add(entra.id);
-      return n;
+  const aplicarEquipo = (e: EquipoGuardado) => {
+    const vivos = e.jugadores.map((id) => porId.get(id)).filter(Boolean) as Jugador[];
+    setEstado({
+      formacion: e.formacion,
+      alineado: repartirEnMolde(vivos, MOLDE_DE(e.formacion), ctx),
     });
-    setMarcado(null);
+    setVerEquipos(false);
   };
 
   const jugar = () => {
-    if (problema || !asign) return;
-    const libres = aptos.filter((j) => !sel.has(j.id));
+    if (problema) return;
+    const dentro = new Set(once.map((j) => j.id));
+    const libres = aptos.filter((j) => !dentro.has(j.id));
     const porNivel = (a: Jugador, b: Jugador) =>
       nivelEf(b, b.posicion, ctx) - nivelEf(a, a.posicion, ctx);
     const arquero = libres.filter((j) => j.posicion === "ARQ").sort(porNivel)[0];
@@ -130,7 +88,7 @@ export default function ArmarOnce({
       ...(arquero ? [arquero] : []),
       ...libres.filter((j) => j.posicion !== "ARQ").sort(porNivel).slice(0, 6),
     ];
-    onJugar({ once, suplentes, actitud, presionAlta, puestos: asign.puestos });
+    onJugar({ once, suplentes, actitud, presionAlta, puestos });
   };
 
   return (
@@ -162,83 +120,21 @@ export default function ArmarOnce({
       {/* ---------- estado del once ---------- */}
       <div className="flex items-stretch border-y" style={{ borderColor: "var(--linea)" }}>
         <Dato etiqueta="Once" valor={`${once.length}/11`} alerta={once.length !== 11} />
-        <Dato etiqueta="Sistema" valor={asign?.molde ?? "—"} />
+        <Dato etiqueta="Formación" valor={estado.formacion} />
         <Dato etiqueta="Extranj." valor={`${extranjeros}/${CUPO_EXTRANJEROS}`}
               alerta={extranjeros > CUPO_EXTRANJEROS} />
         <Dato etiqueta="Sub-18" valor={String(sub18)} alerta={sub18 === 0} />
         <Dato etiqueta="Nivel" valor={nivelOnce ? String(nivelOnce) : "—"} fuerte />
       </div>
 
-      {/* ---------- cancha ---------- */}
-      <div className="flex min-h-0 flex-1 flex-col py-2">
-        <CanchaArmado once={once} puestos={asign?.puestos ?? new Map()} ctx={ctx}
-                      seleccionado={marcado} onTocar={tocar} />
-      </div>
-
-      {asign && (asign.adaptados.length > 0 || asign.fueraDePuesto.length > 0) && (
-        <div className="px-4 pb-1 text-[10px]" style={{ color: "var(--tenue)" }}>
-          {asign.adaptados.map((j) => (
-            <span key={j.id} className="mr-2">
-              {j.apellido} de {asign.puestos.get(j.id)}{" "}
-              <span style={{ color: "var(--medio)" }}>×0.90</span>
-            </span>
-          ))}
-          {asign.fueraDePuesto.map((j) => (
-            <span key={j.id} className="mr-2">
-              {j.apellido} de {asign.puestos.get(j.id)}{" "}
-              <span style={{ color: "var(--critico)" }}>×0.75</span>
-            </span>
-          ))}
-        </div>
-      )}
-
-      {/* ---------- banco ---------- */}
-      <div className="border-t pt-1.5" style={{ borderColor: "var(--linea)" }}>
-        <div className="flex items-center gap-1 px-3 pb-1.5">
-          <span className="mr-1 shrink-0 text-[9px] uppercase tracking-[0.14em]"
-                style={{ color: "var(--apagado)" }}>
-            Banco
-          </span>
-          {FILTROS.map((p) => (
-            <button key={p} onClick={() => setFiltro(p)}
-              className="flex-1 rounded py-1 text-[10px] font-bold uppercase tracking-wider"
-              style={{
-                background: filtro === p ? "var(--blanco)" : "var(--carbon)",
-                color: filtro === p ? "var(--negro)" : "var(--tenue)",
-              }}>
-              {p === "TODOS" ? "Todos" : p}
-            </button>
-          ))}
-        </div>
-
-        <div className="scroll-x flex gap-1.5 px-3 pb-2">
-          {banco.map((j) => {
-            const elegido = marcado === j.id;
-            return (
-              <button key={j.id} onClick={() => tocar(j)}
-                className="flex shrink-0 flex-col items-center rounded-lg px-2 py-1.5"
-                style={{
-                  width: 66,
-                  background: elegido ? "var(--medio)" : "var(--carbon)",
-                  color: elegido ? "var(--negro)" : "var(--blanco)",
-                }}>
-                <Dorsal numero={j.numero} tam={26} />
-                <span className="apellido mt-1 max-w-full truncate text-[9px] leading-tight">
-                  {j.apellido}
-                </span>
-                <span className="mt-0.5 flex items-center gap-1 text-[9px] leading-none">
-                  <span style={{ color: elegido ? "var(--negro)" : "var(--apagado)" }}>
-                    {j.posicion}
-                  </span>
-                  <span className="num">{nivelEf(j, j.posicion, ctx)}</span>
-                  <span className="inline-block h-1 w-1 rounded-full"
-                        style={{ background: colorCondicion(j.condicion) }} />
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
+      <Alineador aptos={aptos} ctx={ctx} estado={estado} onCambio={setEstado}
+        extra={
+          <button onClick={() => setVerEquipos(true)}
+            className="shrink-0 rounded px-2 py-1 text-[9px] font-bold uppercase tracking-[0.12em]"
+            style={{ background: "var(--carbon)", color: "var(--tenue)" }}>
+            Equipos
+          </button>
+        } />
 
       {/* ---------- decisiones ---------- */}
       <div className="border-t px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2"
@@ -278,6 +174,60 @@ export default function ArmarOnce({
           {problema ?? "Jugar el partido"}
         </button>
       </div>
+
+      {verEquipos && (
+        <Hoja titulo="Equipos guardados" onCerrar={() => setVerEquipos(false)}>
+          {equipos.length === 0 && (
+            <p className="text-[11px] leading-relaxed" style={{ color: "var(--tenue)" }}>
+              Todavía no guardaste ninguno. Armá un once y guardalo acá abajo, o
+              armalos con calma desde Plantel · Equipos.
+            </p>
+          )}
+          <div className="flex flex-col gap-1.5">
+            {equipos.map((e) => {
+              const vivos = e.jugadores.filter((id) => porId.has(id)).length;
+              return (
+                <button key={e.nombre} onClick={() => aplicarEquipo(e)}
+                  className="flex items-center justify-between rounded-lg px-3 py-2.5 text-left"
+                  style={{ background: "var(--carbon)" }}>
+                  <span className="min-w-0">
+                    <span className="apellido block truncate text-[13px] leading-tight">{e.nombre}</span>
+                    <span className="text-[9px] uppercase tracking-wider"
+                          style={{ color: vivos < e.jugadores.length ? "var(--medio)" : "var(--tenue)" }}>
+                      {e.formacion} · {vivos === e.jugadores.length
+                        ? `${vivos} jugadores`
+                        : `faltan ${e.jugadores.length - vivos}, hay bajas`}
+                    </span>
+                  </span>
+                  <span className="shrink-0 text-[10px] font-bold uppercase tracking-widest"
+                        style={{ color: "var(--medio)" }}>Poner</span>
+                </button>
+              );
+            })}
+          </div>
+          {once.length === 11 && (
+            <div className="mt-3 flex gap-1.5">
+              <input value={nombreNuevo} onChange={(e) => setNombreNuevo(e.target.value)}
+                placeholder={equipos.length ? "Nombre del equipo" : "Titular"}
+                className="min-w-0 flex-1 rounded-lg px-3 py-2.5 text-[12px] outline-none"
+                style={{ background: "var(--carbon)", color: "var(--blanco)" }} />
+              <button
+                onClick={() => {
+                  const nombre = nombreNuevo.trim() || (equipos.length ? `Equipo ${equipos.length + 1}` : "Titular");
+                  onGuardarEquipo({
+                    nombre, formacion: estado.formacion, jugadores: once.map((j) => j.id),
+                  });
+                  setNombreNuevo("");
+                  setVerEquipos(false);
+                }}
+                className="shrink-0 rounded-lg px-4 py-2.5 text-[11px] font-bold uppercase tracking-[0.12em]"
+                style={{ background: "var(--blanco)", color: "var(--negro)" }}>
+                Guardar
+              </button>
+            </div>
+          )}
+        </Hoja>
+      )}
     </div>
   );
 }
