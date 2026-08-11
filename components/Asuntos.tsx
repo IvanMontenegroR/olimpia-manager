@@ -10,6 +10,7 @@ const COLOR: Record<Asunto["tipo"], string> = {
   oferta: "#d9a832",
   marketing: "#4a7fb5",
   prensa: "#d9a832",
+  viaje: "#4a7fb5",
 };
 
 /** Lo que hay que resolver antes de que el día siga. */
@@ -34,6 +35,7 @@ export default function Asuntos({
         {asunto.tipo === "entrenamiento" ? "Semana de trabajo"
           : asunto.tipo === "oferta" ? "Mercado"
           : asunto.tipo === "marketing" ? "Comercial"
+          : asunto.tipo === "viaje" ? "Logística"
           : "Vestuario y prensa"}
       </span>
       <h2 className="apellido mt-1 text-[22px] leading-tight">{asunto.titulo}</h2>
@@ -84,6 +86,26 @@ function opcionesDe(a: Asunto, p: Partida):
         efecto: { hinchada: -9 } },
     ];
   }
+  if (a.tipo === "viaje") {
+    const altura = !!a.datos?.altura;
+    return [
+      { id: "vispera", etiqueta: "Viajar la víspera",
+        detalle: altura
+          ? "Se llega la noche anterior y la altura se siente entera"
+          : "Lo más barato, pero se llega con el viaje encima" },
+      { id: "dosdias", etiqueta: "Viajar dos días antes",
+        detalle: altura
+          ? "Media adaptación: la altura pega bastante menos"
+          : "El plantel llega descansado",
+        efecto: { dineroUsd: -60_000 } },
+      { id: "semana", etiqueta: "Concentrar en destino",
+        detalle: altura
+          ? "Adaptación completa, pero una semana lejos de casa pesa adentro"
+          : "Llegan enteros, aunque se hace largo",
+        efecto: { dineroUsd: -150_000, ambiente: -3 } },
+    ];
+  }
+
   if (a.tipo === "oferta") {
     const oferta = p.ofertas.find((o) => o.id === (a.datos?.ofertaId as string));
     const j = PLANTEL.find((x) => x.id === oferta?.jugadorId);

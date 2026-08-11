@@ -11,6 +11,8 @@
  */
 import { readFileSync } from "node:fs";
 import { Rng } from "../engine/rng.ts";
+import { condicionRival, fuerzaBaseAjustada } from "../lib/rivales.ts";
+import { factorCondicion } from "../engine/motor.ts";
 import { simularTemporada, type Evento, type ResultadoTemporada } from "../engine/temporada.ts";
 import type { Estrategia } from "../engine/dt.ts";
 import type { Jugador } from "../engine/tipos.ts";
@@ -28,6 +30,12 @@ const fuerzas: Record<string, number> = Object.fromEntries(
   equipos.map((e: any) => [e.id, e.fuerza]));
 const inter = Object.fromEntries(internacionales.map((r: any) => [r.id, r]));
 
+/**
+ * Cuánto se prepara cada viaje de copa, para medir cuánto vale el plan de
+ * viaje. Se pasa por ACLIMATACION=0.55 npx tsx scripts/balance.ts
+ */
+const ACLIMATACION = Number(process.env.ACLIMATACION ?? 0);
+
 function construirEventos(rng: Rng): Evento[] {
   const ev: Evento[] = [];
 
@@ -38,10 +46,12 @@ function construirEventos(rng: Rng): Evento[] {
     ev.push({
       fecha: p.fecha, competencia: "clausura", ronda: `fecha_${p.fecha_numero}`,
       rivalId, rivalNombre: esLocal ? p.visitante_nombre : p.local_nombre,
-      rivalFuerza: fuerzas[rivalId], esLocal,
+      rivalFuerza: fuerzaBaseAjustada(rivalId, fuerzas[rivalId]), esLocal,
       viajeKm: p.viaje_km_olimpia ?? 0,
       alturaM: 43, esClasico: rivalId === "cerro_porteno",
       fechaNumero: p.fecha_numero,
+      // el rival llega como lo dejó su propio calendario
+      rivalCondicion: condicionRival(rivalId, p.fecha),
     });
   }
 
@@ -52,7 +62,8 @@ function construirEventos(rng: Rng): Evento[] {
     const r = inter[rid];
     ev.push({ fecha: ida, competencia: "sudamericana", ronda: `${ronda}_ida`,
       rivalId: rid, rivalNombre: r.nombre, rivalFuerza: r.fuerza, esLocal: false,
-      viajeKm: r.km_desde_asuncion, alturaM: r.altura_m, esClasico: false });
+      viajeKm: r.km_desde_asuncion, alturaM: r.altura_m, esClasico: false,
+      aclimatacion: ACLIMATACION });
     ev.push({ fecha: vuelta, competencia: "sudamericana", ronda: `${ronda}_vuelta`,
       rivalId: rid, rivalNombre: r.nombre, rivalFuerza: r.fuerza, esLocal: true,
       viajeKm: 0, alturaM: 43, esClasico: false });
@@ -73,7 +84,7 @@ function construirEventos(rng: Rng): Evento[] {
   ev.push({ fecha: cal.final.fecha, competencia: "sudamericana", ronda: "final",
     rivalId: finalista, rivalNombre: rf.nombre, rivalFuerza: rf.fuerza,
     esLocal: false, neutral: true, viajeKm: copa.final.km_desde_asuncion,
-    alturaM: copa.final.altura_m, esClasico: false });
+    alturaM: copa.final.altura_m, esClasico: false, aclimatacion: ACLIMATACION });
 
   ev.sort((a, b) => a.fecha.localeCompare(b.fecha));
   return ev;
@@ -81,8 +92,14 @@ function construirEventos(rng: Rng): Evento[] {
 
 const otrosPartidos = fixture
   .filter((p: any) => p.local !== "olimpia" && p.visitante !== "olimpia")
-  .map((p: any) => ({ fecha: p.fecha, local: p.local, visitante: p.visitante,
-                      fl: fuerzas[p.local], fv: fuerzas[p.visitante] }));
+  .map((p: any) => ({
+    fecha: p.fecha, local: p.local, visitante: p.visitante,
+    // el desgaste vale para todos, si no el torneo se gana solo
+    fl: fuerzaBaseAjustada(p.local, fuerzas[p.local]) *
+        factorCondicion(condicionRival(p.local, p.fecha)),
+    fv: fuerzaBaseAjustada(p.visitante, fuerzas[p.visitante]) *
+        factorCondicion(condicionRival(p.visitante, p.fecha)),
+  }));
 
 // ------------------------------------------------------------------ corrida
 

@@ -109,6 +109,13 @@ export interface ContextoPartido {
   ocupacion?: number;
   /** Solo en copa: la vuelta se juega con el global de la ida. */
   llaveIda?: { golesOlimpia: number; golesRival: number };
+  /**
+   * Cuánto llegó adaptado el plantel, 0 a 1. Sale del plan de viaje: llegar
+   * con días de anticipación recorta el castigo de la altura y del viaje.
+   */
+  aclimatacion?: number;
+  /** Condición del rival, 0 a 100. Viene de su propio calendario. */
+  rivalCondicion?: number;
 }
 
 export interface Alineacion {

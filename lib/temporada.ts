@@ -1,11 +1,12 @@
 "use client";
 
 import { PLANTEL, partidosDeOlimpia, type PartidoUI } from "./juego.ts";
-import { P, clamp } from "@/engine/motor.ts";
+import { P, clamp, factorCondicion } from "@/engine/motor.ts";
 import { Rng } from "@/engine/rng.ts";
 import equiposJson from "@/data/equipos_2026.json";
 import fixtureJson from "@/data/fixture_clausura2026_final.json";
 import rivalesJson from "@/data/rivales_internacionales.json";
+import { condicionRival, fuerzaBaseAjustada } from "./rivales.ts";
 import { sortearSituacion, type Efecto, type Situacion } from "@/engine/situaciones.ts";
 import { generarMercado, sortearOferta, type FichajeGenerado } from "@/engine/mercado.ts";
 import type { Jugador } from "@/engine/tipos.ts";
@@ -14,7 +15,7 @@ const EQUIPOS = equiposJson as any[];
 const FIXTURE = fixtureJson as any[];
 const RIVALES = rivalesJson as any[];
 const CLAVE = "olimpia-manager-clausura-2026";
-const VERSION = 9;
+const VERSION = 10;
 
 export const DIA_INICIAL = "2026-07-20";
 export const TOTAL_FECHAS = 22;
@@ -75,7 +76,7 @@ export type Fichaje = FichajeGenerado;
 /** Algo que espera una decisión. El día no avanza hasta resolverlo. */
 export interface Asunto {
   id: string;
-  tipo: "entrenamiento" | "evento" | "oferta" | "marketing" | "prensa";
+  tipo: "entrenamiento" | "evento" | "oferta" | "marketing" | "prensa" | "viaje";
   dia: string;
   titulo: string;
   detalle: string;
@@ -118,6 +119,11 @@ export interface Partida {
 
   /** Alineaciones guardadas por el DT: el titular, el equipo de copa, etc. */
   equipos: EquipoGuardado[];
+  /**
+   * Cómo se preparó el viaje del próximo partido de visitante, 0 a 1. Recorta
+   * el castigo de la altura y el desgaste del vuelo. Se consume al jugar.
+   */
+  aclimatacion: number;
 
   copa: EstadoCopa;
   ofertas: Oferta[];
@@ -171,6 +177,7 @@ export function partidaNueva(): Partida {
     entrenaA: null,
     precioEntrada: 60,
     equipos: [],
+    aclimatacion: 0,
     sponsorConBonus: false,
     puntosDescontados: 0,
     paciencia: 70,
@@ -211,6 +218,7 @@ export function cargar(): Partida {
     p.pendientes ??= [];
     p.bitacora ??= [];
     p.equipos ??= [];
+    p.aclimatacion ??= 0;
     return p;
   } catch {
     return partidaNueva();
@@ -296,8 +304,24 @@ export function partidoDe(p: Partida): PartidoUI | null {
       ...elegido.ctx,
       hinchada: p.hinchada,
       ocupacion: ocupacionDe(p, elegido.ctx.esClasico),
+      aclimatacion: elegido.ctx.esLocal ? 0 : p.aclimatacion,
+      // Los rivales de liga arrastran su propio calendario; los de copa llegan
+      // enteros porque su fixture internacional no está modelado. La fuerza va
+      // ajustada para que el desgaste no les cambie el promedio del torneo.
+      ...(elegido.ctx.competencia === "clausura" ? {
+        rivalFuerza: fuerzaBaseAjustada(elegido.rivalId, elegido.ctx.rivalFuerza),
+        rivalCondicion: condicionRival(elegido.rivalId, elegido.ctx.fecha),
+      } : { rivalCondicion: 100 }),
     },
   };
+}
+
+/**
+ * Un viaje se planifica cuando pesa: mucho kilómetro o mucha altura. Contra
+ * Recoleta en Asunción no hay nada que decidir.
+ */
+export function viajeExigente(m: PartidoUI): boolean {
+  return !m.ctx.esLocal && (m.ctx.viajeKm >= 800 || m.ctx.alturaM >= 1500);
 }
 
 export const esPartidoDeCopa = (m: PartidoUI | null) => m?.ctx.competencia === "sudamericana";
@@ -352,8 +376,14 @@ export function tablaDe(p: Partida): FilaTabla[] {
   for (const m of FIXTURE) {
     if (m.fecha_numero >= p.fechaActual) continue;
     if (m.local === "olimpia" || m.visitante === "olimpia") continue;
-    const xl = P.xgBase * Math.exp(P.xgK * (fuerzas[m.local] + P.localiaLiga - fuerzas[m.visitante]));
-    const xv = P.xgBase * Math.exp(P.xgK * (fuerzas[m.visitante] - fuerzas[m.local] - P.localiaLiga));
+    // Todos arrastran su calendario, no solo los rivales de Olimpia: si el
+    // desgaste valiera únicamente contra vos, el torneo se ganaría solo.
+    const fl = fuerzaBaseAjustada(m.local, fuerzas[m.local]) *
+      factorCondicion(condicionRival(m.local, m.fecha));
+    const fv = fuerzaBaseAjustada(m.visitante, fuerzas[m.visitante]) *
+      factorCondicion(condicionRival(m.visitante, m.fecha));
+    const xl = P.xgBase * Math.exp(P.xgK * (fl + P.localiaLiga - fv));
+    const xv = P.xgBase * Math.exp(P.xgK * (fv - fl - P.localiaLiga));
     const gl = rng.poisson(clamp(xl, 0.05, 6));
     const gv = rng.poisson(clamp(xv, 0.05, 6));
     anotar(m.local, gl, gv); anotar(m.visitante, gv, gl);
@@ -394,6 +424,8 @@ export function estadoSub18(p: Partida) {
 export function cerrarPartido(p: Partida, partido: PartidoUI, c: CierrePartido): Partida {
   const n: Partida = estructurado(p);
   const esCopa = partido.ctx.competencia === "sudamericana";
+  // el plan de viaje valía para este partido y se agota acá
+  n.aclimatacion = 0;
 
   if (!esCopa) n.resultados.push({
     fechaNumero: p.fechaActual,
@@ -665,6 +697,25 @@ export function avanzarUnDia(p: Partida): ResultadoAvance {
     });
   }
 
+  // El plan de viaje se decide con tiempo: tres días antes, que es cuando
+  // todavía se puede adelantar la delegación.
+  if (alPartido === 3 && !n.pendientes.some((a) => a.tipo === "viaje")) {
+    const m = partidoDe(n);
+    if (m && viajeExigente(m)) {
+      const altura = m.ctx.alturaM >= 1500;
+      n.pendientes.push({
+        id: `via-${n.dia}`, tipo: "viaje", dia: n.dia,
+        titulo: altura ? "Viaje a la altura" : "Plan de viaje",
+        detalle: altura
+          ? `${m.ciudad} está a ${m.ctx.alturaM.toLocaleString("es")} metros. ` +
+            "Cuánto antes llegue la delegación cambia lo que se puede correr."
+          : `Son ${m.ctx.viajeKm.toLocaleString("es")} km hasta ${m.ciudad}. ` +
+            "¿Cuándo se viaja?",
+        datos: { altura, km: m.ctx.viajeKm, ciudad: m.ciudad },
+      });
+    }
+  }
+
   if (alPartido === 1 && !n.pendientes.some((a) => a.tipo === "marketing")) {
     const m = partidoDe(n);
     if (m?.ctx.esLocal) {
@@ -735,6 +786,21 @@ export function resolverAsunto(p: Partida, asuntoId: string, opcionId: string): 
       opcionId === "recuperacion" ? "Semana de recuperación: se baja la carga."
       : opcionId === "tactico" ? "Semana táctica: se trabaja el partido."
       : "Semana de trabajo individual con los juveniles." });
+    return n;
+  }
+
+  if (a.tipo === "viaje") {
+    const PLANES: Record<string, { acl: number; costo: number; texto: string }> = {
+      vispera:  { acl: 0,    costo: 0,       texto: "Se viaja la víspera. Se ahorra plata y se llega justo." },
+      dosdias:  { acl: 0.55, costo: 60_000,  texto: "La delegación viaja dos días antes." },
+      semana:   { acl: 1,    costo: 150_000, texto: "Se arma la concentración con anticipación en destino." },
+    };
+    const plan = PLANES[opcionId] ?? PLANES.vispera;
+    n.aclimatacion = plan.acl;
+    n.dineroUsd -= plan.costo;
+    // estar lejos de casa varios días desgasta la cabeza, no las piernas
+    if (opcionId === "semana") n.ambiente = clamp(n.ambiente - 3, 0, 100);
+    n.bitacora.push({ dia: n.dia, texto: plan.texto });
     return n;
   }
 

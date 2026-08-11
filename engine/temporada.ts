@@ -18,6 +18,10 @@ export interface Evento {
   alturaM: number;
   esClasico: boolean;
   fechaNumero?: number;
+  /** Condición con la que llega el rival, según su propio calendario. */
+  rivalCondicion?: number;
+  /** Plan de viaje: cuánto se preparó el partido de visitante. */
+  aclimatacion?: number;
 }
 
 export interface ResultadoTemporada {
@@ -136,6 +140,8 @@ export function simularTemporada(
       alturaM: ev.alturaM,
       diasDescanso: descanso,
       esClasico: ev.esClasico,
+      rivalCondicion: ev.rivalCondicion,
+      aclimatacion: ev.aclimatacion,
     };
 
     const alineacion = armarOnce(plantel, ctx, estrategia, {

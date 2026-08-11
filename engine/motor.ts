@@ -58,7 +58,13 @@ export const P = {
   localiaCopa: 13.0,     // Olimpia de local en copa: eliminó de local a Flamengo, Fluminense y Atlético Nacional
   localiaCopaRival: 6.0, // el rival de local en copa: pesa, pero no como el Defensores     // el Defensores de noche en Conmebol no es el Defensores de un domingo
   alturaUmbralM: 1500,
-  alturaPor1000m: 0.06,
+  // La altura es EL problema del fútbol sudamericano. Ir a La Paz o a Cusco
+  // sin preparar el viaje tiene que doler.
+  alturaPor1000m: 0.085,
+  /** Cuánto del castigo de altura se puede recortar llegando con días. */
+  alturaAclimataMax: 0.6,
+  /** Y cuánto del desgaste del viaje se ahorra por lo mismo. */
+  viajeAclimataMax: 0.5,
   hostilMax: 0.10,      // pibe sin partidos internacionales
   hostilMin: 0.03,      // veterano curtido
   clasicoRuido: 0.05,
@@ -72,6 +78,13 @@ export const P = {
   actitudDefensa: { defensivo: 7, equilibrado: 0, ofensivo: -4 } as Record<Actitud, number>,
   presionAtaque: 2.5,
   presionDefensa: -1.5,
+  /**
+   * Lo que suma apretar arriba a un rival que llega gastado. Es lo que hace
+   * que enterarse de cómo llega el rival sirva para algo: si viene de jugar
+   * el jueves conviene ahogarlo, y si llega entero la presión te desgasta a
+   * vos sin ganancia.
+   */
+  presionContraCansado: 4.5,
 
   // --- rasgos ---
   rasgoDesequilibranteXg: 0.12,   // +12% de situaciones generadas
@@ -137,10 +150,16 @@ export function factorAmbienteHostil(j: Jugador, ctx: ContextoPartido): number {
   return 1 - (j.rasgos.includes("veterano_de_copas") ? pen * 0.5 : pen);
 }
 
+/**
+ * El castigo por jugar en altura, que se puede recortar llegando antes. Un
+ * plantel que viajó cinco días antes a La Paz no es el mismo que bajó del
+ * avión la noche anterior.
+ */
 export function factorAltura(ctx: ContextoPartido): number {
   if (ctx.esLocal || ctx.alturaM <= P.alturaUmbralM) return 1;
   const exceso = (ctx.alturaM - P.alturaUmbralM) / 1000;
-  return 1 - exceso * P.alturaPor1000m;
+  const aclimatado = clamp(ctx.aclimatacion ?? 0, 0, 1);
+  return 1 - exceso * P.alturaPor1000m * (1 - P.alturaAclimataMax * aclimatado);
 }
 
 export function nivelEfectivo(j: Jugador, puesto: Posicion, ctx: ContextoPartido): number {
@@ -177,7 +196,9 @@ export function fuerzas(a: Alineacion, ctx: ContextoPartido) {
   ataque += P.actitudAtaque[a.actitud];
   defensa += P.actitudDefensa[a.actitud];
   if (a.presionAlta) {
-    ataque += P.presionAtaque;
+    // apretar arriba rinde de verdad contra piernas cansadas
+    const gastado = clamp((92 - (ctx.rivalCondicion ?? 100)) / 25, 0, 1);
+    ataque += P.presionAtaque + P.presionContraCansado * gastado;
     defensa += P.presionDefensa;
   }
   if (ctx.esLocal && !ctx.neutral) {
@@ -208,7 +229,12 @@ export function simularPartido(
 ): ResultadoPartido {
   const f = fuerzas(a, ctx);
   const localiaRival = ctx.competencia === "sudamericana" ? P.localiaCopaRival : P.localiaLiga;
-  const rival = ctx.rivalFuerza + (ctx.esLocal || ctx.neutral ? 0 : localiaRival);
+  // El rival también viene de jugar: si tuvo copa entre semana o encadenó
+  // partidos, llega gastado igual que vos. Su fuerza ya está en la escala de
+  // nivel efectivo, así que se le aplica la misma curva de condición.
+  const rival =
+    ctx.rivalFuerza * factorCondicion(ctx.rivalCondicion ?? 100) +
+    (ctx.esLocal || ctx.neutral ? 0 : localiaRival);
 
   let xgOlimpia = P.xgBase * Math.exp(P.xgK * (f.ataque - rival));
   let xgRival = P.xgBase * Math.exp(P.xgK * (rival - f.defensa));
@@ -255,7 +281,9 @@ export function simularPartido(
 export function desgastePorPartido(j: Jugador, minutos: number, ctx: ContextoPartido,
                                    presionAlta: boolean): number {
   let d = P.desgaste90 * (minutos / 90);
-  d += (ctx.viajeKm / 1000) * P.desgasteViajeKm;
+  // viajar con tiempo también ahorra piernas, no solo pulmón
+  const aclimatado = clamp(ctx.aclimatacion ?? 0, 0, 1);
+  d += (ctx.viajeKm / 1000) * P.desgasteViajeKm * (1 - P.viajeAclimataMax * aclimatado);
   if (presionAlta) d += P.desgastePresionAlta * (minutos / 90);
   if (j.edad >= 33) d += P.desgasteVeterano * (minutos / 90);
   return d;

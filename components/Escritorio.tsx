@@ -16,6 +16,7 @@ import {
   tablaDe, type EquipoGuardado, type Partida,
 } from "@/lib/temporada.ts";
 import Alineador, { type EstadoAlineacion } from "./Alineador.tsx";
+import FichaJugador from "./FichaJugador.tsx";
 import { mejorMolde, MOLDE_DE, repartirEnMolde } from "@/lib/juego.ts";
 
 type Vista = "escritorio" | "plantel" | "tabla" | "fixture" | "mercado" | "bitacora" | "copa";
@@ -262,25 +263,27 @@ export default function Escritorio({
       ) : (
         <div className="flex min-h-0 flex-1 flex-col px-3">
           {/* tablero del club */}
-          <div className="escalona shrink-0">
-            <ModuloCopa partida={partida} rival={rivalCopa} onClick={() => setVista("copa")} />
+          <div className="escalona grid shrink-0 grid-cols-2 gap-1.5">
+            <Modulo titulo="Plantel" color="#3fa76a" onClick={() => setVista("plantel")}
+              numero={condMedia} sufijo="%" pie="condición media"
+              alerta={
+                !sub18.alcanza ? `Sub-18: faltan ${sub18.faltan}'`
+                : bajas.length ? `${bajas.length} baja${bajas.length > 1 ? "s" : ""}`
+                : undefined} />
 
-            <div className="mt-1.5 grid grid-cols-3 gap-1.5">
-              <Modulo titulo="Plantel" color="#3fa76a" onClick={() => setVista("plantel")}
-                numero={condMedia} sufijo="%" pie="condición"
-                alerta={
-                  !sub18.alcanza ? `Sub-18 ${sub18.faltan}'`
-                  : bajas.length ? `${bajas.length} baja${bajas.length > 1 ? "s" : ""}`
-                  : undefined} />
+            <Modulo titulo="Sudamericana" color="#d9a832" onClick={() => setVista("copa")}
+              principal={NOMBRE_RONDA[partida.copa.ronda]}
+              pie={rivalCopa ? `vs ${rivalCopa.nombre}` : "sin rival"}
+              escudo={partida.copa.ronda !== "eliminado" && partida.copa.ronda !== "campeon"
+                ? partida.copa.rivalId : undefined} />
 
-              <Modulo titulo="Tabla" color="#4a7fb5" onClick={() => setVista("tabla")}
-                numero={posicion} sufijo="°"
-                pie={difLider === 0 ? "puntero" : `a ${difLider} del líder`} />
+            <Modulo titulo="Tabla" color="#4a7fb5" onClick={() => setVista("tabla")}
+              numero={posicion} sufijo="°"
+              pie={difLider === 0 ? "puntero" : `a ${difLider} del líder`} />
 
-              <Modulo titulo="Pases" color="#e0902a" onClick={() => setVista("mercado")}
-                numero={partida.fichajes.length} pie="disponibles"
-                alerta={partida.ofertas.length ? `${partida.ofertas.length} oferta` : undefined} />
-            </div>
+            <Modulo titulo="Pases" color="#e0902a" onClick={() => setVista("mercado")}
+              numero={partida.fichajes.length} pie="disponibles"
+              alerta={partida.ofertas.length ? `${partida.ofertas.length} oferta` : undefined} />
           </div>
 
           {/* último movimiento */}
@@ -411,47 +414,6 @@ export default function Escritorio({
 
 // ---------------------------------------------------------------- piezas
 
-/**
- * La copa merece más lugar que un cuadradito: es el rival que más pesa y el
- * que menos seguido aparece, así que se muestra con el escudo grande.
- */
-function ModuloCopa({ partida, rival, onClick }: {
-  partida: Partida; rival: any; onClick: () => void;
-}) {
-  const c = partida.copa;
-  const vivo = c.ronda !== "eliminado" && c.ronda !== "campeon";
-  const NOMBRES: Record<string, string> = {
-    octavos: "Octavos de final", cuartos: "Cuartos de final",
-    semis: "Semifinal", final: "Final", eliminado: "Eliminado", campeon: "Campeón",
-  };
-  return (
-    <button onClick={onClick} className="relieve flex w-full items-center gap-3 rounded-lg p-3 text-left"
-      style={{
-        background: `linear-gradient(160deg,
-          color-mix(in srgb, #d9a832 26%, var(--carbon-alto)),
-          color-mix(in srgb, #d9a832 9%, var(--carbon)))`,
-      }}>
-      {vivo && <Escudo id={c.rivalId} nombre={rival?.nombre ?? "rival"} tam={46} />}
-      <span className="min-w-0 flex-1">
-        <span className="block text-[9px] uppercase tracking-[0.16em]" style={{ color: "#d9a832" }}>
-          Sudamericana · {NOMBRES[c.ronda]}
-        </span>
-        <span className="apellido block truncate text-[21px] leading-tight">
-          {vivo ? (rival?.nombre ?? "Sin rival") : NOMBRES[c.ronda]}
-        </span>
-        {vivo && (
-          <span className="block truncate text-[10px]" style={{ color: "var(--tenue)" }}>
-            {rival?.pais ? `${rival.pais} · ` : ""}
-            {c.jugadosEnRonda === 1 ? `global ${c.globalO}-${c.globalR}` : "ida y vuelta"}
-          </span>
-        )}
-      </span>
-      <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider"
-            style={{ color: "#d9a832" }}>Ver →</span>
-    </button>
-  );
-}
-
 function Punto({ color }: { color: string }) {
   return <span className="block h-2 w-2 rounded-full" style={{ background: color }} />;
 }
@@ -468,9 +430,9 @@ function Modulo({ titulo, color, principal, numero, sufijo, pie, alerta, escudo,
                 color-mix(in srgb, ${color} 20%, var(--carbon-alto)),
                 color-mix(in srgb, ${color} 8%, var(--carbon)))`,
             }}>
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between gap-1">
         <span className="text-[9px] uppercase tracking-[0.14em]" style={{ color }}>{titulo}</span>
-        {escudo && <Escudo id={escudo} nombre={titulo} tam={16} />}
+        {escudo && <Escudo id={escudo} nombre={titulo} tam={34} />}
       </div>
       <div className="apellido mt-1 truncate text-[19px] leading-none">
         {numero !== undefined
@@ -548,6 +510,14 @@ function VistaPlantel({ plantel, partida, onGuardarEquipos }: {
 }) {
   const orden = ["ARQ", "DEF", "MED", "DEL"];
   const [pestana, setPestana] = useState<"lista" | "equipos">("lista");
+  const [ficha, setFicha] = useState<string | null>(null);
+
+  // contexto neutro: la ficha muestra en qué puestos rinde, no simula un partido
+  const ctxFicha = useMemo(() => partidoDe(partida)?.ctx ?? {
+    fecha: partida.dia, competencia: "clausura" as const, esLocal: true,
+    rivalFuerza: 62, rivalNombre: "—", viajeKm: 0, alturaM: 43,
+    diasDescanso: 6, esClasico: false,
+  }, [partida]);
 
   if (pestana === "equipos") {
     return (
@@ -596,7 +566,8 @@ function VistaPlantel({ plantel, partida, onGuardarEquipos }: {
           const e = partida.plantel[j.id];
           const fuera = j.suspendido ? "SUSPENDIDO" : j.lesionado_hasta ? "LESIONADO" : null;
           return (
-            <div key={j.id} className="mb-1 flex items-center gap-2 rounded-md px-2 py-1.5"
+            <button key={j.id} onClick={() => setFicha(j.id)}
+              className="mb-1 flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left"
               style={{ background: fuera
                 ? "color-mix(in srgb, #c0392b 16%, var(--carbon))" : "var(--carbon)" }}>
               <Dorsal numero={j.numero} tam={24} />
@@ -627,9 +598,17 @@ function VistaPlantel({ plantel, partida, onGuardarEquipos }: {
                 </span>
               </span>
               <span className="num w-6 text-right text-[15px]">{j.nivel}</span>
-            </div>
+            </button>
           );
         })}
+
+      {ficha && (() => {
+        const j = plantel.find((x) => x.id === ficha);
+        return j ? (
+          <FichaJugador jugador={j} estado={partida.plantel[j.id]} ctx={ctxFicha}
+                        onCerrar={() => setFicha(null)} />
+        ) : null;
+      })()}
     </>
   );
 }
