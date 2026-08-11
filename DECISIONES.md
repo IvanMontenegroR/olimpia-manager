@@ -416,6 +416,26 @@ degradado diagonal con luz superior y sombra propia.
   por encima.
 - Las alertas rojas de los módulos respiran.
 
+## Movimiento y densidad visual
+
+Sobre la paleta de cancha se agregó una capa de movimiento para que la pantalla
+se sienta viva sin volverse ruidosa:
+
+- **Números que se mueven.** La caja, los medidores y la posición no saltan de un
+  valor al otro: recorren la diferencia con desaceleración y pegan un salto corto
+  al llegar. Se ve en `components/Numero.tsx`.
+- **Listas escalonadas.** Los módulos, el plantel, la tabla y la bitácora entran
+  de a uno con 34 ms de diferencia, en vez de aparecer todos de golpe.
+- **Transición entre pantallas.** Entrar a una sección desliza desde la derecha y
+  volver desliza desde la izquierda, así se entiende la jerarquía.
+- **Todo lo que se toca se hunde.** Los botones bajan a 0,97 y suben un poco de
+  brillo mientras están presionados.
+- **Barras que se llenan** en 720 ms con curva de desaceleración, incluida la de
+  progreso de la temporada bajo el nombre del club.
+- **El escudo de Olimpia como marca de agua**, al 2% de opacidad detrás de todo.
+
+Todo respeta `prefers-reduced-motion`.
+
 ## Estado de los datos
 
 | Archivo | Estado |

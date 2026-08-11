@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Escudo from "./Escudo.tsx";
+import Numero from "./Numero.tsx";
 import Asuntos from "./Asuntos.tsx";
 import Mercado from "./Mercado.tsx";
 import { COLOR_POS } from "./PanelPartido.tsx";
@@ -63,7 +64,9 @@ export default function Escritorio({
   };
 
   return (
-    <div className="app">
+    <div className="app pantalla-atras">
+      <span className="marca-agua" style={{ backgroundImage: "url(escudos/olimpia.png)" }} />
+
       {/* ---------- club ---------- */}
       <header className="px-4 pb-2 pt-3">
         <div className="flex items-center gap-2.5">
@@ -71,12 +74,18 @@ export default function Escritorio({
           <div className="min-w-0 flex-1">
             <div className="apellido text-[16px] leading-none">Olimpia</div>
             <div className="text-[10px]" style={{ color: "var(--tenue)" }}>
-              {formatoDia(partida.dia)}
+              {formatoDia(partida.dia)} · fecha {Math.min(partida.fechaActual, TOTAL_FECHAS)} de {TOTAL_FECHAS}
+            </div>
+            <div className="mt-1 h-[3px] overflow-hidden rounded-full" style={{ background: "var(--linea)" }}>
+              <div className="barra-llena h-full rounded-full"
+                   style={{
+                     width: `${(Math.min(partida.fechaActual - 1, TOTAL_FECHAS) / TOTAL_FECHAS) * 100}%`,
+                     background: "linear-gradient(90deg, var(--cesped-hondo), var(--cesped))",
+                   }} />
             </div>
           </div>
-          <div className="num text-[13px]" style={{ color: "#3fa76a" }}>
-            {miles(partida.dineroUsd)}
-          </div>
+          <Numero valor={partida.dineroUsd} formato={(n) => miles(Math.round(n))}
+                  className="num text-[13px]" style={{ color: "var(--cesped)" }} />
         </div>
 
         <div className="mt-2 flex gap-2">
@@ -130,9 +139,9 @@ export default function Escritorio({
       ) : (
         <div className="flex min-h-0 flex-1 flex-col px-3">
           {/* tablero del club */}
-          <div className="grid shrink-0 grid-cols-2 gap-1.5">
+          <div className="escalona grid shrink-0 grid-cols-2 gap-1.5">
             <Modulo titulo="Plantel" color="#3fa76a" onClick={() => setVista("plantel")}
-              principal={`${condMedia}%`} pie="condición media"
+              numero={condMedia} sufijo="%" pie="condición media"
               alerta={bajas.length ? `${bajas.length} baja${bajas.length > 1 ? "s" : ""}` : undefined} />
 
             <Modulo titulo="Sudamericana" color="#d9a832" onClick={() => setVista("copa")}
@@ -142,16 +151,17 @@ export default function Escritorio({
                 ? partida.copa.rivalId : undefined} />
 
             <Modulo titulo="Tabla" color="#4a7fb5" onClick={() => setVista("tabla")}
-              principal={`${posicion}°`}
+              numero={posicion} sufijo="°"
               pie={difLider === 0 ? "puntero" : `a ${difLider} del líder`} />
 
             <Modulo titulo="Pases" color="#e0902a" onClick={() => setVista("mercado")}
-              principal={String(partida.fichajes.length)} pie="disponibles"
+              numero={partida.fichajes.length} pie="disponibles"
               alerta={partida.ofertas.length ? `${partida.ofertas.length} oferta` : undefined} />
           </div>
 
           {/* último movimiento */}
-          <div className="scroll-y relieve mt-1.5 min-h-0 flex-1 rounded-lg p-2.5"
+          <div key={partida.bitacora.length}
+               className="scroll-y relieve mt-1.5 min-h-0 flex-1 rounded-lg p-2.5"
                style={{ background: "var(--carbon)" }}>
             <div className="mb-1 flex items-center justify-between">
               <span className="text-[9px] uppercase tracking-[0.14em]" style={{ color: "var(--apagado)" }}>
@@ -160,6 +170,7 @@ export default function Escritorio({
               <button onClick={() => setVista("bitacora")} className="text-[9px]"
                       style={{ color: "var(--apagado)" }}>ver todo</button>
             </div>
+            <div className="escalona">
             {[...partida.bitacora].reverse().slice(0, 12).map((b, i) => (
               <div key={i} className="mb-1 flex gap-2 text-[11px]">
                 <span className="num shrink-0" style={{ color: "var(--apagado)" }}>
@@ -168,6 +179,7 @@ export default function Escritorio({
                 <span style={{ color: "var(--tenue)" }}>{b.texto}</span>
               </div>
             ))}
+            </div>
           </div>
         </div>
       )}
@@ -249,9 +261,9 @@ function Punto({ color }: { color: string }) {
 }
 
 /** Tarjeta del tablero: un dato grande, un pie y, si hace falta, una alerta. */
-function Modulo({ titulo, color, principal, pie, alerta, escudo, onClick }: {
-  titulo: string; color: string; principal: string; pie: string;
-  alerta?: string; escudo?: string; onClick: () => void;
+function Modulo({ titulo, color, principal, numero, sufijo, pie, alerta, escudo, onClick }: {
+  titulo: string; color: string; principal?: string; numero?: number; sufijo?: string;
+  pie: string; alerta?: string; escudo?: string; onClick: () => void;
 }) {
   return (
     <button onClick={onClick} className="relieve rounded-lg p-2.5 text-left"
@@ -264,7 +276,11 @@ function Modulo({ titulo, color, principal, pie, alerta, escudo, onClick }: {
         <span className="text-[9px] uppercase tracking-[0.14em]" style={{ color }}>{titulo}</span>
         {escudo && <Escudo id={escudo} nombre={titulo} tam={16} />}
       </div>
-      <div className="apellido mt-1 truncate text-[19px] leading-none">{principal}</div>
+      <div className="apellido mt-1 truncate text-[19px] leading-none">
+        {numero !== undefined
+          ? <><Numero valor={numero} className="num" />{sufijo}</>
+          : principal}
+      </div>
       <div className="mt-0.5 truncate text-[10px]" style={{ color: "var(--tenue)" }}>{pie}</div>
       {alerta && (
         <div className="respirar mt-1.5 inline-block rounded px-1.5 py-0.5 text-[8px] font-extrabold uppercase tracking-wider"
@@ -283,11 +299,12 @@ function Medidor({ etiqueta, valor, color }: { etiqueta: string; valor: number; 
         <span className="text-[8px] uppercase tracking-[0.14em]" style={{ color: "var(--apagado)" }}>
           {etiqueta}
         </span>
-        <span className="num text-[10px]" style={{ color }}>{Math.round(valor)}</span>
+        <Numero valor={valor} className="num text-[10px]" style={{ color }} />
       </div>
-      <div className="h-1 overflow-hidden rounded-full" style={{ background: "var(--linea)" }}>
-        <div className="h-full rounded-full transition-all duration-500"
-             style={{ width: `${valor}%`, background: color }} />
+      <div className="h-1.5 overflow-hidden rounded-full relieve" style={{ background: "var(--linea)" }}>
+        <div className="barra-llena h-full rounded-full"
+             style={{ width: `${valor}%`,
+                      background: `linear-gradient(90deg, color-mix(in srgb, ${color} 55%, #000), ${color})` }} />
       </div>
     </div>
   );
@@ -297,13 +314,13 @@ function Sub({ titulo, onVolver, children }: {
   titulo: string; onVolver: () => void; children: React.ReactNode;
 }) {
   return (
-    <div className="app">
+    <div className="app pantalla">
       <header className="flex items-center gap-3 px-4 pb-2 pt-3">
         <button onClick={onVolver} className="rounded-md px-2 py-1 text-[12px] font-bold"
                 style={{ background: "var(--carbon)", color: "var(--tenue)" }}>←</button>
         <h1 className="apellido text-[20px] leading-none">{titulo}</h1>
       </header>
-      <div className="scroll-y min-h-0 flex-1 px-3 pb-4">{children}</div>
+      <div className="scroll-y escalona min-h-0 flex-1 px-3 pb-4">{children}</div>
     </div>
   );
 }
