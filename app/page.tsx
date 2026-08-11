@@ -3,50 +3,40 @@
 import { useEffect, useState } from "react";
 import ArmarOnce, { type Salida } from "@/components/ArmarOnce.tsx";
 import PartidoEnVivo from "@/components/PartidoEnVivo.tsx";
-import Inicio from "@/components/Inicio.tsx";
+import Escritorio from "@/components/Escritorio.tsx";
 import {
-  avanzarFecha, cargar, guardar, partidaNueva, partidoDe, plantelDe,
+  avanzarUnDia, cargar, cerrarPartido, fichar, guardar, partidaNueva,
+  partidoDe, plantelDe, resolverAsunto,
   type CierrePartido, type Partida,
 } from "@/lib/temporada.ts";
 
-type Fase = "inicio" | "armar" | "partido";
+type Fase = "escritorio" | "armar" | "partido";
 
 export default function Page() {
   const [partida, setPartida] = useState<Partida | null>(null);
-  const [fase, setFase] = useState<Fase>("inicio");
+  const [fase, setFase] = useState<Fase>("escritorio");
   const [salida, setSalida] = useState<Salida | null>(null);
 
-  // el estado vive en localStorage: se lee recién en el cliente
   useEffect(() => { setPartida(cargar()); }, []);
   useEffect(() => { if (partida) guardar(partida); }, [partida]);
 
   if (!partida) {
     return (
       <div className="app items-center justify-center">
-        <span className="apellido text-[16px]" style={{ color: "var(--tenue)" }}>
-          Cargando
-        </span>
+        <span className="apellido text-[16px]" style={{ color: "var(--tenue)" }}>Cargando</span>
       </div>
     );
   }
 
   const partido = partidoDe(partida);
-  const plantel = plantelDe(partida);
-
-  const terminar = (cierre: CierrePartido) => {
-    if (!partido) return;
-    setPartida((p) => (p ? avanzarFecha(p, partido, cierre) : p));
-    setSalida(null);
-    setFase("inicio");
-  };
 
   if (fase === "armar" && partido) {
     return (
       <ArmarOnce
         key={partida.fechaActual}
         partido={partido}
-        plantel={plantel}
-        onVolver={() => setFase("inicio")}
+        plantel={plantelDe(partida)}
+        onVolver={() => setFase("escritorio")}
         onJugar={(s) => { setSalida(s); setFase("partido"); }} />
     );
   }
@@ -57,15 +47,22 @@ export default function Page() {
         key={partida.fechaActual}
         partido={partido}
         salida={salida}
-        onTerminar={terminar} />
+        onTerminar={(c: CierrePartido) => {
+          setPartida((p) => (p ? cerrarPartido(p, partido, c) : p));
+          setSalida(null);
+          setFase("escritorio");
+        }} />
     );
   }
 
   return (
-    <Inicio
+    <Escritorio
       partida={partida}
-      partido={partido}
+      onAvanzar={() => setPartida((p) => (p ? avanzarUnDia(p).partida : p))}
       onDirigir={() => setFase("armar")}
-      onReiniciar={() => { setPartida(partidaNueva()); setFase("inicio"); }} />
+      onResolver={(asuntoId, opcionId) =>
+        setPartida((p) => (p ? resolverAsunto(p, asuntoId, opcionId) : p))}
+      onFichar={(id) => setPartida((p) => (p ? fichar(p, id) ?? p : p))}
+      onReiniciar={() => { setPartida(partidaNueva()); setFase("escritorio"); }} />
   );
 }

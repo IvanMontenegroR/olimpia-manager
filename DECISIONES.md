@@ -299,6 +299,36 @@ completo cuando algo requiere atención, y chapas de color para los estados.
 Los eventos del relato llevan chapa de color por tipo y los importantes van con
 fondo teñido: no hace falta leer para saber que hubo una lesión.
 
+## De partidos sueltos a modo carrera
+
+El juego pasó a ser un calendario día por día, como el modo carrera de PES.
+Va contra lo que decía la sección 7 del documento de contexto ("no hacer un
+calendario día a día tipo FM"), y es una decisión revisada a propósito: sin los
+días de por medio, el juego eran 22 partidos seguidos y todo lo demás quedaba
+afuera.
+
+Para que no sea tedioso, el día no se avanza de a uno a ciegas: **si hay algo que
+resolver, el botón de avanzar desaparece** y la pantalla muestra la decisión. Si
+no hay nada, se avanza de un toque hasta el próximo asunto o hasta el partido.
+
+**Lo que aparece entre partidos:**
+
+| | |
+|---|---|
+| Plan de la semana | Recuperación, táctico o individual. Cambia cuánta condición recupera el plantel por día. |
+| Vestuario y prensa | Cinco situaciones que se disparan según el contexto: un suplente que se queja, la conferencia después de dos sin ganar, la dirigencia pidiendo recortar, banderas en el predio, un amistoso bien pago. |
+| Mercado | Llegan ofertas por tus mejores jugadores y hay una lista de fichajes con precio calculado con la misma fórmula logarítmica del Nivel. |
+| Comercial | El precio de la entrada antes de cada partido de local: barato llena el estadio, caro recauda y enoja. |
+
+**Estado nuevo de la partida:** día del calendario, caja en dólares, ambiente del
+vestuario, humor de la hinchada, moral por jugador y bitácora de todo lo que fue
+pasando.
+
+La condición ahora se recupera **por día**, no por fecha, y el entrenamiento la
+modula: recuperación multiplica por 1,6 y táctico la baja a 0,85. Eso convierte el
+plan de la semana en una decisión real cuando venís de un partido y tenés otro en
+tres días.
+
 ## Estado de los datos
 
 | Archivo | Estado |

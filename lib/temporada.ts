@@ -5,12 +5,20 @@ import { P, clamp } from "@/engine/motor.ts";
 import { Rng } from "@/engine/rng.ts";
 import equiposJson from "@/data/equipos_2026.json";
 import fixtureJson from "@/data/fixture_clausura2026_final.json";
+import { sortearSituacion, type Efecto, type Situacion } from "@/engine/situaciones.ts";
+import { generarMercado, sortearOferta, type FichajeGenerado } from "@/engine/mercado.ts";
 import type { Jugador } from "@/engine/tipos.ts";
 
 const EQUIPOS = equiposJson as any[];
 const FIXTURE = fixtureJson as any[];
 const CLAVE = "olimpia-manager-clausura-2026";
-const VERSION = 3;
+const VERSION = 5;
+
+export const DIA_INICIAL = "2026-07-20";
+export const TOTAL_FECHAS = 22;
+export const OBJETIVO = "Salir campeón del Clausura";
+
+export type Enfoque = "recuperacion" | "tactico" | "individual";
 
 export interface ResultadoFecha {
   fechaNumero: number;
@@ -23,36 +31,101 @@ export interface ResultadoFecha {
 export interface EstadoPlantel {
   condicion: number;
   amarillas: number;
-  suspendido: boolean;
-  lesionadoHasta: number | null; // número de fecha
+  suspendidoFechas: number;
+  lesionadoHasta: string | null; // día ISO
   golesTorneo: number;
   minutos: number;
+  moral: number;
+}
+
+export interface Oferta {
+  id: string;
+  jugadorId: string;
+  club: string;
+  montoUsd: number;
+  venceEl: string;
+}
+
+export type Fichaje = FichajeGenerado;
+
+/** Algo que espera una decisión. El día no avanza hasta resolverlo. */
+export interface Asunto {
+  id: string;
+  tipo: "entrenamiento" | "evento" | "oferta" | "marketing" | "prensa";
+  dia: string;
+  titulo: string;
+  detalle: string;
+  datos?: Record<string, unknown>;
+  situacion?: Situacion;
+  efectos?: Record<string, Efecto>;
 }
 
 export interface Partida {
   version: number;
-  fechaActual: number; // 1..22
+  dia: string;
+  fechaActual: number;
   resultados: ResultadoFecha[];
   plantel: Record<string, EstadoPlantel>;
   minutosSub18: number;
+
+  dineroUsd: number;
+  ambiente: number;      // clima interno del plantel, 0 a 100
+  hinchada: number;      // humor de la gente, 0 a 100
+  entrenamiento: Enfoque | null;
+  entrenaA: string | null;
+  precioEntrada: number; // en miles de guaraníes
+
+  ofertas: Oferta[];
+  fichajes: Fichaje[];
+  pendientes: Asunto[];
+  bitacora: { dia: string; texto: string }[];
 }
 
-export const OBJETIVO = "Salir campeón del Clausura";
+// ---------------------------------------------------------------- utilidades
+
+export const sumarDias = (dia: string, n: number) =>
+  new Date(Date.parse(dia) + n * 86400000).toISOString().slice(0, 10);
+
+export const diasEntre = (a: string, b: string) =>
+  Math.round((Date.parse(b) - Date.parse(a)) / 86400000);
+
+const MESES = ["ene", "feb", "mar", "abr", "may", "jun",
+               "jul", "ago", "sep", "oct", "nov", "dic"];
+const DIAS = ["dom", "lun", "mar", "mié", "jue", "vie", "sáb"];
+
+export function formatoDia(dia: string): string {
+  const d = new Date(dia + "T12:00:00");
+  return `${DIAS[d.getDay()]} ${d.getDate()} ${MESES[d.getMonth()]}`;
+}
+
+// ---------------------------------------------------------------- creación
 
 export function partidaNueva(): Partida {
   return {
     version: VERSION,
+    dia: DIA_INICIAL,
     fechaActual: 1,
     resultados: [],
     plantel: Object.fromEntries(PLANTEL.map((j) => [j.id, {
       condicion: j.condicion,
       amarillas: 0,
-      suspendido: false,
+      suspendidoFechas: 0,
       lesionadoHasta: null,
       golesTorneo: 0,
       minutos: 0,
+      moral: 70,
     }])),
     minutosSub18: 0,
+    dineroUsd: 1_800_000,
+    ambiente: 72,
+    hinchada: 68,
+    entrenamiento: null,
+    entrenaA: null,
+    precioEntrada: 60,
+    ofertas: [],
+    fichajes: generarMercado(DIA_INICIAL),
+    pendientes: [],
+    bitacora: [{ dia: DIA_INICIAL, texto: "Arranca la pretemporada del Clausura." }],
   };
 }
 
@@ -63,13 +136,6 @@ export function cargar(): Partida {
     if (!raw) return partidaNueva();
     const p = JSON.parse(raw) as Partida;
     if (p.version !== VERSION) return partidaNueva();
-    // por si el plantel cambió entre versiones
-    for (const j of PLANTEL) {
-      p.plantel[j.id] ??= {
-        condicion: j.condicion, amarillas: 0, suspendido: false,
-        lesionadoHasta: null, golesTorneo: 0, minutos: 0,
-      };
-    }
     return p;
   } catch {
     return partidaNueva();
@@ -78,17 +144,15 @@ export function cargar(): Partida {
 
 export function guardar(p: Partida): void {
   if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(CLAVE, JSON.stringify(p));
-  } catch { /* sin espacio o modo privado: se sigue jugando en memoria */ }
+  try { window.localStorage.setItem(CLAVE, JSON.stringify(p)); } catch { /* sin espacio */ }
 }
 
 export function borrar(): void {
-  if (typeof window === "undefined") return;
-  window.localStorage.removeItem(CLAVE);
+  if (typeof window !== "undefined") window.localStorage.removeItem(CLAVE);
 }
 
-/** El plantel con la condición y las sanciones que dejó lo jugado hasta acá. */
+// ---------------------------------------------------------------- consultas
+
 export function plantelDe(p: Partida): Jugador[] {
   return PLANTEL.map((j) => {
     const e = p.plantel[j.id];
@@ -96,37 +160,37 @@ export function plantelDe(p: Partida): Jugador[] {
     return {
       ...j,
       condicion: Math.round(e.condicion),
-      suspendido: e.suspendido,
-      lesionado_hasta: e.lesionadoHasta && e.lesionadoHasta > p.fechaActual ? "futuro" : null,
+      suspendido: e.suspendidoFechas > 0,
+      lesionado_hasta: e.lesionadoHasta && e.lesionadoHasta > p.dia ? e.lesionadoHasta : null,
       tarjetas_amarillas: e.amarillas,
     };
   });
 }
 
-export const disponible = (j: Jugador) => !j.suspendido && !j.lesionado_hasta;
+export function partidoDe(p: Partida): PartidoUI | null {
+  return partidosDeOlimpia().find((x) => x.etiqueta.endsWith(`Fecha ${p.fechaActual}`)) ?? null;
+}
+
+export const hayPartidoHoy = (p: Partida) => partidoDe(p)?.ctx.fecha === p.dia;
+
+export function diasAlPartido(p: Partida): number | null {
+  const m = partidoDe(p);
+  return m ? diasEntre(p.dia, m.ctx.fecha) : null;
+}
 
 // ---------------------------------------------------------------- tabla
 
 export interface FilaTabla {
-  id: string;
-  nombre: string;
+  id: string; nombre: string;
   pj: number; g: number; e: number; p: number;
   gf: number; gc: number; dg: number; pts: number;
 }
 
-/**
- * Tabla de posiciones. Los partidos de Olimpia son los que jugaste; el resto
- * de la liga se simula con una semilla fija, así la tabla no cambia sola cada
- * vez que se abre la pantalla.
- */
 export function tablaDe(p: Partida): FilaTabla[] {
-  const fuerzas: Record<string, number> = Object.fromEntries(
-    EQUIPOS.map((e) => [e.id, e.fuerza]));
-  const filas: Record<string, FilaTabla> = Object.fromEntries(
-    EQUIPOS.map((e) => [e.id, {
-      id: e.id, nombre: e.nombre, pj: 0, g: 0, e: 0, p: 0, gf: 0, gc: 0, dg: 0, pts: 0,
-    }]));
-
+  const fuerzas: Record<string, number> = Object.fromEntries(EQUIPOS.map((e) => [e.id, e.fuerza]));
+  const filas: Record<string, FilaTabla> = Object.fromEntries(EQUIPOS.map((e) => [e.id, {
+    id: e.id, nombre: e.nombre, pj: 0, g: 0, e: 0, p: 0, gf: 0, gc: 0, dg: 0, pts: 0,
+  }]));
   const anotar = (id: string, favor: number, contra: number) => {
     const f = filas[id];
     f.pj++; f.gf += favor; f.gc += contra; f.dg = f.gf - f.gc;
@@ -134,16 +198,13 @@ export function tablaDe(p: Partida): FilaTabla[] {
     else if (favor === contra) { f.e++; f.pts += 1; }
     else f.p++;
   };
-
   for (const r of p.resultados) {
     const local = r.esLocal ? "olimpia" : r.rivalId;
     const visita = r.esLocal ? r.rivalId : "olimpia";
     const gl = r.esLocal ? r.golesOlimpia : r.golesRival;
     const gv = r.esLocal ? r.golesRival : r.golesOlimpia;
-    anotar(local, gl, gv);
-    anotar(visita, gv, gl);
+    anotar(local, gl, gv); anotar(visita, gv, gl);
   }
-
   const rng = new Rng("liga-clausura-2026");
   for (const m of FIXTURE) {
     if (m.fecha_numero >= p.fechaActual) continue;
@@ -152,10 +213,8 @@ export function tablaDe(p: Partida): FilaTabla[] {
     const xv = P.xgBase * Math.exp(P.xgK * (fuerzas[m.visitante] - fuerzas[m.local] - P.localiaLiga));
     const gl = rng.poisson(clamp(xl, 0.05, 6));
     const gv = rng.poisson(clamp(xv, 0.05, 6));
-    anotar(m.local, gl, gv);
-    anotar(m.visitante, gv, gl);
+    anotar(m.local, gl, gv); anotar(m.visitante, gv, gl);
   }
-
   return Object.values(filas).sort(
     (a, b) => b.pts - a.pts || b.dg - a.dg || b.gf - a.gf || a.nombre.localeCompare(b.nombre));
 }
@@ -163,7 +222,7 @@ export function tablaDe(p: Partida): FilaTabla[] {
 export const posicionDe = (p: Partida, id = "olimpia") =>
   tablaDe(p).findIndex((f) => f.id === id) + 1;
 
-// ---------------------------------------------------------------- avance
+// ---------------------------------------------------------------- cierre de partido
 
 export interface CierrePartido {
   golesOlimpia: number;
@@ -171,30 +230,29 @@ export interface CierrePartido {
   minutos: Map<string, number>;
   amarillas: string[];
   rojas: string[];
-  lesionados: { id: string; fechas: number }[];
+  lesionados: { id: string; dias: number }[];
   goleadores: string[];
 }
 
 const AMARILLAS_PARA_SUSPENSION = 5;
 
-/** Cierra la fecha: descuenta condición, aplica sanciones y avanza el calendario. */
-export function avanzarFecha(p: Partida, partido: PartidoUI, cierre: CierrePartido): Partida {
-  const n: Partida = JSON.parse(JSON.stringify(p));
+export function cerrarPartido(p: Partida, partido: PartidoUI, c: CierrePartido): Partida {
+  const n: Partida = estructurado(p);
 
   n.resultados.push({
     fechaNumero: p.fechaActual,
     rivalId: partido.rivalId,
     esLocal: partido.ctx.esLocal,
-    golesOlimpia: cierre.golesOlimpia,
-    golesRival: cierre.golesRival,
+    golesOlimpia: c.golesOlimpia,
+    golesRival: c.golesRival,
   });
 
-  const jugaron = new Set(cierre.minutos.keys());
+  const gano = c.golesOlimpia > c.golesRival;
+  const empate = c.golesOlimpia === c.golesRival;
 
   for (const j of PLANTEL) {
     const e = n.plantel[j.id];
-    const min = cierre.minutos.get(j.id) ?? 0;
-
+    const min = c.minutos.get(j.id) ?? 0;
     if (min > 0) {
       let desgaste = P.desgaste90 * (min / 90);
       desgaste += (partido.ctx.viajeKm / 1000) * P.desgasteViajeKm;
@@ -202,33 +260,233 @@ export function avanzarFecha(p: Partida, partido: PartidoUI, cierre: CierreParti
       e.condicion = clamp(e.condicion - desgaste, 0, 100);
       e.minutos += min;
       if (j.fecha_nacimiento >= "2007-01-01" && min >= 90) n.minutosSub18 += 90;
+      e.moral = clamp(e.moral + (gano ? 4 : empate ? 0 : -4), 0, 100);
     } else {
-      const tasa = j.edad >= 33 ? P.recuperacionVeterano : P.recuperacionPorDia;
-      e.condicion = clamp(e.condicion + tasa * 6, 0, 100);
+      e.moral = clamp(e.moral - 1.5, 0, 100); // el que no juega se calienta
     }
 
-    // las suspensiones duran una fecha
-    e.suspendido = false;
-    if (cierre.amarillas.includes(j.id)) {
+    if (e.suspendidoFechas > 0) e.suspendidoFechas--;
+    if (c.amarillas.includes(j.id)) {
       e.amarillas++;
-      if (e.amarillas >= AMARILLAS_PARA_SUSPENSION) { e.amarillas = 0; e.suspendido = true; }
+      if (e.amarillas >= AMARILLAS_PARA_SUSPENSION) { e.amarillas = 0; e.suspendidoFechas = 1; }
     }
-    if (cierre.rojas.includes(j.id)) e.suspendido = true;
+    if (c.rojas.includes(j.id)) e.suspendidoFechas = 1;
 
-    const les = cierre.lesionados.find((l) => l.id === j.id);
-    if (les) e.lesionadoHasta = p.fechaActual + les.fechas;
-    else if (e.lesionadoHasta && e.lesionadoHasta <= p.fechaActual) e.lesionadoHasta = null;
-
-    e.golesTorneo += cierre.goleadores.filter((g) => g === j.id).length;
-    void jugaron;
+    const les = c.lesionados.find((l) => l.id === j.id);
+    if (les) e.lesionadoHasta = sumarDias(p.dia, les.dias);
+    e.golesTorneo += c.goleadores.filter((g) => g === j.id).length;
   }
 
+  // taquilla y humor de la gente
+  if (partido.ctx.esLocal) {
+    const entradas = Math.round(
+      14000 * (n.hinchada / 70) * (1.5 - n.precioEntrada / 120) * (partido.ctx.esClasico ? 1.5 : 1));
+    const recaudado = Math.max(0, entradas) * n.precioEntrada * 0.14;
+    n.dineroUsd += Math.round(recaudado);
+    n.bitacora.push({ dia: p.dia, texto:
+      `Taquilla: ${Math.max(0, entradas).toLocaleString("es")} personas, ${miles(Math.round(recaudado))} de recaudación.` });
+  }
+  n.hinchada = clamp(n.hinchada + (gano ? 5 : empate ? -1 : -6)
+    + (partido.ctx.esClasico ? (gano ? 6 : empate ? 0 : -8) : 0), 0, 100);
+  n.ambiente = clamp(n.ambiente + (gano ? 3 : empate ? 0 : -3), 0, 100);
+
+  n.bitacora.push({ dia: p.dia, texto:
+    `${partido.ctx.esLocal ? "" : "De visitante. "}Olimpia ${c.golesOlimpia} - ${c.golesRival} ${partido.rivalNombre}.` });
+
   n.fechaActual = p.fechaActual + 1;
+  n.entrenamiento = null;
+  n.entrenaA = null;
+  return avanzarUnDia(n).partida;
+}
+
+export const miles = (usd: number) =>
+  usd >= 1_000_000 ? `USD ${(usd / 1_000_000).toFixed(2)}M` : `USD ${Math.round(usd / 1000)}k`;
+
+// ---------------------------------------------------------------- avance de días
+
+function estructurado<T>(x: T): T {
+  return JSON.parse(JSON.stringify(x)) as T;
+}
+
+export interface ResultadoAvance {
+  partida: Partida;
+  novedades: string[];
+}
+
+/**
+ * Un día. Recupera condición, cura lesionados y dispara lo que corresponda.
+ * Si queda algo pendiente, el día siguiente no avanza hasta resolverlo.
+ */
+export function avanzarUnDia(p: Partida): ResultadoAvance {
+  const n: Partida = estructurado(p);
+  const novedades: string[] = [];
+  n.dia = sumarDias(p.dia, 1);
+  const rng = new Rng(`dia-${n.dia}-${n.fechaActual}`);
+
+  const entrena = n.entrenamiento;
+  void novedades;
+  for (const j of PLANTEL) {
+    const e = n.plantel[j.id];
+    if (e.lesionadoHasta && e.lesionadoHasta <= n.dia) {
+      e.lesionadoHasta = null;
+      novedades.push(`${j.apellido} se recuperó y ya está a disposición.`);
+    }
+    if (e.lesionadoHasta) continue;
+
+    let tasa = j.edad >= 33 ? P.recuperacionVeterano : P.recuperacionPorDia;
+    if (entrena === "recuperacion") tasa *= 1.6;
+    if (entrena === "tactico") tasa *= 0.85;
+    if (entrena === "individual") tasa *= 0.9;
+    e.condicion = clamp(e.condicion + tasa, 0, 100);
+
+    if (entrena === "individual" && n.entrenaA === j.id && rng.chance(0.16)) {
+      novedades.push(`${j.apellido} viene trabajando muy bien. Se lo nota más suelto.`);
+    }
+  }
+
+  // asuntos que aparecen solos
+  const alPartido = diasAlPartido(n);
+
+  if (esLunes(n.dia) && !n.entrenamiento && alPartido !== null && alPartido > 1) {
+    n.pendientes.push({
+      id: `ent-${n.dia}`, tipo: "entrenamiento", dia: n.dia,
+      titulo: "Plan de la semana",
+      detalle: "¿En qué se enfoca el trabajo hasta el partido?",
+    });
+  }
+
+  if (alPartido === 1 && !n.pendientes.some((a) => a.tipo === "marketing")) {
+    const m = partidoDe(n);
+    if (m?.ctx.esLocal) {
+      n.pendientes.push({
+        id: `mkt-${n.dia}`, tipo: "marketing", dia: n.dia,
+        titulo: "Precio de la entrada",
+        detalle: `Mañana se juega en ${m.estadio}. ¿A cuánto se vende?`,
+      });
+    }
+  }
+
+  // una situación cada tanto, nunca el día del partido ni el anterior
+  if ((alPartido === null || alPartido > 1) && !n.pendientes.length && rng.chance(0.3)) {
+    const armada = sortearSituacion({
+      plantel: plantelDe(n),
+      ambiente: n.ambiente,
+      hinchada: n.hinchada,
+      racha: n.resultados.slice(-3).map((r) =>
+        r.golesOlimpia > r.golesRival ? "G" : r.golesOlimpia === r.golesRival ? "E" : "P"),
+      posicion: 0,
+    }, rng);
+    if (armada) {
+      n.pendientes.push({
+        id: `sit-${n.dia}`, tipo: "evento", dia: n.dia,
+        titulo: armada.s.titulo, detalle: armada.s.contexto,
+        situacion: armada.s, efectos: armada.efectos,
+      });
+    }
+  }
+
+  // ofertas por los mejores
+  if (!n.ofertas.length && rng.chance(0.14)) {
+    const o = sortearOferta(plantelDe(n), n.dia);
+    if (o) {
+      n.ofertas.push({
+        id: `of-${n.dia}`, jugadorId: o.jugadorId, club: o.club,
+        montoUsd: o.montoUsd, venceEl: sumarDias(n.dia, 4),
+      });
+      const j = PLANTEL.find((x) => x.id === o.jugadorId)!;
+      n.pendientes.push({
+        id: `ofp-${n.dia}`, tipo: "oferta", dia: n.dia,
+        titulo: "Llegó una oferta",
+        detalle: `${o.club} ofrece ${miles(o.montoUsd)} por ${j.apellido}.`,
+        datos: { ofertaId: `of-${n.dia}` },
+      });
+    }
+  }
+
+  return { partida: n, novedades };
+}
+
+// ---------------------------------------------------------------- decisiones
+
+export function resolverAsunto(p: Partida, asuntoId: string, opcionId: string): Partida {
+  const n: Partida = estructurado(p);
+  const a = n.pendientes.find((x) => x.id === asuntoId);
+  if (!a) return n;
+  n.pendientes = n.pendientes.filter((x) => x.id !== asuntoId);
+
+  if (a.tipo === "entrenamiento") {
+    n.entrenamiento = opcionId as Enfoque;
+    if (opcionId === "individual") {
+      // se entrena al juvenil con más margen de crecimiento
+      const juveniles = PLANTEL.filter((j) => j.nivel_incertidumbre > 0);
+      n.entrenaA = juveniles.sort((x, y) => y.nivel_incertidumbre - x.nivel_incertidumbre)[0]?.id ?? null;
+    }
+    n.bitacora.push({ dia: n.dia, texto:
+      opcionId === "recuperacion" ? "Semana de recuperación: se baja la carga."
+      : opcionId === "tactico" ? "Semana táctica: se trabaja el partido."
+      : "Semana de trabajo individual con los juveniles." });
+    return n;
+  }
+
+  if (a.tipo === "marketing") {
+    const precios: Record<string, number> = { barato: 35, normal: 60, caro: 100 };
+    n.precioEntrada = precios[opcionId] ?? 60;
+    n.hinchada = clamp(n.hinchada + (opcionId === "barato" ? 5 : opcionId === "caro" ? -6 : 0), 0, 100);
+    n.bitacora.push({ dia: n.dia, texto:
+      `Entradas a ${n.precioEntrada} mil guaraníes.` });
+    return n;
+  }
+
+  if (a.tipo === "oferta") {
+    const oferta = n.ofertas.find((o) => o.id === (a.datos?.ofertaId as string));
+    if (!oferta) return n;
+    n.ofertas = n.ofertas.filter((o) => o.id !== oferta.id);
+    const j = PLANTEL.find((x) => x.id === oferta.jugadorId)!;
+    if (opcionId === "vender") {
+      n.dineroUsd += oferta.montoUsd;
+      n.plantel[oferta.jugadorId].lesionadoHasta = "2099-01-01"; // sale del plantel
+      n.hinchada = clamp(n.hinchada - (j.nivel >= 68 ? 9 : 3), 0, 100);
+      n.ambiente = clamp(n.ambiente - 3, 0, 100);
+      n.bitacora.push({ dia: n.dia, texto:
+        `${j.apellido} se va a ${oferta.club} por ${miles(oferta.montoUsd)}.` });
+    } else {
+      n.ambiente = clamp(n.ambiente + 2, 0, 100);
+      n.plantel[oferta.jugadorId].moral = clamp(n.plantel[oferta.jugadorId].moral - 6, 0, 100);
+      n.bitacora.push({ dia: n.dia, texto: `Se rechazó la oferta por ${j.apellido}.` });
+    }
+    return n;
+  }
+
+  // situación de prensa, vestuario o dirigencia
+  const efecto = a.efectos?.[opcionId];
+  if (efecto) {
+    if (efecto.ambiente) n.ambiente = clamp(n.ambiente + efecto.ambiente, 0, 100);
+    if (efecto.hinchada) n.hinchada = clamp(n.hinchada + efecto.hinchada, 0, 100);
+    if (efecto.dineroUsd) n.dineroUsd += efecto.dineroUsd;
+    if (efecto.moralDe) {
+      const e = n.plantel[efecto.moralDe.id];
+      if (e) e.moral = clamp(e.moral + efecto.moralDe.delta, 0, 100);
+    }
+    if (efecto.condicionTodos) {
+      for (const id of Object.keys(n.plantel)) {
+        n.plantel[id].condicion = clamp(n.plantel[id].condicion + efecto.condicionTodos, 0, 100);
+      }
+    }
+    n.bitacora.push({ dia: n.dia, texto: efecto.texto });
+  }
   return n;
 }
 
-export function partidoDe(p: Partida): PartidoUI | null {
-  return partidosDeOlimpia().find((x) => x.etiqueta.endsWith(`Fecha ${p.fechaActual}`)) ?? null;
+/** Comprar del mercado. Devuelve null si no alcanza la plata. */
+export function fichar(p: Partida, fichajeId: string): Partida | null {
+  const f = p.fichajes.find((x) => x.id === fichajeId);
+  if (!f || f.precioUsd > p.dineroUsd) return null;
+  const n: Partida = estructurado(p);
+  n.dineroUsd -= f.precioUsd;
+  n.fichajes = n.fichajes.filter((x) => x.id !== fichajeId);
+  n.bitacora.push({ dia: n.dia, texto:
+    `Refuerzo: llega ${f.nombre} ${f.apellido} por ${miles(f.precioUsd)}.` });
+  return n;
 }
 
-export const TOTAL_FECHAS = 22;
+const esLunes = (dia: string) => new Date(dia + "T12:00:00").getDay() === 1;

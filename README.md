@@ -74,8 +74,22 @@ registradas de sus clubes y se usan acá con fines identificatorios dentro de un
 proyecto personal sin fines comerciales. Los clubes sin archivo de escudo caen a
 un monograma generado con sus colores.
 
+## Cómo se juega
+
+El juego es un calendario, no una lista de partidos. Se avanza día por día desde
+el escritorio del DT y en el camino aparecen cosas que hay que resolver antes de
+seguir: el plan de entrenamiento de la semana, un malestar en el vestuario, una
+oferta por tu goleador, el precio de la entrada para el partido del domingo.
+
+Cada decisión mueve algo: la caja, el clima del plantel, el humor de la hinchada
+o la condición física. Nada es gratis.
+
+El día del partido se arma el once sobre la cancha y se dirige: relato minuto a
+minuto, tres cambios, un cambio de actitud, y momentos que frenan el juego para
+que decidas con el reloj corriendo.
+
 ## Estado
 
-MVP en construcción. Anda: armar el once, jugar el partido con relato, cambios y
-cambio de actitud. Falta: arrastrar la condición entre fechas, persistencia, tabla
-de posiciones y la Sudamericana en la interfaz.
+MVP jugable de punta a punta: 22 fechas con la temporada guardada en el navegador.
+Falta la Copa Sudamericana en la interfaz (el motor ya la simula) y el sistema de
+marketing completo.

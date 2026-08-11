@@ -355,7 +355,7 @@ export default function PartidoEnVivo({
         .map((e) => e.jugadorId!),
       rojas: visibles.filter((e) => e.tipo === "roja" && e.jugadorId).map((e) => e.jugadorId!),
       lesionados: visibles.filter((e) => e.tipo === "lesion" && e.jugadorId)
-        .map((e) => ({ id: e.jugadorId!, fechas: 1 + Math.floor(Math.random() * 3) })),
+        .map((e) => ({ id: e.jugadorId!, dias: 7 + Math.floor(Math.random() * 30) })),
       goleadores: visibles.filter((e) => e.tipo === "gol" && e.jugadorId).map((e) => e.jugadorId!),
     };
   };
