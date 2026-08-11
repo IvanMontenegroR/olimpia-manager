@@ -33,7 +33,7 @@ export default function Page() {
   if (fase === "armar" && partido) {
     return (
       <ArmarOnce
-        key={partida.fechaActual}
+        key={`${partida.dia}-${partida.fechaActual}`}
         partido={partido}
         plantel={plantelDe(partida)}
         onVolver={() => setFase("escritorio")}
@@ -44,7 +44,7 @@ export default function Page() {
   if (fase === "partido" && partido && salida) {
     return (
       <PartidoEnVivo
-        key={partida.fechaActual}
+        key={`${partida.dia}-${partida.fechaActual}`}
         partido={partido}
         salida={salida}
         onTerminar={(c: CierrePartido) => {

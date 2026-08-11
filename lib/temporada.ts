@@ -5,20 +5,39 @@ import { P, clamp } from "@/engine/motor.ts";
 import { Rng } from "@/engine/rng.ts";
 import equiposJson from "@/data/equipos_2026.json";
 import fixtureJson from "@/data/fixture_clausura2026_final.json";
+import rivalesJson from "@/data/rivales_internacionales.json";
 import { sortearSituacion, type Efecto, type Situacion } from "@/engine/situaciones.ts";
 import { generarMercado, sortearOferta, type FichajeGenerado } from "@/engine/mercado.ts";
 import type { Jugador } from "@/engine/tipos.ts";
 
 const EQUIPOS = equiposJson as any[];
 const FIXTURE = fixtureJson as any[];
+const RIVALES = rivalesJson as any[];
 const CLAVE = "olimpia-manager-clausura-2026";
-const VERSION = 5;
+const VERSION = 6;
 
 export const DIA_INICIAL = "2026-07-20";
 export const TOTAL_FECHAS = 22;
 export const OBJETIVO = "Salir campeón del Clausura";
 
 export type Enfoque = "recuperacion" | "tactico" | "individual";
+export type RondaCopa = "octavos" | "cuartos" | "semis" | "final" | "eliminado" | "campeon";
+
+export interface EstadoCopa {
+  ronda: RondaCopa;
+  rivalId: string;
+  globalO: number;
+  globalR: number;
+  jugadosEnRonda: number;
+}
+
+/** Calendario real de las fases finales, de data/sudamericana_2026.json. */
+export const CALENDARIO_COPA: Record<string, { ida: string; vuelta: string }> = {
+  octavos: { ida: "2026-08-13", vuelta: "2026-08-20" },
+  cuartos: { ida: "2026-09-17", vuelta: "2026-09-24" },
+  semis:   { ida: "2026-10-22", vuelta: "2026-10-29" },
+  final:   { ida: "2026-11-21", vuelta: "2026-11-21" },
+};
 
 export interface ResultadoFecha {
   fechaNumero: number;
@@ -75,6 +94,7 @@ export interface Partida {
   entrenaA: string | null;
   precioEntrada: number; // en miles de guaraníes
 
+  copa: EstadoCopa;
   ofertas: Oferta[];
   fichajes: Fichaje[];
   pendientes: Asunto[];
@@ -122,6 +142,7 @@ export function partidaNueva(): Partida {
     entrenamiento: null,
     entrenaA: null,
     precioEntrada: 60,
+    copa: { ronda: "octavos", rivalId: "vasco_da_gama", globalO: 0, globalR: 0, jugadosEnRonda: 0 },
     ofertas: [],
     fichajes: generarMercado(DIA_INICIAL),
     pendientes: [],
@@ -167,9 +188,53 @@ export function plantelDe(p: Partida): Jugador[] {
   });
 }
 
-export function partidoDe(p: Partida): PartidoUI | null {
+export function partidoLigaDe(p: Partida): PartidoUI | null {
   return partidosDeOlimpia().find((x) => x.etiqueta.endsWith(`Fecha ${p.fechaActual}`)) ?? null;
 }
+
+export function partidoCopaDe(p: Partida): PartidoUI | null {
+  const c = p.copa;
+  if (c.ronda === "eliminado" || c.ronda === "campeon") return null;
+  const cal = CALENDARIO_COPA[c.ronda];
+  const esFinal = c.ronda === "final";
+  const dia = c.jugadosEnRonda === 0 ? cal.ida : cal.vuelta;
+  if (dia < p.dia) return null;
+  const r = (RIVALES as any[]).find((x) => x.id === c.rivalId);
+  if (!r) return null;
+  const esLocal = !esFinal && c.jugadosEnRonda === 1;
+  const nombreRonda = { octavos: "Octavos", cuartos: "Cuartos", semis: "Semifinal",
+                        final: "FINAL" }[c.ronda as "octavos"];
+  return {
+    rivalId: c.rivalId,
+    rivalNombre: r.nombre,
+    estadio: esFinal ? "Metropolitano Roberto Meléndez" : esLocal ? "Defensores del Chaco" : r.estadio,
+    ciudad: esFinal ? "Barranquilla" : esLocal ? "Asunción" : r.ciudad,
+    etiqueta: `Sudamericana · ${nombreRonda}${esFinal ? "" : c.jugadosEnRonda === 0 ? " ida" : " vuelta"}`,
+    ctx: {
+      fecha: dia,
+      competencia: "sudamericana",
+      esLocal,
+      neutral: esFinal,
+      rivalFuerza: r.fuerza,
+      rivalNombre: r.nombre,
+      viajeKm: esLocal ? 0 : r.km_desde_asuncion,
+      alturaM: esLocal ? 43 : r.altura_m,
+      diasDescanso: 3,
+      esClasico: false,
+    },
+  };
+}
+
+/** El que venga antes. */
+export function partidoDe(p: Partida): PartidoUI | null {
+  const liga = partidoLigaDe(p);
+  const copa = partidoCopaDe(p);
+  if (!liga) return copa;
+  if (!copa) return liga;
+  return copa.ctx.fecha <= liga.ctx.fecha ? copa : liga;
+}
+
+export const esPartidoDeCopa = (m: PartidoUI | null) => m?.ctx.competencia === "sudamericana";
 
 export const hayPartidoHoy = (p: Partida) => partidoDe(p)?.ctx.fecha === p.dia;
 
@@ -238,8 +303,9 @@ const AMARILLAS_PARA_SUSPENSION = 5;
 
 export function cerrarPartido(p: Partida, partido: PartidoUI, c: CierrePartido): Partida {
   const n: Partida = estructurado(p);
+  const esCopa = partido.ctx.competencia === "sudamericana";
 
-  n.resultados.push({
+  if (!esCopa) n.resultados.push({
     fechaNumero: p.fechaActual,
     rivalId: partido.rivalId,
     esLocal: partido.ctx.esLocal,
@@ -293,10 +359,74 @@ export function cerrarPartido(p: Partida, partido: PartidoUI, c: CierrePartido):
   n.bitacora.push({ dia: p.dia, texto:
     `${partido.ctx.esLocal ? "" : "De visitante. "}Olimpia ${c.golesOlimpia} - ${c.golesRival} ${partido.rivalNombre}.` });
 
-  n.fechaActual = p.fechaActual + 1;
+  if (esCopa) {
+    avanzarLlave(n, c, partido);
+  } else {
+    n.fechaActual = p.fechaActual + 1;
+  }
   n.entrenamiento = null;
   n.entrenaA = null;
   return avanzarUnDia(n).partida;
+}
+
+const SIGUIENTE: Record<string, RondaCopa> = {
+  octavos: "cuartos", cuartos: "semis", semis: "final", final: "campeon",
+};
+
+const RIVALES_POR_RONDA: Record<string, string[]> = {
+  // el camino real del cuadro: Olimpia sale de la llave D
+  cuartos: ["river_plate", "river_plate", "santa_fe"],
+  semis: ["boca_juniors", "sao_paulo", "bolivar", "recoleta"],
+  final: ["atletico_mineiro", "botafogo", "santos", "bragantino", "lanus"],
+};
+
+function avanzarLlave(n: Partida, c: CierrePartido, partido: PartidoUI) {
+  const copa = n.copa;
+  copa.globalO += c.golesOlimpia;
+  copa.globalR += c.golesRival;
+  copa.jugadosEnRonda++;
+
+  const esFinal = copa.ronda === "final";
+  const cerrada = esFinal || copa.jugadosEnRonda >= 2;
+  if (!cerrada) {
+    n.bitacora.push({ dia: n.dia, texto:
+      `Copa Sudamericana, ida: Olimpia ${c.golesOlimpia} - ${c.golesRival} ${partido.rivalNombre}.` });
+    return;
+  }
+
+  const rng = new Rng(`copa-${copa.ronda}-${n.dia}`);
+  // sin gol de visitante y sin alargue: el global empatado va a penales
+  const pasa = copa.globalO > copa.globalR
+    || (copa.globalO === copa.globalR && rng.chance(0.5));
+
+  n.bitacora.push({ dia: n.dia, texto:
+    `Copa Sudamericana: Olimpia ${c.golesOlimpia} - ${c.golesRival} ${partido.rivalNombre}. ` +
+    `Global ${copa.globalO}-${copa.globalR}. ${pasa ? "Olimpia avanza." : "Olimpia queda afuera."}` });
+
+  if (!pasa) {
+    copa.ronda = "eliminado";
+    n.hinchada = clamp(n.hinchada - 10, 0, 100);
+    n.ambiente = clamp(n.ambiente - 6, 0, 100);
+    return;
+  }
+
+  n.hinchada = clamp(n.hinchada + 9, 0, 100);
+  n.ambiente = clamp(n.ambiente + 5, 0, 100);
+  n.dineroUsd += copa.ronda === "octavos" ? 600_000
+    : copa.ronda === "cuartos" ? 900_000
+    : copa.ronda === "semis" ? 1_400_000 : 5_000_000;
+
+  const siguiente = SIGUIENTE[copa.ronda];
+  if (siguiente === "campeon") {
+    copa.ronda = "campeon";
+    n.bitacora.push({ dia: n.dia, texto: "OLIMPIA CAMPEÓN DE LA COPA SUDAMERICANA." });
+    return;
+  }
+  copa.ronda = siguiente;
+  copa.rivalId = rng.elegir(RIVALES_POR_RONDA[siguiente]);
+  copa.globalO = 0;
+  copa.globalR = 0;
+  copa.jugadosEnRonda = 0;
 }
 
 export const miles = (usd: number) =>

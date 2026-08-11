@@ -149,6 +149,65 @@ const PLANTILLAS: Plantilla[] = [
     }),
   },
   {
+    id: "camiseta",
+    cuando: (c) => c.plantel.some((j) => (j.valor_comercial ?? 1) >= 3),
+    armar: (c, rng) => {
+      const caras = c.plantel
+        .filter((j) => (j.valor_comercial ?? 1) >= 3)
+        .sort((a, b) => (b.valor_comercial ?? 1) - (a.valor_comercial ?? 1));
+      const estrella = caras[0];
+      const pibe = c.plantel.filter((j) => j.edad <= 22)[0] ?? estrella;
+      return {
+        s: {
+          id: "camiseta",
+          titulo: "Lanzamiento de la camiseta",
+          contexto: `Sale la nueva. Hay que elegir con quién se presenta.`,
+          opciones: [
+            { id: "estrella", etiqueta: `Con ${estrella.apellido}`,
+              detalle: "El nombre que vende afuera" },
+            { id: "pibe", etiqueta: `Con ${pibe.apellido}`,
+              detalle: "El pibe de la casa. A la gente le gusta" },
+            { id: "hinchada", etiqueta: "Con la hinchada",
+              detalle: "Sin caras, todo el club" },
+          ],
+        },
+        efectos: {
+          estrella: { dineroUsd: 380_000, hinchada: -2,
+            moralDe: { id: estrella.id, delta: 8 },
+            texto: `La camiseta se presentó con ${estrella.apellido}. Se vendió muy bien afuera.` },
+          pibe: { dineroUsd: 210_000, hinchada: 7,
+            moralDe: { id: pibe.id, delta: 10 },
+            texto: `${pibe.apellido} fue la cara de la camiseta. La gente lo festejó.` },
+          hinchada: { dineroUsd: 260_000, hinchada: 10,
+            texto: "La campaña fue con la hinchada de protagonista. Pegó fuerte." },
+        },
+      };
+    },
+  },
+  {
+    id: "sponsor",
+    cuando: () => true,
+    armar: () => ({
+      s: {
+        id: "sponsor",
+        titulo: "Contrato de sponsor",
+        contexto: "Hay dos ofertas sobre la mesa para la marca del frente.",
+        opciones: [
+          { id: "fijo", etiqueta: "Contrato fijo",
+            detalle: "Plata segura ahora, sin premios" },
+          { id: "variable", etiqueta: "Menos fijo, bonus por títulos",
+            detalle: "Entra menos hoy, mucho más si salís campeón" },
+        ],
+      },
+      efectos: {
+        fijo: { dineroUsd: 700_000,
+          texto: "Se firmó el contrato fijo. Entró la plata de una." },
+        variable: { dineroUsd: 250_000, ambiente: 3,
+          texto: "Se firmó con bonus por objetivos. Ahora hay que ganar." },
+      },
+    }),
+  },
+  {
     id: "amistoso",
     cuando: () => true,
     armar: () => ({

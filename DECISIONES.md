@@ -329,6 +329,45 @@ modula: recuperación multiplica por 1,6 y táctico la baja a 0,85. Eso conviert
 plan de la semana en una decisión real cuando venís de un partido y tenés otro en
 tres días.
 
+## La Sudamericana adentro del juego
+
+Los partidos de copa entran al mismo calendario que la liga, en sus fechas reales
+(13 y 20 de agosto los octavos, 17 y 24 de septiembre los cuartos, 22 y 29 de
+octubre las semis, la final el 21 de noviembre en Barranquilla). El escritorio los
+marca en violeta y el que venga antes es el próximo partido, sea de la copa o del
+Clausura.
+
+Las llaves se resuelven con el global de ida y vuelta, sin gol de visitante y sin
+alargue: empatado, va a penales. Pasar de ronda paga entre 600 mil y 5 millones de
+dólares y levanta a la hinchada; quedar afuera la hunde.
+
+Ahí es donde aprieta el calendario que ya estaba cargado: el clásico con Cerro cae
+dos días después de la vuelta con Vasco, y la fecha 21 cae dos días después de la
+final de Barranquilla.
+
+## Marketing
+
+Se sumaron al juego de situaciones:
+
+- **Lanzamiento de la camiseta**: se elige la cara de la campaña. La estrella de
+  `valor_comercial` alto rinde más plata; el pibe de la casa rinde menos plata y
+  más hinchada.
+- **Contrato de sponsor**: fijo grande ahora, o menos fijo con bonus por títulos.
+- **Amistoso internacional**: plata fuerte a cambio de piernas.
+
+Es exactamente la tensión de la sección 10 del documento: a veces la decisión
+comercialmente correcta es deportivamente mala.
+
+## Escudos
+
+Los 26 clubes tienen escudo real: los 12 de la Copa de Primera y los 14 del cuadro
+de la Sudamericana. Bajados de Wikimedia Commons, reducidos a 96 píxeles, 424 kB en
+total. El mapa de extensiones está en `data/escudos.json` porque algunos vienen en
+SVG y otros en PNG.
+
+El fallback de monograma se queda igual: sigue haciendo falta para cualquier club
+que aparezca sin archivo.
+
 ## Estado de los datos
 
 | Archivo | Estado |

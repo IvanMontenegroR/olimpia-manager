@@ -7,12 +7,12 @@ import Mercado from "./Mercado.tsx";
 import { COLOR_POS } from "./PanelPartido.tsx";
 import { colorCondicion, esSub18, nombreCorto, partidosDeOlimpia } from "@/lib/juego.ts";
 import {
-  OBJETIVO, TOTAL_FECHAS, borrar, diasAlPartido, formatoDia, hayPartidoHoy,
-  miles, partidoDe, plantelDe, posicionDe, sumarDias, tablaDe,
-  type Partida,
+  CALENDARIO_COPA, OBJETIVO, TOTAL_FECHAS, borrar, diasAlPartido, esPartidoDeCopa,
+  formatoDia, hayPartidoHoy, miles, partidoDe, plantelDe, posicionDe, sumarDias,
+  tablaDe, type Partida,
 } from "@/lib/temporada.ts";
 
-type Vista = "escritorio" | "plantel" | "tabla" | "fixture" | "mercado" | "bitacora";
+type Vista = "escritorio" | "plantel" | "tabla" | "fixture" | "mercado" | "bitacora" | "copa";
 
 export default function Escritorio({
   partida, onAvanzar, onDirigir, onResolver, onFichar, onReiniciar,
@@ -38,13 +38,14 @@ export default function Escritorio({
     return (
       <Sub titulo={{
         plantel: "Plantel", tabla: "Tabla", fixture: "Fixture",
-        mercado: "Mercado", bitacora: "Bitácora",
+        mercado: "Mercado", bitacora: "Bitácora", copa: "Sudamericana",
       }[vista]} onVolver={() => setVista("escritorio")}>
         {vista === "plantel" && <VistaPlantel plantel={plantel} partida={partida} />}
         {vista === "tabla" && <VistaTabla tabla={tabla} />}
         {vista === "fixture" && <VistaFixture partida={partida} />}
         {vista === "mercado" && <Mercado partida={partida} onFichar={onFichar} />}
         {vista === "bitacora" && <VistaBitacora partida={partida} />}
+        {vista === "copa" && <VistaCopa partida={partida} />}
       </Sub>
     );
   }
@@ -81,12 +82,18 @@ export default function Escritorio({
         {Array.from({ length: 12 }, (_, i) => {
           const dia = sumarDias(partida.dia, i);
           const m = partidosDeOlimpia().find((x) => x.ctx.fecha === dia);
+          const copaHoy = Object.values(CALENDARIO_COPA).some(
+            (r) => (r.ida === dia || r.vuelta === dia)
+              && partida.copa.ronda !== "eliminado" && partida.copa.ronda !== "campeon");
           const hoy = i === 0;
           return (
             <div key={dia}
               className="flex w-[52px] shrink-0 flex-col items-center gap-1 rounded-lg py-1.5"
               style={{
-                background: hoy ? "var(--blanco)" : m ? "color-mix(in srgb, #22c55e 20%, var(--carbon))" : "var(--carbon)",
+                background: hoy ? "var(--blanco)"
+                  : copaHoy ? "color-mix(in srgb, #a78bfa 26%, var(--carbon))"
+                  : m ? "color-mix(in srgb, #22c55e 20%, var(--carbon))"
+                  : "var(--carbon)",
                 color: hoy ? "var(--negro)" : "var(--blanco)",
               }}>
               <span className="text-[8px] uppercase tracking-wider"
@@ -94,7 +101,9 @@ export default function Escritorio({
                 {formatoDia(dia).slice(0, 3)}
               </span>
               <span className="num text-[15px] leading-none">{dia.slice(8, 10)}</span>
-              {m ? (
+              {copaHoy ? (
+                <span className="text-[8px] font-extrabold" style={{ color: "#a78bfa" }}>COPA</span>
+              ) : m ? (
                 <Escudo id={m.rivalId} nombre={m.rivalNombre} tam={16} />
               ) : (
                 <span className="h-4 text-[8px]" style={{ color: "var(--apagado)" }}>
@@ -114,8 +123,8 @@ export default function Escritorio({
           <div className="flex h-full flex-col justify-center rounded-xl p-4"
                style={{ background: "color-mix(in srgb, #22c55e 12%, var(--carbon))" }}>
             <span className="text-center text-[10px] uppercase tracking-[0.18em]"
-                  style={{ color: "#22c55e" }}>
-              Hoy se juega
+                  style={{ color: esPartidoDeCopa(partido) ? "#a78bfa" : "#22c55e" }}>
+              {esPartidoDeCopa(partido) ? partido.etiqueta : "Hoy se juega"}
             </span>
             <div className="mt-3 flex items-center justify-center gap-4">
               <Escudo id="olimpia" nombre="Olimpia" tam={42} />
@@ -140,8 +149,11 @@ export default function Escritorio({
               <div className="flex items-center gap-2.5">
                 <Escudo id={partido.rivalId} nombre={partido.rivalNombre} tam={34} />
                 <div className="min-w-0 flex-1">
-                  <div className="text-[9px] uppercase tracking-[0.14em]" style={{ color: "var(--apagado)" }}>
-                    {partido.ctx.esLocal ? "Local" : "Visitante"} · en {faltan} día{faltan === 1 ? "" : "s"}
+                  <div className="text-[9px] uppercase tracking-[0.14em]"
+                       style={{ color: esPartidoDeCopa(partido) ? "#a78bfa" : "var(--apagado)" }}>
+                    {esPartidoDeCopa(partido) ? partido.etiqueta + " · " : ""}
+                    {partido.ctx.neutral ? "Cancha neutral" : partido.ctx.esLocal ? "Local" : "Visitante"}
+                    {" · en "}{faltan} día{faltan === 1 ? "" : "s"}
                   </div>
                   <div className="apellido truncate text-[15px] leading-tight">
                     {nombreCorto(partido.rivalId, partido.rivalNombre)}
@@ -203,9 +215,9 @@ export default function Escritorio({
 
       {/* ---------- accesos ---------- */}
       <div className="grid grid-cols-5 gap-1 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2">
-        {([["plantel", "Plantel", "#22c55e"], ["mercado", "Pases", "#a78bfa"],
-           ["tabla", "Tabla", "#3b82f6"], ["fixture", "Fixture", "#f59e0b"],
-           ["bitacora", "Diario", "#8b8b95"]] as const).map(([id, texto, color]) => (
+        {([["plantel", "Plantel", "#22c55e"], ["mercado", "Pases", "#22d3ee"],
+           ["copa", "Copa", "#a78bfa"], ["tabla", "Tabla", "#3b82f6"],
+           ["fixture", "Fixture", "#f59e0b"]] as const).map(([id, texto, color]) => (
           <button key={id} onClick={() => setVista(id)}
             className="rounded-lg py-2.5 text-[9px] font-bold uppercase tracking-wider"
             style={{ background: `color-mix(in srgb, ${color} 16%, var(--carbon))`, color }}>
@@ -384,6 +396,73 @@ function VistaFixture({ partida }: { partida: Partida }) {
           </div>
         );
       })}
+    </>
+  );
+}
+
+function VistaCopa({ partida }: { partida: Partida }) {
+  const c = partida.copa;
+  const rondas = ["octavos", "cuartos", "semis", "final"] as const;
+  const nombres: Record<string, string> = {
+    octavos: "Octavos de final", cuartos: "Cuartos de final",
+    semis: "Semifinal", final: "Final en Barranquilla",
+  };
+  const indiceActual = rondas.indexOf(c.ronda as "octavos");
+
+  return (
+    <>
+      <div className="mb-3 rounded-xl p-3" style={{ background: "color-mix(in srgb, #a78bfa 14%, var(--carbon))" }}>
+        <div className="text-[9px] uppercase tracking-[0.16em]" style={{ color: "#a78bfa" }}>
+          Copa Sudamericana 2026
+        </div>
+        <div className="apellido mt-1 text-[18px]">
+          {c.ronda === "campeon" ? "OLIMPIA CAMPEÓN"
+            : c.ronda === "eliminado" ? "Eliminado"
+            : nombres[c.ronda]}
+        </div>
+        {c.ronda !== "campeon" && c.ronda !== "eliminado" && c.jugadosEnRonda === 1 && (
+          <div className="num mt-1 text-[13px]" style={{ color: "var(--tenue)" }}>
+            Global: {c.globalO} - {c.globalR}
+          </div>
+        )}
+      </div>
+
+      {rondas.map((r, i) => {
+        const pasada = c.ronda === "campeon" || indiceActual > i;
+        const actual = c.ronda === r;
+        const cal = CALENDARIO_COPA[r];
+        return (
+          <div key={r} className="mb-1.5 rounded-lg p-2.5"
+               style={{
+                 background: actual ? "color-mix(in srgb, #a78bfa 18%, var(--carbon))" : "var(--carbon)",
+                 opacity: !actual && !pasada && c.ronda !== "eliminado" ? 0.55 : 1,
+               }}>
+            <div className="flex items-center gap-2">
+              {actual && <Escudo id={c.rivalId} nombre={c.rivalId} tam={22} />}
+              <span className="min-w-0 flex-1">
+                <span className="apellido block text-[13px]">{nombres[r]}</span>
+                <span className="text-[10px]" style={{ color: "var(--apagado)" }}>
+                  {r === "final" ? cal.ida.slice(8, 10) + "/" + cal.ida.slice(5, 7)
+                    : `${cal.ida.slice(8, 10)}/${cal.ida.slice(5, 7)} y ${cal.vuelta.slice(8, 10)}/${cal.vuelta.slice(5, 7)}`}
+                </span>
+              </span>
+              {pasada && (
+                <span className="rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase"
+                      style={{ background: "#22c55e", color: "#0b0b0c" }}>Pasó</span>
+              )}
+              {actual && c.ronda !== "eliminado" && (
+                <span className="rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase"
+                      style={{ background: "#a78bfa", color: "#0b0b0c" }}>Ahora</span>
+              )}
+            </div>
+          </div>
+        );
+      })}
+
+      <p className="mt-3 px-2 text-[10px] leading-relaxed" style={{ color: "var(--apagado)" }}>
+        Ida y vuelta, sin gol de visitante y sin alargue: si el global termina empatado, se define
+        por penales. La final es a partido único en el Metropolitano de Barranquilla.
+      </p>
     </>
   );
 }

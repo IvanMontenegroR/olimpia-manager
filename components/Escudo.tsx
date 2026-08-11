@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import visual from "@/data/clubes_visual.json";
+import archivos from "@/data/escudos.json";
 
 type Estilo = {
   primario: string; secundario: string; sobrePrimario: string; escudo: boolean;
@@ -26,14 +27,15 @@ export default function Escudo({
   const e = estiloClub(id);
   const [sinArchivo, setSinArchivo] = useState(false);
   const inicial = nombre.replace(/^(Club|Sportivo|Deportivo)\s+/i, "").charAt(0).toUpperCase();
+  const ext = (archivos as Record<string, string>)[id];
 
-  if (!sinArchivo) {
+  if (ext && !sinArchivo) {
     // Varios escudos paraguayos son negros sobre transparente y la interfaz es
     // oscura: sin un chip claro detrás, Olimpia y Libertad desaparecen.
     return (
       <span className="inline-flex shrink-0 items-center justify-center rounded-[5px]"
             style={{ width: tam, height: tam, background: "#f4f4f5", padding: tam * 0.07 }}>
-        <img src={`escudos/${id}.png`} alt={nombre}
+        <img src={`escudos/${id}.${ext}`} alt={nombre}
              onError={() => setSinArchivo(true)}
              style={{ width: "100%", height: "100%", objectFit: "contain" }} />
       </span>

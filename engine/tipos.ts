@@ -32,6 +32,8 @@ export interface Jugador {
   tarjetas_amarillas: number;
   suspendido: boolean;
   historial_lesion_grave?: boolean;
+  /** 1 a 5. No toca la simulación deportiva: es la moneda del marketing. */
+  valor_comercial?: number;
 }
 
 export interface ContextoPartido {
