@@ -29,7 +29,6 @@ export const TOTAL_FECHAS = 22;
 export const AFORO = 36_000;
 export const OBJETIVO = "Salir campeón del Clausura";
 
-export type Enfoque = "recuperacion" | "tactico" | "individual";
 export type RondaCopa = "octavos" | "cuartos" | "semis" | "final" | "eliminado" | "campeon";
 
 export const NOMBRE_RONDA: Record<string, string> = {
@@ -89,7 +88,7 @@ export type Fichaje = FichajeGenerado;
 /** Algo que espera una decisión. El día no avanza hasta resolverlo. */
 export interface Asunto {
   id: string;
-  tipo: "entrenamiento" | "evento" | "oferta" | "marketing" | "prensa" | "viaje";
+  tipo: "evento" | "oferta" | "marketing" | "prensa" | "viaje";
   dia: string;
   titulo: string;
   detalle: string;
@@ -152,8 +151,6 @@ export interface Partida {
   dineroUsd: number;
   ambiente: number;      // clima interno del plantel, 0 a 100
   hinchada: number;      // humor de la gente, 0 a 100
-  entrenamiento: Enfoque | null;
-  entrenaA: string | null;
   precioEntrada: number; // en miles de guaraníes
   /** Se firmó el contrato con premio por objetivos. */
   sponsorConBonus: boolean;
@@ -283,8 +280,6 @@ export function partidaNueva(): Partida {
     dineroUsd: 1_800_000,
     ambiente: 72,
     hinchada: 68,
-    entrenamiento: null,
-    entrenaA: null,
     precioEntrada: 60,
     equipos: equiposIniciales(),
     enReserva: PLANTEL.filter((j) => j.reserva).map((j) => j.id),
@@ -586,6 +581,27 @@ export function cerrarPartido(p: Partida, partido: PartidoUI, c: CierrePartido):
       if (j.edad >= 33) desgaste += P.desgasteVeterano * (min / 90);
       e.condicion = clamp(e.condicion - desgaste, 0, 100);
       e.minutos += min;
+
+      /**
+       * Los juveniles crecen jugando, y esto es lo único del juego que deja
+       * una marca permanente en el plantel.
+       *
+       * Estaba prácticamente apagado: un pibe con techo +15 subía medio punto
+       * en toda la temporada y terminaba igual que empezó, así que darle
+       * minutos no construía nada. Ahora un titular juvenil llega cerca de su
+       * techo en una temporada, y el que no juega no crece: bancarlo aunque
+       * hoy rinda menos es una decisión con premio.
+       */
+      const margen = j.nivel_incertidumbre;
+      if (margen > 0 && e.crecimiento < margen) {
+        const antesEntero = Math.floor(e.crecimiento);
+        e.crecimiento = Math.min(margen, e.crecimiento + (min / 90) * (margen / 20));
+        if (Math.floor(e.crecimiento) > antesEntero) {
+          n.bitacora.push({ dia: p.dia, marca: "titulo",
+            texto: `${j.apellido} dio un salto: ahora es nivel ${j.nivel + Math.floor(e.crecimiento)}.` });
+        }
+      }
+
       // El pibe del interior deja de ser una incógnita cuando pisa la cancha.
       const traido = n.incorporados.find((x) => x.id === j.id && x.aRevelar);
       if (traido && e.minutos >= 20) {
@@ -720,8 +736,6 @@ export function cerrarPartido(p: Partida, partido: PartidoUI, c: CierrePartido):
           };
     }
   }
-  n.entrenamiento = null;
-  n.entrenaA = null;
   return avanzarUnDia(n).partida;
 }
 
@@ -873,7 +887,6 @@ export function avanzarUnDia(p: Partida): ResultadoAvance {
   n.dia = sumarDias(p.dia, 1);
   const rng = new Rng(`dia-${n.dia}-${n.fechaActual}`);
 
-  const entrena = n.entrenamiento;
   void novedades;
   for (const j of PLANTEL) {
     const e = n.plantel[j.id];
@@ -884,15 +897,9 @@ export function avanzarUnDia(p: Partida): ResultadoAvance {
     if (e.lesionadoHasta) continue;
 
     // Un día de recuperación, con la misma curva del motor: se recupera casi
-    // todo en la primera semana y después se estanca. El enfoque de la semana
-    // acelera o frena esa curva.
-    const dias = entrena === "recuperacion" ? 1.6
-      : entrena === "tactico" ? 0.85
-      : entrena === "individual" ? 0.9
-      : 1;
-    const antes = e.condicion;
-    const j2 = { ...j, condicion: antes };
-    recuperar(j2, dias + P.recuperacionDiaPerdido);
+    // todo en la primera semana y después se estanca.
+    const j2 = { ...j, condicion: e.condicion };
+    recuperar(j2, 1 + P.recuperacionDiaPerdido);
     e.condicion = clamp(j2.condicion, 0, 100);
 
     // El ánimo de cada uno tiende al clima del vestuario: un plantel roto
@@ -902,34 +909,10 @@ export function avanzarUnDia(p: Partida): ResultadoAvance {
     e.animo = clamp(e.animo + (n.ambiente - e.animo) * 0.06 + (70 - e.animo) * 0.04, 0, 100);
     // con el vestuario partido, además se cae solo
     if (n.ambiente < 30) e.animo = clamp(e.animo - 0.8, 0, 100);
-
-    // Los juveniles crecen con minutos y con el trabajo individual. Su margen
-    // es exactamente la incertidumbre de Nivel que traen.
-    const margen = j.nivel_incertidumbre;
-    if (margen > 0 && e.crecimiento < margen) {
-      let sube = 0;
-      if (entrena === "individual" && n.entrenaA === j.id) sube += 0.10;
-      if (e.minutos > 0) sube += (e.minutos / 900) * 0.05;
-      if (sube > 0 && rng.chance(0.35)) {
-        e.crecimiento = Math.min(margen, e.crecimiento + sube);
-        if (Math.floor(e.crecimiento) > Math.floor(e.crecimiento - sube)) {
-          n.bitacora.push({ dia: n.dia, texto:
-            `${j.apellido} dio un salto: ahora es nivel ${j.nivel + Math.floor(e.crecimiento)}.` });
-        }
-      }
-    }
   }
 
   // asuntos que aparecen solos
   const alPartido = diasAlPartido(n);
-
-  if (esLunes(n.dia) && !n.entrenamiento && alPartido !== null && alPartido > 1) {
-    n.pendientes.push({
-      id: `ent-${n.dia}`, tipo: "entrenamiento", dia: n.dia,
-      titulo: "Plan de la semana",
-      detalle: "¿En qué se enfoca el trabajo hasta el partido?",
-    });
-  }
 
   // El plan de viaje se decide con tiempo: tres días antes, que es cuando
   // todavía se puede adelantar la delegación.
@@ -1138,19 +1121,6 @@ export function resolverAsunto(p: Partida, asuntoId: string, opcionId: string): 
   if (!a) return n;
   n.pendientes = n.pendientes.filter((x) => x.id !== asuntoId);
 
-  if (a.tipo === "entrenamiento") {
-    n.entrenamiento = opcionId as Enfoque;
-    if (opcionId === "individual") {
-      // se entrena al juvenil con más margen de crecimiento
-      const juveniles = PLANTEL.filter((j) => j.nivel_incertidumbre > 0);
-      n.entrenaA = juveniles.sort((x, y) => y.nivel_incertidumbre - x.nivel_incertidumbre)[0]?.id ?? null;
-    }
-    n.bitacora.push({ dia: n.dia, texto:
-      opcionId === "recuperacion" ? "Semana de recuperación: se baja la carga."
-      : opcionId === "tactico" ? "Semana táctica: se trabaja el partido."
-      : "Semana de trabajo individual con los juveniles." });
-    return n;
-  }
 
   if (a.tipo === "viaje") {
     const PLANES: Record<string, { acl: number; costo: number; texto: string }> = {
@@ -1238,6 +1208,10 @@ export function resolverAsunto(p: Partida, asuntoId: string, opcionId: string): 
       n.plantel[efecto.suspendeA].suspendidoFechas = 1;
     }
     if (efecto.traerPibeDe) sumarPibe(n, efecto.traerPibeDe);
+    // el texto decía que subía al plantel principal y no lo sacaba de la reserva
+    if (efecto.subirDeReserva) {
+      n.enReserva = n.enReserva.filter((id) => id !== efecto.subirDeReserva);
+    }
     n.bitacora.push({
       dia: n.dia,
       texto: efecto.texto,
@@ -1292,4 +1266,3 @@ export function fichar(p: Partida, fichajeId: string): Partida | null {
   return n;
 }
 
-const esLunes = (dia: string) => new Date(dia + "T12:00:00").getDay() === 1;

@@ -9,7 +9,7 @@ import Escritorio from "@/components/Escritorio.tsx";
 import { salidaAutomatica } from "@/lib/juego.ts";
 import {
   avanzarUnDia, cargar, cerrarPartido, fichar, ficharEstrella, guardar, partidaNueva,
-  partidoDe, plantelDe, rechazarEstrella, resolverAsunto,
+  partidoDe, plantelDe, rechazarEstrella, resolverAsunto, TOTAL_FECHAS,
   type CierrePartido, type Partida,
 } from "@/lib/temporada.ts";
 
@@ -58,6 +58,10 @@ export default function Page() {
         partido={partido}
         plantel={plantelDe(partida)}
         equipos={partida.equipos}
+        estadoSub18={{
+          minutos: partida.minutosSub18,
+          partidosRestantes: Math.max(1, TOTAL_FECHAS - partida.fechaActual + 1),
+        }}
         onGuardarEquipo={(e) => setPartida((p) => (p ? {
           ...p,
           // guardar con un nombre ya usado lo pisa, no lo duplica
@@ -94,7 +98,10 @@ export default function Page() {
       onJugarDirecto={() => {
         // El once que propone el juego, sin pasar por la pantalla de armado.
         if (!partido) return;
-        setSalida(salidaAutomatica(partido, plantelDe(partida)));
+        setSalida(salidaAutomatica(partido, plantelDe(partida), {
+          minutos: partida.minutosSub18,
+          partidosRestantes: Math.max(1, TOTAL_FECHAS - partida.fechaActual + 1),
+        }));
         setFase("partido");
       }}
       onFicharEstrella={() => setPartida((p) => (p ? ficharEstrella(p) : p))}

@@ -64,7 +64,7 @@ const AYUDAS: Record<Ayuda, { titulo: string; texto: string; mueve: string[] }> 
     ],
   },
   dirigencia: {
-    titulo: "Dirigencia",
+    titulo: "Prestigio",
     texto: "Cuánto te bancan. Si llega a cero, te echan y se termina la partida.",
     mueve: [
       "Resultados y posición en la tabla",
@@ -207,14 +207,34 @@ export default function Escritorio({
                   className="num text-[13px]" style={{ color: "var(--cesped)" }} />
         </div>
 
+        {/* El prestigio manda sobre las otras dos: es el titular de tu ciclo,
+            no una barra más. Por eso va ancho, con nombre y arriba. */}
+        <button onClick={() => setAyuda("dirigencia")} className="mt-2 block w-full text-left">
+          <div className="mb-1 flex items-baseline justify-between">
+            <span className="text-[9px] uppercase tracking-[0.18em]"
+                  style={{ color: partida.paciencia < 25 ? "#c0392b" : "#4a7fb5" }}>
+              {partida.paciencia >= 80 ? "Intocable"
+                : partida.paciencia >= 55 ? "Respetado"
+                : partida.paciencia >= 25 ? "Cuestionado"
+                : "En la cuerda floja"}
+            </span>
+            <Numero valor={partida.paciencia} className="num text-[13px]"
+                    style={{ color: partida.paciencia < 25 ? "#c0392b" : "#4a7fb5" }} />
+          </div>
+          <div className="relieve h-2 overflow-hidden rounded-full" style={{ background: "var(--linea)" }}>
+            <div className="barra-llena h-full rounded-full"
+                 style={{ width: `${partida.paciencia}%`,
+                          background: partida.paciencia < 25
+                            ? "linear-gradient(90deg, #6b1f16, #c0392b)"
+                            : "linear-gradient(90deg, #26486b, #4a7fb5)" }} />
+          </div>
+        </button>
+
         <div className="mt-2 flex gap-2">
           <Medidor etiqueta="Vestuario" valor={partida.ambiente} color="#3fa76a"
                    onClick={() => setAyuda("vestuario")} />
           <Medidor etiqueta="Hinchada" valor={partida.hinchada} color="#d9a832"
                    onClick={() => setAyuda("hinchada")} />
-          <Medidor etiqueta="Dirigencia" valor={partida.paciencia}
-                   color={partida.paciencia < 25 ? "#c0392b" : "#4a7fb5"}
-                   onClick={() => setAyuda("dirigencia")} />
           {/* La ocupación es del próximo partido de local: de visitante no
               significa nada, así que no ocupa lugar. */}
           {partido?.ctx.esLocal && (

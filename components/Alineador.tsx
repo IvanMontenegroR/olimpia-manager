@@ -26,10 +26,6 @@ export interface EstadoAlineacion {
   alineado: Alineado;
 }
 
-export function useAlineacion(inicial: EstadoAlineacion) {
-  const [estado, setEstado] = useState(inicial);
-  return { estado, setEstado };
-}
 
 export default function Alineador({
   aptos, ctx, estado, onCambio, extra,
@@ -295,6 +291,3 @@ export function Hoja({ titulo, onCerrar, children }: {
   );
 }
 
-/** Cuántos jugadores del equipo guardado siguen disponibles. */
-export const CUPO = CUPO_EXTRANJEROS;
-export const esJuvenil = esSub18;

@@ -10,7 +10,6 @@ import { DibujoEscena, ESCENAS, type TipoEscena } from "./Escena.tsx";
  * situaciones traen la suya; estas cuatro son fijas.
  */
 const ESCENA_POR_TIPO: Record<Asunto["tipo"], TipoEscena> = {
-  entrenamiento: "predio",
   evento: "vestuario",
   oferta: "mercado",
   marketing: "tribuna",
@@ -83,16 +82,6 @@ function opcionesDe(a: Asunto, p: Partida): {
   id: string; etiqueta: string; detalle: string; efecto?: EfectoVisible;
   apuesta?: { exito: number; bien: string; mal: string };
 }[] {
-  if (a.tipo === "entrenamiento") {
-    return [
-      { id: "recuperacion", etiqueta: "Recuperación",
-        detalle: "Recupera 60% más rápido cada día" },
-      { id: "tactico", etiqueta: "Táctico",
-        detalle: "Recupera 15% menos por día" },
-      { id: "individual", etiqueta: "Individual",
-        detalle: "El juvenil con más margen sube de Nivel; el plantel recupera 10% menos" },
-    ];
-  }
   if (a.tipo === "marketing") {
     return [
       { id: "barato", etiqueta: "Popular a 35 mil",

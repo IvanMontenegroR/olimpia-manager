@@ -187,5 +187,3 @@ function Chip({ texto, color }: { texto: string; color: string }) {
   );
 }
 
-/** Se exporta para el balance de rareza en los tests de calibración. */
-export const RAREZAS = CHANCE_POR_CATEGORIA;

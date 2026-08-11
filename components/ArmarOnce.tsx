@@ -20,11 +20,12 @@ export interface Salida {
 }
 
 export default function ArmarOnce({
-  partido, plantel, equipos, onJugar, onVolver, onGuardarEquipo,
+  partido, plantel, equipos, estadoSub18, onJugar, onVolver, onGuardarEquipo,
 }: {
   partido: PartidoUI;
   plantel: Jugador[];
   equipos: EquipoGuardado[];
+  estadoSub18: { minutos: number; partidosRestantes: number };
   onJugar: (s: Salida) => void;
   onVolver: () => void;
   onGuardarEquipo: (e: EquipoGuardado) => void;
@@ -38,10 +39,10 @@ export default function ArmarOnce({
   // formación, arrastrar de un puesto a otro y guardar equipos armados.
   const inicial = useMemo<EstadoAlineacion>(() => {
     // el once sugerido sale del primer equipo; la reserva se sube a mano
-    const once = autoOnce(ctx, aptos.filter((j) => !j.reserva))
+    const once = autoOnce(ctx, aptos.filter((j) => !j.reserva), estadoSub18)
       .map((id) => porId.get(id)!).filter(Boolean);
     return mejorMolde(once, ctx);
-  }, [ctx, aptos, porId]);
+  }, [ctx, aptos, porId, estadoSub18]);
 
   const [estado, setEstado] = useState<EstadoAlineacion>(inicial);
   const [actitud, setActitud] = useState<Actitud>(ctx.esLocal ? "ofensivo" : "equilibrado");

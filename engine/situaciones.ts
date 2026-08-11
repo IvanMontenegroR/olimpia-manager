@@ -21,6 +21,8 @@ export interface Efecto {
   suspendeA?: string;
   /** Suma al plantel un juvenil de nivel desconocido, del pueblo que diga. */
   traerPibeDe?: string;
+  /** Lo saca de la reserva de verdad, no solo en el texto. */
+  subirDeReserva?: string;
 }
 
 export interface OpcionSituacion {
@@ -555,6 +557,7 @@ const PLANTILLAS: Plantilla[] = [
         },
         efectos: {
           subir: { moralDe: { id: j.id, delta: 16 }, ambiente: -3, hinchada: 3,
+            subirDeReserva: j.id,
             texto: `${j.apellido} se entrena con el plantel principal.` },
           esperar: { moralDe: { id: j.id, delta: -8 },
             texto: `${j.apellido} sigue en la reserva por ahora.` },

@@ -176,54 +176,6 @@ export function mejorMolde(
   return { formacion: mejor.formacion, alineado: mejor.alineado };
 }
 
-/**
- * "Once sueltos": el DT elige a los once y el sistema deduce el sistema.
- * Prueba todos los moldes, y dentro de cada uno reparte a los once entre los
- * slots buscando el mejor encaje global. Deja explícito quién termina fuera
- * de su puesto y cuánto pierde por eso.
- */
-export function asignarPuestos(once: Jugador[], ctx: ContextoPartido): Asignacion | null {
-  if (once.length !== 11) return null;
-  let mejor: Asignacion | null = null;
-
-  for (const { nombre } of MOLDES) {
-    const slots = MOLDE_DE(nombre);
-    // Todas las parejas jugador-slot ordenadas por lo que rinde cada una: se
-    // van tomando de la mejor a la peor mientras los dos lados estén libres.
-    const parejas: { j: Jugador; slot: number; valor: number }[] = [];
-    for (const j of once) {
-      for (let s = 0; s < slots.length; s++) {
-        parejas.push({ j, slot: s, valor: nivelEfectivo(j, slots[s], ctx) });
-      }
-    }
-    parejas.sort((a, b) => b.valor - a.valor);
-
-    const puestos = new Map<string, Posicion>();
-    const slotUsado = new Array(slots.length).fill(false);
-    let total = 0;
-    for (const { j, slot, valor } of parejas) {
-      if (puestos.has(j.id) || slotUsado[slot]) continue;
-      puestos.set(j.id, slots[slot]);
-      slotUsado[slot] = true;
-      total += valor;
-      if (puestos.size === 11) break;
-    }
-    if (puestos.size !== 11) continue;
-
-    if (total > (mejor?.total ?? -Infinity)) {
-      const adaptados: Jugador[] = [];
-      const fueraDePuesto: Jugador[] = [];
-      for (const j of once) {
-        const p = puestos.get(j.id)!;
-        if (p === j.posicion) continue;
-        if (j.posiciones_secundarias.includes(p)) adaptados.push(j);
-        else fueraDePuesto.push(j);
-      }
-      mejor = { molde: nombre, puestos, total, adaptados, fueraDePuesto };
-    }
-  }
-  return mejor;
-}
 
 export interface PartidoUI {
   ctx: ContextoPartido;
@@ -290,8 +242,17 @@ export const nombreCorto = (id: string, nombre: string) =>
 export const colorCondicion = (c: number) =>
   c >= 80 ? "var(--ok)" : c >= 60 ? "var(--medio)" : c >= 40 ? "var(--bajo)" : "var(--critico)";
 
-/** Once inicial sugerido: el mejor posible respetando cupo y Sub-18. */
-export function autoOnce(ctx: PartidoUI["ctx"], plantel: Jugador[]): string[] {
+/**
+ * Once inicial sugerido: el mejor posible respetando el cupo de extranjeros.
+ *
+ * El Sub-18 entra solo si hace falta para llegar a los 900 minutos. Antes
+ * entraba siempre, y como ninguno de los dos juveniles es titular por mérito
+ * (Zarza es el tercer extremo izquierdo del plantel), eso costaba nivel todas
+ * las fechas para cumplir una regla que se cumple con diez partidos.
+ */
+export function autoOnce(
+  ctx: PartidoUI["ctx"], plantel: Jugador[], estadoSub18?: EstadoSub18,
+): string[] {
   // Se llena el 4-3-3 slot por slot con el mejor de cada uno, en vez de por
   // línea: así no termina un lateral derecho jugando de izquierdo teniendo un
   // izquierdo natural en el banco.
@@ -307,15 +268,17 @@ export function autoOnce(ctx: PartidoUI["ctx"], plantel: Jugador[]): string[] {
     if (j.extranjero) ext++;
   };
 
-  // El Sub-18 entra primero y consume el slot que mejor le calza, no uno
-  // cualquiera: si no se descuenta un slot, el molde queda de doce y el último
-  // puesto se pierde al recortar.
-  const sub = plantel.filter(esSub18)
-    .sort((a, b) => nivelEf(b, b.posicion, ctx) - nivelEf(a, a.posicion, ctx))[0];
-  if (sub) {
-    meter(sub);
-    const suyo = slots.indexOf(sub.posicion);
-    slots.splice(suyo >= 0 ? suyo : slots.length - 1, 1);
+  // Solo se mete un Sub-18 si el ritmo no alcanza. Y cuando entra, consume el
+  // slot que mejor le calza: si no se descuenta un slot, el molde queda de
+  // doce y el último puesto se pierde al recortar.
+  if (hacenFaltaMinutosSub18(estadoSub18)) {
+    const sub = plantel.filter(esSub18)
+      .sort((a, b) => nivelEf(b, b.posicion, ctx) - nivelEf(a, a.posicion, ctx))[0];
+    if (sub) {
+      meter(sub);
+      const suyo = slots.indexOf(sub.posicion);
+      slots.splice(suyo >= 0 ? suyo : slots.length - 1, 1);
+    }
   }
 
   // Cada vuelta es un slot: contar por puesto natural saltea slots y deja el
@@ -360,12 +323,32 @@ export function bancoSugerido(
  * El equipo con el que sale Olimpia si no tocás nada. Lo usan el botón de
  * jugar directo y la pantalla de armado, así que los dos parten de lo mismo.
  */
-export function salidaAutomatica(partido: PartidoUI, plantel: Jugador[]) {
+export interface EstadoSub18 {
+  minutos: number;
+  partidosRestantes: number;
+}
+
+/**
+ * Si al ritmo actual no se llega a los 900, ya conviene poner al juvenil. Solo
+ * cuentan los partidos completos, así que hacen falta diez.
+ */
+export function hacenFaltaMinutosSub18(e?: EstadoSub18): boolean {
+  if (!e) return false;
+  const faltan = Math.max(0, SUB18_META_MINUTOS - e.minutos);
+  if (faltan === 0) return false;
+  return faltan >= e.partidosRestantes * 60;
+}
+
+export const SUB18_META_MINUTOS = 900;
+
+export function salidaAutomatica(
+  partido: PartidoUI, plantel: Jugador[], estadoSub18?: EstadoSub18,
+) {
   const { ctx } = partido;
   const aptos = plantel.filter((j) => !j.suspendido && !j.lesionado_hasta);
   const porId = new Map(aptos.map((j) => [j.id, j]));
 
-  const elegidos = autoOnce(ctx, aptos.filter((j) => !j.reserva))
+  const elegidos = autoOnce(ctx, aptos.filter((j) => !j.reserva), estadoSub18)
     .map((id) => porId.get(id)!).filter(Boolean);
   const { formacion, alineado } = mejorMolde(elegidos, ctx);
   const slots = MOLDE_DE(formacion);
