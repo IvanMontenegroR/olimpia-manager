@@ -2,6 +2,7 @@
 
 import { miles, type Asunto, type Partida } from "@/lib/temporada.ts";
 import { PLANTEL } from "@/lib/juego.ts";
+import Efectos, { type EfectoVisible } from "./Efectos.tsx";
 
 const COLOR: Record<Asunto["tipo"], string> = {
   entrenamiento: "#3fa76a",
@@ -51,6 +52,7 @@ export default function Asuntos({
             }}>
             <span className="apellido block text-[14px] leading-tight">{o.etiqueta}</span>
             <span className="block text-[11px]" style={{ color: "var(--tenue)" }}>{o.detalle}</span>
+            {o.efecto && <Efectos e={o.efecto} />}
           </button>
         ))}
       </div>
@@ -58,24 +60,28 @@ export default function Asuntos({
   );
 }
 
-function opcionesDe(a: Asunto, p: Partida): { id: string; etiqueta: string; detalle: string }[] {
+function opcionesDe(a: Asunto, p: Partida):
+  { id: string; etiqueta: string; detalle: string; efecto?: EfectoVisible }[] {
   if (a.tipo === "entrenamiento") {
     return [
       { id: "recuperacion", etiqueta: "Recuperación",
-        detalle: "El plantel recupera condición mucho más rápido" },
+        detalle: "Recupera 60% más rápido cada día" },
       { id: "tactico", etiqueta: "Táctico",
-        detalle: "Se trabaja el partido, se recupera menos" },
+        detalle: "Recupera 15% menos por día" },
       { id: "individual", etiqueta: "Individual",
-        detalle: "Trabajo con los juveniles, a costa del descanso" },
+        detalle: "El juvenil con más margen sube de Nivel; el plantel recupera 10% menos" },
     ];
   }
   if (a.tipo === "marketing") {
     return [
       { id: "barato", etiqueta: "Popular a 35 mil",
-        detalle: "Se llena el estadio, entra menos plata" },
-      { id: "normal", etiqueta: "Precio habitual, 60 mil", detalle: "Lo de siempre" },
+        detalle: "Estadio lleno: más aliento en la cancha",
+        efecto: { hinchada: 6 } },
+      { id: "normal", etiqueta: "Precio habitual, 60 mil",
+        detalle: "Lo de siempre", efecto: { hinchada: -1 } },
       { id: "caro", etiqueta: "Aprovechar, 100 mil",
-        detalle: "Más recaudación, la gente se queja" },
+        detalle: "Más plata por entrada, menos gente y menos aliento",
+        efecto: { hinchada: -9 } },
     ];
   }
   if (a.tipo === "oferta") {
@@ -83,10 +89,19 @@ function opcionesDe(a: Asunto, p: Partida): { id: string; etiqueta: string; deta
     const j = PLANTEL.find((x) => x.id === oferta?.jugadorId);
     return [
       { id: "vender", etiqueta: `Vender por ${oferta ? miles(oferta.montoUsd) : ""}`,
-        detalle: `Entra la plata y perdés a ${j?.apellido ?? "el jugador"}` },
+        detalle: `Perdés a ${j?.apellido ?? "el jugador"}`,
+        efecto: {
+          dineroUsd: oferta?.montoUsd,
+          hinchada: (j?.nivel ?? 0) >= 68 ? -9 : -3,
+          ambiente: -3,
+        } },
       { id: "rechazar", etiqueta: "Rechazar",
-        detalle: "Se queda, pero no le va a caer bien" },
+        detalle: `${j?.apellido ?? "El jugador"} se queda dolido y rinde menos por un tiempo`,
+        efecto: { ambiente: 2, moralDe: { id: "", delta: -6 }, moralTexto: j?.apellido } },
     ];
   }
-  return a.situacion?.opciones ?? [];
+  return (a.situacion?.opciones ?? []).map((o) => ({
+    ...o,
+    efecto: a.efectos?.[o.id] as EfectoVisible | undefined,
+  }));
 }

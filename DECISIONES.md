@@ -483,6 +483,36 @@ natural en el banco.
 
 El balance del motor no se movió: 44,3 puntos rotando contra 31,9 con once fijo.
 
+## Auditoría de mecánicas y cierre del círculo
+
+Una revisión del código encontró que buena parte del juego era decorado: valores
+que se calculaban, se guardaban y no se leían en ningún lado. Lo que se arregló:
+
+| Antes | Ahora |
+|---|---|
+| **Fichar no incorporaba a nadie.** Cobraba la plata, sacaba al jugador del mercado y ahí terminaba. | El refuerzo entra al plantel con dorsal libre, 88% de condición y moral 78. |
+| La moral se calculaba y solo se mostraba. | Entra en el Nivel efectivo como multiplicador de 0,94 a 1,06. Rechazar una oferta ahora cuesta rendimiento. |
+| El ambiente del vestuario era un medidor decorativo. | Cada día la moral de cada jugador tiende hacia él: un vestuario roto arrastra a todos. |
+| El bonus del sponsor se prometía y no se pagaba. | Se guarda la elección y paga 2,5 millones al cumplir el objetivo. |
+| Los 900 minutos Sub-18 se contaban sin consecuencia. | Si no se llega, la APF descuenta 3 puntos en la tabla. Se avisa desde antes. |
+| Los juveniles nunca subían de Nivel. | Crecen con minutos y con trabajo individual, hasta agotar su incertidumbre de Nivel. |
+| La forma quedaba congelada entre fechas. | Se mueve según lo que hizo el jugador y el equipo con él en cancha. |
+| La hinchada solo multiplicaba la taquilla. | Escala el bonus de localía y arrastra al vestuario. |
+
+**La cadena causal quedó cerrada:** resultados → hinchada → vestuario → moral de
+cada jugador → Nivel efectivo. Y en paralelo: precio de la entrada → ocupación del
+estadio → aliento → bonus de local.
+
+La ocupación la manda el precio, no el momento del equipo: una popular a 35 mil
+llena aunque vengas perdiendo, y a 100 mil se vacía aunque vayas primero. Con el
+estadio lleno y la gente contenta el bonus de local se multiplica por 1,35; con la
+cancha a medio llenar y silbando cae a 0,55. Jugar de local dejó de ser una
+constante.
+
+**Los números se ven antes de elegir.** Cada opción de cada evento muestra sus
+efectos como chips (`+USD 980k`, `−9 hinchada`, `−6 ánimo de Olveira`), y los
+medidores muestran el delta flotante cuando cambian.
+
 ## Estado de los datos
 
 | Archivo | Estado |

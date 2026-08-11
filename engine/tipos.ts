@@ -86,6 +86,8 @@ export interface Jugador {
   tarjetas_amarillas: number;
   suspendido: boolean;
   historial_lesion_grave?: boolean;
+  /** 0 a 100. Se mueve con lo que le pasa al jugador y al vestuario. */
+  moral?: number;
   /** 1 a 5. No toca la simulación deportiva: es la moneda del marketing. */
   valor_comercial?: number;
 }
@@ -101,6 +103,10 @@ export interface ContextoPartido {
   alturaM: number;
   diasDescanso: number;
   esClasico: boolean;
+  /** Humor de la hinchada, 0 a 100. Escala el bonus de local. */
+  hinchada?: number;
+  /** Qué parte del estadio se llenó, 0 a 1. */
+  ocupacion?: number;
   /** Solo en copa: la vuelta se juega con el global de la ida. */
   llaveIda?: { golesOlimpia: number; golesRival: number };
 }

@@ -14,10 +14,12 @@ const EQUIPOS = equiposJson as any[];
 const FIXTURE = fixtureJson as any[];
 const RIVALES = rivalesJson as any[];
 const CLAVE = "olimpia-manager-clausura-2026";
-const VERSION = 6;
+const VERSION = 7;
 
 export const DIA_INICIAL = "2026-07-20";
 export const TOTAL_FECHAS = 22;
+/** Capacidad del Defensores del Chaco. */
+export const AFORO = 36_000;
 export const OBJETIVO = "Salir campeón del Clausura";
 
 export type Enfoque = "recuperacion" | "tactico" | "individual";
@@ -55,6 +57,9 @@ export interface EstadoPlantel {
   golesTorneo: number;
   minutos: number;
   moral: number;
+  forma: "en_racha" | "neutral" | "en_baja";
+  /** Cuánto subió de Nivel con minutos y trabajo individual. */
+  crecimiento: number;
 }
 
 export interface Oferta {
@@ -81,6 +86,8 @@ export interface Asunto {
 
 export interface Partida {
   version: number;
+  /** Refuerzos comprados. Se suman al plantel del JSON. */
+  incorporados: Jugador[];
   dia: string;
   fechaActual: number;
   resultados: ResultadoFecha[];
@@ -93,6 +100,10 @@ export interface Partida {
   entrenamiento: Enfoque | null;
   entrenaA: string | null;
   precioEntrada: number; // en miles de guaraníes
+  /** Se firmó el contrato con premio por objetivos. */
+  sponsorConBonus: boolean;
+  /** Puntos que sacó la APF por incumplir la regla Sub-18. */
+  puntosDescontados: number;
 
   copa: EstadoCopa;
   ofertas: Oferta[];
@@ -123,6 +134,7 @@ export function formatoDia(dia: string): string {
 export function partidaNueva(): Partida {
   return {
     version: VERSION,
+    incorporados: [],
     dia: DIA_INICIAL,
     fechaActual: 1,
     resultados: [],
@@ -134,6 +146,8 @@ export function partidaNueva(): Partida {
       golesTorneo: 0,
       minutos: 0,
       moral: 70,
+      forma: j.forma,
+      crecimiento: 0,
     }])),
     minutosSub18: 0,
     dineroUsd: 1_800_000,
@@ -142,6 +156,8 @@ export function partidaNueva(): Partida {
     entrenamiento: null,
     entrenaA: null,
     precioEntrada: 60,
+    sponsorConBonus: false,
+    puntosDescontados: 0,
     copa: { ronda: "octavos", rivalId: "vasco_da_gama", globalO: 0, globalR: 0, jugadosEnRonda: 0 },
     ofertas: [],
     fichajes: generarMercado(DIA_INICIAL),
@@ -195,15 +211,19 @@ export function borrar(): void {
 // ---------------------------------------------------------------- consultas
 
 export function plantelDe(p: Partida): Jugador[] {
-  return PLANTEL.map((j) => {
+  return [...PLANTEL, ...(p.incorporados ?? [])].map((j) => {
     const e = p.plantel[j.id];
     if (!e) return j;
     return {
       ...j,
+      nivel: j.nivel + Math.floor(e.crecimiento ?? 0),
+      nivel_incertidumbre: Math.max(0, j.nivel_incertidumbre - Math.floor(e.crecimiento ?? 0)),
       condicion: Math.round(e.condicion),
       suspendido: e.suspendidoFechas > 0,
       lesionado_hasta: e.lesionadoHasta && e.lesionadoHasta > p.dia ? e.lesionadoHasta : null,
       tarjetas_amarillas: e.amarillas,
+      moral: Math.round(e.moral),
+      forma: e.forma,
     };
   });
 }
@@ -245,18 +265,37 @@ export function partidoCopaDe(p: Partida): PartidoUI | null {
   };
 }
 
-/** El que venga antes. */
+/** El que venga antes, ya con el estado del estadio adentro del contexto. */
 export function partidoDe(p: Partida): PartidoUI | null {
   const liga = partidoLigaDe(p);
   const copa = partidoCopaDe(p);
-  if (!liga) return copa;
-  if (!copa) return liga;
-  return copa.ctx.fecha <= liga.ctx.fecha ? copa : liga;
+  const elegido = !liga ? copa : !copa ? liga
+    : copa.ctx.fecha <= liga.ctx.fecha ? copa : liga;
+  if (!elegido) return null;
+  return {
+    ...elegido,
+    ctx: {
+      ...elegido.ctx,
+      hinchada: p.hinchada,
+      ocupacion: ocupacionDe(p, elegido.ctx.esClasico),
+    },
+  };
 }
 
 export const esPartidoDeCopa = (m: PartidoUI | null) => m?.ctx.competencia === "sudamericana";
 
 export const hayPartidoHoy = (p: Partida) => partidoDe(p)?.ctx.fecha === p.dia;
+
+/**
+ * Qué parte del estadio se llena. Manda el precio: una popular accesible llena
+ * aunque el equipo no venga bien; con la entrada cara se vacía aunque vaya
+ * primero.
+ */
+export function ocupacionDe(p: Partida, esClasico = false): number {
+  const porPrecio = clamp(1.45 - p.precioEntrada / 70, 0.25, 1.12);
+  const porHumor = 0.55 + (p.hinchada / 100) * 0.55;
+  return clamp(porPrecio * porHumor * (esClasico ? 1.25 : 1), 0.15, 1);
+}
 
 export function diasAlPartido(p: Partida): number | null {
   const m = partidoDe(p);
@@ -283,6 +322,7 @@ export function tablaDe(p: Partida): FilaTabla[] {
     else if (favor === contra) { f.e++; f.pts += 1; }
     else f.p++;
   };
+  if (p.puntosDescontados) filas["olimpia"].pts -= p.puntosDescontados;
   for (const r of p.resultados) {
     const local = r.esLocal ? "olimpia" : r.rivalId;
     const visita = r.esLocal ? r.rivalId : "olimpia";
@@ -321,6 +361,18 @@ export interface CierrePartido {
 
 const AMARILLAS_PARA_SUSPENSION = 5;
 
+/** Lo que falta de Sub-18 y si el ritmo alcanza para llegar. */
+export function estadoSub18(p: Partida) {
+  const faltan = Math.max(0, 900 - p.minutosSub18);
+  const fechasRestantes = Math.max(0, TOTAL_FECHAS - p.fechaActual + 1);
+  return {
+    faltan,
+    fechasRestantes,
+    alcanza: faltan <= fechasRestantes * 90,
+    cumplido: faltan === 0,
+  };
+}
+
 export function cerrarPartido(p: Partida, partido: PartidoUI, c: CierrePartido): Partida {
   const n: Partida = estructurado(p);
   const esCopa = partido.ctx.competencia === "sudamericana";
@@ -336,8 +388,15 @@ export function cerrarPartido(p: Partida, partido: PartidoUI, c: CierrePartido):
   const gano = c.golesOlimpia > c.golesRival;
   const empate = c.golesOlimpia === c.golesRival;
 
-  for (const j of PLANTEL) {
+  // Jugar de local con el estadio lleno levanta al plantel; jugar ante una
+  // cancha vacía y silbando lo hunde.
+  const empujeCancha = partido.ctx.esLocal
+    ? (ocupacionDe(p, partido.ctx.esClasico) - 0.62) * 9
+    : 0;
+
+  for (const j of plantelDe(p)) {
     const e = n.plantel[j.id];
+    if (!e) continue;
     const min = c.minutos.get(j.id) ?? 0;
     if (min > 0) {
       let desgaste = P.desgaste90 * (min / 90);
@@ -346,9 +405,14 @@ export function cerrarPartido(p: Partida, partido: PartidoUI, c: CierrePartido):
       e.condicion = clamp(e.condicion - desgaste, 0, 100);
       e.minutos += min;
       if (j.fecha_nacimiento >= "2007-01-01" && min >= 90) n.minutosSub18 += 90;
-      e.moral = clamp(e.moral + (gano ? 4 : empate ? 0 : -4), 0, 100);
+      e.moral = clamp(e.moral + (gano ? 4 : empate ? 0 : -4) + empujeCancha, 0, 100);
+      // la forma se mueve con lo que hizo el equipo estando él en cancha
+      const golesSuyos = c.goleadores.filter((g) => g === j.id).length;
+      e.forma = golesSuyos > 0 || (gano && min >= 60) ? "en_racha"
+        : (!gano && !empate && min >= 60) ? "en_baja"
+        : "neutral";
     } else {
-      e.moral = clamp(e.moral - 1.5, 0, 100); // el que no juega se calienta
+      e.moral = clamp(e.moral - 1.8, 0, 100); // el que no juega se calienta
     }
 
     if (e.suspendidoFechas > 0) e.suspendidoFechas--;
@@ -363,18 +427,25 @@ export function cerrarPartido(p: Partida, partido: PartidoUI, c: CierrePartido):
     e.golesTorneo += c.goleadores.filter((g) => g === j.id).length;
   }
 
-  // taquilla y humor de la gente
+  // taquilla
   if (partido.ctx.esLocal) {
-    const entradas = Math.round(
-      14000 * (n.hinchada / 70) * (1.5 - n.precioEntrada / 120) * (partido.ctx.esClasico ? 1.5 : 1));
-    const recaudado = Math.max(0, entradas) * n.precioEntrada * 0.14;
+    const ocupacion = ocupacionDe(p, partido.ctx.esClasico);
+    const entradas = Math.round(AFORO * ocupacion);
+    const recaudado = entradas * n.precioEntrada * 0.14;
     n.dineroUsd += Math.round(recaudado);
     n.bitacora.push({ dia: p.dia, texto:
-      `Taquilla: ${Math.max(0, entradas).toLocaleString("es")} personas, ${miles(Math.round(recaudado))} de recaudación.` });
+      `${entradas.toLocaleString("es")} personas en el estadio (${Math.round(ocupacion * 100)}% del aforo), ` +
+      `${miles(Math.round(recaudado))} de recaudación.` });
   }
-  n.hinchada = clamp(n.hinchada + (gano ? 5 : empate ? -1 : -6)
-    + (partido.ctx.esClasico ? (gano ? 6 : empate ? 0 : -8) : 0), 0, 100);
-  n.ambiente = clamp(n.ambiente + (gano ? 3 : empate ? 0 : -3), 0, 100);
+
+  // La gente se enoja con los malos resultados y se enoja el doble en el clásico.
+  n.hinchada = clamp(n.hinchada + (gano ? 5 : empate ? -2 : -8)
+    + (partido.ctx.esClasico ? (gano ? 7 : empate ? -2 : -10) : 0), 0, 100);
+
+  // El vestuario sigue a los resultados y también al humor de la calle: cuando
+  // la hinchada está caliente, adentro se siente.
+  const arrastreHinchada = (n.hinchada - 50) * 0.05;
+  n.ambiente = clamp(n.ambiente + (gano ? 3 : empate ? 0 : -4) + arrastreHinchada, 0, 100);
 
   n.bitacora.push({ dia: p.dia, texto:
     `${partido.ctx.esLocal ? "" : "De visitante. "}Olimpia ${c.golesOlimpia} - ${c.golesRival} ${partido.rivalNombre}.` });
@@ -383,6 +454,20 @@ export function cerrarPartido(p: Partida, partido: PartidoUI, c: CierrePartido):
     avanzarLlave(n, c, partido);
   } else {
     n.fechaActual = p.fechaActual + 1;
+
+    // La APF descuenta puntos al que no cumple los 900 minutos de Sub-18.
+    if (n.fechaActual > TOTAL_FECHAS && n.minutosSub18 < 900) {
+      n.puntosDescontados = 3;
+      n.bitacora.push({ dia: p.dia, texto:
+        `Sanción: Olimpia no llegó a los 900 minutos Sub-18 (${n.minutosSub18}). ` +
+        `La APF descuenta 3 puntos.` });
+    }
+
+    // el sponsor con bonus paga cuando hay algo que festejar
+    if (n.sponsorConBonus && gano && n.fechaActual > TOTAL_FECHAS) {
+      n.dineroUsd += 2_500_000;
+      n.bitacora.push({ dia: p.dia, texto: "El sponsor pagó el bonus por objetivos." });
+    }
   }
   n.entrenamiento = null;
   n.entrenaA = null;
@@ -489,8 +574,24 @@ export function avanzarUnDia(p: Partida): ResultadoAvance {
     if (entrena === "individual") tasa *= 0.9;
     e.condicion = clamp(e.condicion + tasa, 0, 100);
 
-    if (entrena === "individual" && n.entrenaA === j.id && rng.chance(0.16)) {
-      novedades.push(`${j.apellido} viene trabajando muy bien. Se lo nota más suelto.`);
+    // La moral de cada uno tiende al clima del vestuario: un plantel roto
+    // arrastra a todos, uno unido levanta al que está caído.
+    e.moral = clamp(e.moral + (n.ambiente - e.moral) * 0.06, 0, 100);
+
+    // Los juveniles crecen con minutos y con el trabajo individual. Su margen
+    // es exactamente la incertidumbre de Nivel que traen.
+    const margen = j.nivel_incertidumbre;
+    if (margen > 0 && e.crecimiento < margen) {
+      let sube = 0;
+      if (entrena === "individual" && n.entrenaA === j.id) sube += 0.10;
+      if (e.minutos > 0) sube += (e.minutos / 900) * 0.05;
+      if (sube > 0 && rng.chance(0.35)) {
+        e.crecimiento = Math.min(margen, e.crecimiento + sube);
+        if (Math.floor(e.crecimiento) > Math.floor(e.crecimiento - sube)) {
+          n.bitacora.push({ dia: n.dia, texto:
+            `${j.apellido} dio un salto: ahora es nivel ${j.nivel + Math.floor(e.crecimiento)}.` });
+        }
+      }
     }
   }
 
@@ -581,9 +682,10 @@ export function resolverAsunto(p: Partida, asuntoId: string, opcionId: string): 
   if (a.tipo === "marketing") {
     const precios: Record<string, number> = { barato: 35, normal: 60, caro: 100 };
     n.precioEntrada = precios[opcionId] ?? 60;
-    n.hinchada = clamp(n.hinchada + (opcionId === "barato" ? 5 : opcionId === "caro" ? -6 : 0), 0, 100);
+    n.hinchada = clamp(
+      n.hinchada + (opcionId === "barato" ? 6 : opcionId === "caro" ? -9 : -1), 0, 100);
     n.bitacora.push({ dia: n.dia, texto:
-      `Entradas a ${n.precioEntrada} mil guaraníes.` });
+      `Entradas a ${n.precioEntrada} mil. Se espera ${Math.round(ocupacionDe(n) * 100)}% del estadio.` });
     return n;
   }
 
@@ -607,6 +709,8 @@ export function resolverAsunto(p: Partida, asuntoId: string, opcionId: string): 
     return n;
   }
 
+  if (a.situacion?.id === "sponsor") n.sponsorConBonus = opcionId === "variable";
+
   // situación de prensa, vestuario o dirigencia
   const efecto = a.efectos?.[opcionId];
   if (efecto) {
@@ -627,15 +731,48 @@ export function resolverAsunto(p: Partida, asuntoId: string, opcionId: string): 
   return n;
 }
 
-/** Comprar del mercado. Devuelve null si no alcanza la plata. */
+/** Comprar del mercado. El refuerzo entra al plantel y queda disponible. */
 export function fichar(p: Partida, fichajeId: string): Partida | null {
   const f = p.fichajes.find((x) => x.id === fichajeId);
   if (!f || f.precioUsd > p.dineroUsd) return null;
   const n: Partida = estructurado(p);
   n.dineroUsd -= f.precioUsd;
   n.fichajes = n.fichajes.filter((x) => x.id !== fichajeId);
+
+  const usados = new Set(plantelDe(n).map((j) => j.numero));
+  let numero = 2;
+  while (usados.has(numero) && numero < 45) numero++;
+
+  const jugador: Jugador = {
+    id: f.id,
+    nombre: f.nombre,
+    apellido: f.apellido,
+    numero,
+    posicion: f.posicion,
+    posiciones_secundarias: [],
+    edad: f.edad,
+    fecha_nacimiento: `${2026 - f.edad}-01-01`,
+    nacionalidad: f.nacionalidad,
+    extranjero: f.extranjero,
+    nivel: f.nivel,
+    nivel_incertidumbre: f.edad <= 21 ? 8 : 0,
+    condicion: 88,
+    forma: "neutral",
+    partidos_internacionales: f.extranjero ? 12 : 4,
+    rasgos: [],
+    lesionado_hasta: null,
+    tarjetas_amarillas: 0,
+    suspendido: false,
+    valor_comercial: f.valorComercial,
+  };
+  n.incorporados = [...(n.incorporados ?? []), jugador];
+  n.plantel[jugador.id] = {
+    condicion: 88, amarillas: 0, suspendidoFechas: 0, lesionadoHasta: null,
+    golesTorneo: 0, minutos: 0, moral: 78, forma: "neutral", crecimiento: 0,
+  };
+  n.ambiente = clamp(n.ambiente + 2, 0, 100);
   n.bitacora.push({ dia: n.dia, texto:
-    `Refuerzo: llega ${f.nombre} ${f.apellido} por ${miles(f.precioUsd)}.` });
+    `Refuerzo: llega ${f.apellido} (${f.posicion}, nivel ${f.nivel}) por ${miles(f.precioUsd)}.` });
   return n;
 }
 

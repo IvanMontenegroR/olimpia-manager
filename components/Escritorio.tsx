@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Escudo from "./Escudo.tsx";
 import Numero from "./Numero.tsx";
 import Dorsal from "./Dorsal.tsx";
@@ -11,7 +11,8 @@ import { colorCondicion, esSub18, nombreCorto, partidosDeOlimpia } from "@/lib/j
 import RIVALES_COPA from "@/data/rivales_internacionales.json";
 import {
   CALENDARIO_COPA, OBJETIVO, TOTAL_FECHAS, borrar, diasAlPartido, esPartidoDeCopa,
-  formatoDia, hayPartidoHoy, miles, partidoDe, plantelDe, posicionDe, sumarDias,
+  estadoSub18, formatoDia, hayPartidoHoy, miles, ocupacionDe, partidoDe, plantelDe,
+  posicionDe, sumarDias,
   tablaDe, type Partida,
 } from "@/lib/temporada.ts";
 
@@ -36,6 +37,8 @@ export default function Escritorio({
   const faltan = diasAlPartido(partida);
   const esHoy = hayPartidoHoy(partida);
   const pendiente = partida.pendientes[0] ?? null;
+  const ocupacion = ocupacionDe(partida, partido?.ctx.esClasico);
+  const sub18 = estadoSub18(partida);
 
   if (vista !== "escritorio") {
     return (
@@ -92,6 +95,21 @@ export default function Escritorio({
         <div className="mt-2 flex gap-2">
           <Medidor etiqueta="Vestuario" valor={partida.ambiente} color="#3fa76a" />
           <Medidor etiqueta="Hinchada" valor={partida.hinchada} color="#d9a832" />
+          <div className="w-[72px] shrink-0">
+            <div className="mb-1 flex items-baseline justify-between">
+              <span className="text-[8px] uppercase tracking-[0.14em]" style={{ color: "var(--apagado)" }}>
+                Estadio
+              </span>
+              <Numero valor={ocupacion * 100} formato={(n) => `${Math.round(n)}%`}
+                      className="num text-[10px]"
+                      style={{ color: ocupacion > 0.8 ? "var(--cesped)" : "var(--tenue)" }} />
+            </div>
+            <div className="h-1.5 overflow-hidden rounded-full relieve" style={{ background: "var(--linea)" }}>
+              <div className="barra-llena h-full rounded-full"
+                   style={{ width: `${ocupacion * 100}%`,
+                            background: "linear-gradient(90deg, #7a5a1e, var(--oro))" }} />
+            </div>
+          </div>
         </div>
       </header>
 
@@ -143,7 +161,10 @@ export default function Escritorio({
           <div className="escalona grid shrink-0 grid-cols-2 gap-1.5">
             <Modulo titulo="Plantel" color="#3fa76a" onClick={() => setVista("plantel")}
               numero={condMedia} sufijo="%" pie="condición media"
-              alerta={bajas.length ? `${bajas.length} baja${bajas.length > 1 ? "s" : ""}` : undefined} />
+              alerta={
+                !sub18.alcanza ? `Sub-18: faltan ${sub18.faltan}'`
+                : bajas.length ? `${bajas.length} baja${bajas.length > 1 ? "s" : ""}`
+                : undefined} />
 
             <Modulo titulo="Sudamericana" color="#d9a832" onClick={() => setVista("copa")}
               principal={NOMBRE_RONDA[partida.copa.ronda]}
@@ -294,8 +315,26 @@ function Modulo({ titulo, color, principal, numero, sufijo, pie, alerta, escudo,
 }
 
 function Medidor({ etiqueta, valor, color }: { etiqueta: string; valor: number; color: string }) {
+  // Cuánto se movió desde la última vez, para mostrarlo al lado del número.
+  const previo = useRef(valor);
+  const [delta, setDelta] = useState<number | null>(null);
+  useEffect(() => {
+    const d = Math.round(valor) - Math.round(previo.current);
+    previo.current = valor;
+    if (!d) return;
+    setDelta(d);
+    const t = setTimeout(() => setDelta(null), 1500);
+    return () => clearTimeout(t);
+  }, [valor]);
+
   return (
-    <div className="flex-1">
+    <div className="relative flex-1">
+      {delta !== null && (
+        <span className="delta num absolute right-0 top-3 text-[11px]"
+              style={{ color: delta > 0 ? "var(--cesped)" : "var(--ladrillo)" }}>
+          {delta > 0 ? `+${delta}` : `−${Math.abs(delta)}`}
+        </span>
+      )}
       <div className="mb-1 flex items-baseline justify-between">
         <span className="text-[8px] uppercase tracking-[0.14em]" style={{ color: "var(--apagado)" }}>
           {etiqueta}
@@ -334,6 +373,14 @@ function VistaPlantel({ plantel, partida }: { plantel: ReturnType<typeof plantel
         <div className="flex items-baseline justify-between text-[11px]">
           <span style={{ color: "var(--tenue)" }}>Minutos Sub-18</span>
           <span className="num">{partida.minutosSub18} / 900</span>
+        </div>
+        <div className="mt-0.5 text-[9px]"
+             style={{ color: estadoSub18(partida).alcanza ? "var(--apagado)" : "var(--ladrillo)" }}>
+          {estadoSub18(partida).cumplido
+            ? "Cumplido"
+            : estadoSub18(partida).alcanza
+              ? `Alcanza si juegan seguido`
+              : `No llegás: la APF descuenta 3 puntos al final`}
         </div>
         <div className="mt-1.5 h-1 overflow-hidden rounded-full" style={{ background: "var(--linea)" }}>
           <div className="h-full rounded-full"

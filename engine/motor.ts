@@ -41,6 +41,18 @@ export const P = {
   formaNeutral: 1.0,
   formaBaja: 0.92,
 
+  // --- moral ---
+  // Un jugador dolido rinde por debajo de lo suyo. Pesa menos que la forma
+  // porque la moral se mueve más seguido.
+  moralPiso: 0.94,
+  moralRango: 0.12,
+
+  // --- la gente ---
+  // Cuánto del bonus de local se cobra según cómo esté el estadio. Con la
+  // cancha vacía y la hinchada enojada, jugar de local casi no sirve.
+  alientoMin: 0.55,
+  alientoMax: 1.35,
+
   // --- contexto ---
   localiaLiga: 3.0,
   localiaCopa: 13.0,     // Olimpia de local en copa: eliminó de local a Flamengo, Fluminense y Atlético Nacional
@@ -75,6 +87,22 @@ export function factorCondicion(condicion: number): number {
 
 export function factorForma(f: Forma): number {
   return f === "en_racha" ? P.formaRacha : f === "en_baja" ? P.formaBaja : P.formaNeutral;
+}
+
+/** Moral 0..100 a multiplicador de rendimiento. */
+export function factorMoral(moral: number | undefined): number {
+  if (moral === undefined) return 1;
+  return P.moralPiso + (clamp(moral, 0, 100) / 100) * P.moralRango;
+}
+
+/**
+ * Cuánto pesa el aliento. Sale del humor de la hinchada y de cuán llena esté
+ * la cancha: una popular a precio accesible con la gente contenta multiplica
+ * el bonus de local; un estadio a medio llenar y silbando lo achica.
+ */
+export function factorAliento(hinchada: number, ocupacion: number): number {
+  const base = 0.45 * (clamp(hinchada, 0, 100) / 100) + 0.55 * clamp(ocupacion, 0, 1);
+  return P.alientoMin + base * (P.alientoMax - P.alientoMin);
 }
 
 /** Distancia entre dos puestos, normalizada a 0..1. */
@@ -121,6 +149,7 @@ export function nivelEfectivo(j: Jugador, puesto: Posicion, ctx: ContextoPartido
     factorCondicion(j.condicion) *
     factorPosicion(j, puesto) *
     factorForma(j.forma) *
+    factorMoral(j.moral) *
     factorAmbienteHostil(j, ctx) *
     factorAltura(ctx)
   );
@@ -152,7 +181,9 @@ export function fuerzas(a: Alineacion, ctx: ContextoPartido) {
     defensa += P.presionDefensa;
   }
   if (ctx.esLocal && !ctx.neutral) {
-    const bono = ctx.competencia === "sudamericana" ? P.localiaCopa : P.localiaLiga;
+    const base = ctx.competencia === "sudamericana" ? P.localiaCopa : P.localiaLiga;
+    // el aliento es lo que convierte el bonus de local en algo que se siente
+    const bono = base * factorAliento(ctx.hinchada ?? 70, ctx.ocupacion ?? 0.7);
     ataque += bono;
     defensa += bono;
   }
