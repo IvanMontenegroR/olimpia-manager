@@ -15,12 +15,27 @@ export interface Efecto {
   moralDe?: { id: string; delta: number };
   condicionTodos?: number;
   texto: string;
+  /** Si la opción es una apuesta, el otro resultado posible. */
+  siSaleMal?: Omit<Efecto, "siSaleMal">;
+  /** Deja al jugador afuera del próximo partido (expulsión, lesión). */
+  suspendeA?: string;
 }
 
 export interface OpcionSituacion {
   id: string;
   etiqueta: string;
   detalle: string;
+  /**
+   * Las opciones que son una apuesta lo dicen de frente. Antes el azar estaba
+   * escondido dentro del efecto y elegías a ciegas; acá ves la chance y el
+   * juego te muestra cómo salió.
+   */
+  apuesta?: {
+    /** Probabilidad de que salga bien, 0 a 1. */
+    exito: number;
+    bien: string;
+    mal: string;
+  };
 }
 
 export interface Situacion {
@@ -723,6 +738,106 @@ const PLANTILLAS: Plantilla[] = [
         campana: { dineroUsd: 650_000, condicionTodos: -4, hinchada: 5,
           texto: "La campaña de socios fue un éxito. El plantel perdió dos días." },
         no: { texto: "Se priorizó el trabajo por encima de la campaña." },
+      },
+    }),
+  },
+  // ------------------------------------------------- decisiones que son apuestas
+  {
+    id: "amonestado_caliente",
+    cuando: (c) => c.plantel.some((j) => j.tarjetas_amarillas > 0),
+    armar: (c, rng) => {
+      const j = rng.elegir(c.plantel.filter((x) => x.tarjetas_amarillas > 0));
+      return {
+        s: {
+          id: "amonestado_caliente",
+          escena: "cancha",
+          titulo: `${j.apellido} está caliente`,
+          contexto: `Lleva amarilla y va a buscar todas. El banco dice que en cualquier ` +
+            "momento se hace expulsar. Quedan treinta minutos.",
+          opciones: [
+            { id: "hablar", etiqueta: "Ir a hablarle",
+              detalle: "No gastás cambio, pero puede no entender",
+              apuesta: { exito: 0.7, bien: "Se calma y termina el partido", mal: "Se hace expulsar igual" } },
+            { id: "cambiar", etiqueta: "Sacarlo ya",
+              detalle: "Seguro, pero gastás un cambio y sale caliente" },
+          ],
+        },
+        efectos: {
+          hablar: {
+            moralDe: { id: j.id, delta: 4 },
+            texto: `${j.apellido} entendió el mensaje y bajó un cambio.`,
+            siSaleMal: {
+              ambiente: -6, moralDe: { id: j.id, delta: -12 }, suspendeA: j.id,
+              texto: `${j.apellido} se hizo expulsar. Se pierde la próxima fecha.`,
+            },
+          },
+          cambiar: { moralDe: { id: j.id, delta: -8 },
+            texto: `Salió ${j.apellido} antes de tiempo. No le gustó nada.` },
+        },
+      };
+    },
+  },
+  {
+    id: "tocado_juega",
+    cuando: (c) => c.plantel.some((j) => j.nivel >= 66 && j.condicion < 72),
+    armar: (c, rng) => {
+      const j = rng.elegir(c.plantel.filter((x) => x.nivel >= 66 && x.condicion < 72));
+      return {
+        s: {
+          id: "tocado_juega",
+          escena: "sanidad",
+          titulo: `${j.apellido} llega tocado`,
+          contexto: "El médico dice que puede jugar infiltrado, pero que si se rompe " +
+            "es para dos meses. Él quiere estar.",
+          opciones: [
+            { id: "jugar", etiqueta: "Que juegue infiltrado",
+              detalle: "Tenés a tu jugador, con riesgo de que se rompa en serio",
+              apuesta: { exito: 0.75, bien: "Aguanta el partido", mal: "Se rompe y son dos meses" } },
+            { id: "cuidar", etiqueta: "Que se cuide",
+              detalle: "Se pierde este partido y vuelve entero" },
+          ],
+        },
+        efectos: {
+          jugar: {
+            moralDe: { id: j.id, delta: 8 },
+            texto: `${j.apellido} aguantó los noventa.`,
+            siSaleMal: {
+              ambiente: -8, moralDe: { id: j.id, delta: -14 }, suspendeA: j.id,
+              texto: `${j.apellido} se rompió. Se pierde lo que viene.`,
+            },
+          },
+          cuidar: { moralDe: { id: j.id, delta: -4 }, condicionTodos: 0,
+            texto: `Se cuidó a ${j.apellido} para lo que viene.` },
+        },
+      };
+    },
+  },
+  {
+    id: "penal_definido",
+    cuando: (c) => c.hinchada < 50,
+    armar: () => ({
+      s: {
+        id: "penal_definido",
+        escena: "prensa",
+        titulo: "Te piden que salgas a bancar",
+        contexto: "La gente está caliente y el periodismo pregunta si el plantel te sigue. " +
+          "Podés salir a poner la cara vos solo o mandar a un referente.",
+        opciones: [
+          { id: "yo", etiqueta: "Poner la cara vos",
+            detalle: "Si la gente lo compra te blindás; si no, quedás más expuesto",
+            apuesta: { exito: 0.6, bien: "La gente valora que des la cara", mal: "Te comen vivo" } },
+          { id: "referente", etiqueta: "Que hable un referente",
+            detalle: "Más seguro, pero queda la sensación de que te escondés" },
+        ],
+      },
+      efectos: {
+        yo: {
+          hinchada: 12, ambiente: 5,
+          texto: "Diste la cara y la gente lo valoró.",
+          siSaleMal: { hinchada: -9, ambiente: -4, texto: "Saliste a hablar y te comieron vivo." },
+        },
+        referente: { hinchada: -3, ambiente: 4,
+          texto: "Habló un referente del plantel. Adentro se agradeció." },
       },
     }),
   },

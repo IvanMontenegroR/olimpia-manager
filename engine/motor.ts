@@ -17,8 +17,13 @@ export const P = {
 
   desgaste90: 36,       // puntos de condición que cuesta un partido completo
   desgasteViajeKm: 3.0, // extra cada 1000 km
-  desgastePresionAlta: 5,
   desgasteVeterano: 4,  // 33 años o más
+  /**
+   * Lo que cuesta cada actitud, en condición. Meterse atrás cansa menos que
+   * salir a presionar, y eso es lo que le da sentido a aguantar incluso
+   * cuando sos el mejor: guardás piernas para el partido que importa.
+   */
+  desgasteActitud: { defensivo: -5, equilibrado: 0, ofensivo: 6 } as Record<Actitud, number>,
 
   /**
    * La recuperación va hacia 100 con rendimientos decrecientes, como en la
@@ -84,12 +89,12 @@ export const P = {
   // --- contexto ---
   /**
    * Cuánta ventaja se le da al rival, en puntos de fuerza. Existe para calibrar
-   * la dificultad sin tocar los datos de cada club. Subió cuando se arregló la
-   * recuperación: antes los titulares llegaban fundidos a media temporada y eso
-   * hacía de freno artificial; ahora llegan enteros, así que la vara la tienen
-   * que poner los rivales y no el cansancio.
+   * la dificultad sin tocar los datos de cada club. Pasó a negativo cuando se
+   * topeó la ventaja máxima para sacar las goleadas: con el tope, la
+   * superioridad de Olimpia sobre los equipos flojos dejó de convertirse en
+   * goles y el torneo se volvió mucho más difícil de lo que era.
    */
-  ajusteRival: 2,
+  ajusteRival: -3,
 
   localiaLiga: 3.0,
   localiaCopa: 13.0,     // Olimpia de local en copa: eliminó de local a Flamengo, Fluminense y Atlético Nacional
@@ -107,12 +112,26 @@ export const P = {
   clasicoRuido: 0.05,
 
   // --- motor de gol ---
-  xgBase: 1.30,
+  xgBase: 1.22,
   xgK: 0.055,
+  /**
+   * Tope de la ventaja que se traduce en goles. Sin esto, contra los equipos
+   * más flojos la diferencia de veinte puntos se convertía en cuatro goles
+   * esperados y salían goleadas de 5-0 todo el tiempo: había 13% de partidos
+   * con cuatro o más de diferencia cuando en el fútbol real son 3%.
+   */
+  ventajaMaxima: 9,
+  /**
+   * Corrección de Dixon-Coles para los marcadores bajos. Dos Poisson
+   * independientes dan pocos empates (salían 19% cuando en el fútbol real son
+   * 26%), porque en un partido real los equipos se condicionan: si está 0-0 a
+   * los ochenta, los dos se cuidan. Con rho negativo suben el 0-0 y el 1-1.
+   */
+  rhoEmpates: -0.17,
   // Meterse atrás tiene que servir de verdad: aguantar en Río y definirla en
   // Asunción es una estrategia legítima, no un suicidio.
-  actitudAtaque: { defensivo: -6, equilibrado: 0, ofensivo: 4 } as Record<Actitud, number>,
-  actitudDefensa: { defensivo: 7, equilibrado: 0, ofensivo: -4 } as Record<Actitud, number>,
+  actitudAtaque: { defensivo: -7, equilibrado: 0, ofensivo: 5 } as Record<Actitud, number>,
+  actitudDefensa: { defensivo: 9, equilibrado: 0, ofensivo: -6 } as Record<Actitud, number>,
   presionAtaque: 2.5,
   presionDefensa: -1.5,
   /**
@@ -260,6 +279,43 @@ function bonoRasgos(once: Jugador[], rng: Rng): number {
   return mult;
 }
 
+/**
+ * Saca el marcador de la distribución conjunta, no de dos Poisson sueltas.
+ *
+ * El ajuste de Dixon-Coles sube la probabilidad de los resultados bajos y
+ * parejos, que es lo que pasa en el fútbol: los equipos se miran, y un 0-0 o
+ * un 1-1 son mucho más comunes de lo que predice el azar puro.
+ */
+function marcador(lambda: number, mu: number, rng: Rng): [number, number] {
+  const MAX = 8;
+  const pois = (l: number, k: number) => {
+    let p = Math.exp(-l);
+    for (let i = 1; i <= k; i++) p = (p * l) / i;
+    return p;
+  };
+  const tau = (x: number, y: number) => {
+    if (x === 0 && y === 0) return 1 - lambda * mu * P.rhoEmpates;
+    if (x === 0 && y === 1) return 1 + lambda * P.rhoEmpates;
+    if (x === 1 && y === 0) return 1 + mu * P.rhoEmpates;
+    if (x === 1 && y === 1) return 1 - P.rhoEmpates;
+    return 1;
+  };
+
+  const celdas: { x: number; y: number; p: number }[] = [];
+  let total = 0;
+  for (let x = 0; x <= MAX; x++) {
+    for (let y = 0; y <= MAX; y++) {
+      const p = Math.max(0, pois(lambda, x) * pois(mu, y) * tau(x, y));
+      celdas.push({ x, y, p });
+      total += p;
+    }
+  }
+
+  let r = rng.next() * total;
+  for (const c of celdas) { r -= c.p; if (r <= 0) return [c.x, c.y]; }
+  return [0, 0];
+}
+
 export function simularPartido(
   a: Alineacion, ctx: ContextoPartido, rng: Rng,
 ): ResultadoPartido {
@@ -272,8 +328,10 @@ export function simularPartido(
     ctx.rivalFuerza * factorCondicion(ctx.rivalCondicion ?? 100) +
     (ctx.esLocal || ctx.neutral ? 0 : localiaRival) + P.ajusteRival;
 
-  let xgOlimpia = P.xgBase * Math.exp(P.xgK * (f.ataque - rival));
-  let xgRival = P.xgBase * Math.exp(P.xgK * (rival - f.defensa));
+  // la ventaja se topea: ser muy superior no puede significar cuatro goles
+  const ventaja = (d: number) => clamp(d, -P.ventajaMaxima, P.ventajaMaxima);
+  let xgOlimpia = P.xgBase * Math.exp(P.xgK * ventaja(f.ataque - rival));
+  let xgRival = P.xgBase * Math.exp(P.xgK * ventaja(rival - f.defensa));
   xgOlimpia *= bonoRasgos(a.once, rng);
 
   if (ctx.esClasico) {
@@ -281,8 +339,8 @@ export function simularPartido(
     xgRival *= 1 + rng.normal(0, P.clasicoRuido);
   }
 
-  const golesOlimpia = rng.poisson(clamp(xgOlimpia, 0.05, 6));
-  const golesRival = rng.poisson(clamp(xgRival, 0.05, 6));
+  const [golesOlimpia, golesRival] = marcador(
+    clamp(xgOlimpia, 0.05, 6), clamp(xgRival, 0.05, 6), rng);
 
   // minutos: los 11 juegan 90 salvo los tres cambios, que el DT automático
   // resuelve en `temporada.ts`. Acá se registran los 90 y se ajusta afuera.
@@ -323,7 +381,7 @@ export function desgastePorPartido(j: Jugador, minutos: number, ctx: ContextoPar
   // viajar con tiempo también ahorra piernas, no solo pulmón
   const aclimatado = clamp(ctx.aclimatacion ?? 0, 0, 1);
   d += (ctx.viajeKm / 1000) * P.desgasteViajeKm * (1 - P.viajeAclimataMax * aclimatado);
-  if (aprieta(actitud)) d += P.desgastePresionAlta * (minutos / 90);
+  d += P.desgasteActitud[actitud] * (minutos / 90);
   if (j.edad >= 33) d += P.desgasteVeterano * (minutos / 90);
   return d;
 }

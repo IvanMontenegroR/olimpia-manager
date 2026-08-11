@@ -165,6 +165,8 @@ export interface Partida {
   despedido: string | null;
   /** Lo que hay que mostrar a pantalla completa antes de seguir. */
   hito: Hito | null;
+  /** Cómo salió la última apuesta, para poder mostrarla antes de continuar. */
+  resultadoApuesta: { salioBien: boolean; texto: string; chance: number } | null;
 
   /**
    * La oportunidad de fichaje que está sobre la mesa, si hay alguna. Tiene
@@ -292,6 +294,7 @@ export function partidaNueva(): Partida {
     paciencia: 70,
     despedido: null,
     hito: null,
+    resultadoApuesta: null,
     estrella: null,
     estrellasVistas: [],
     copa: { ronda: "octavos", rivalId: "vasco_da_gama", globalO: 0, globalR: 0, jugadosEnRonda: 0 },
@@ -340,6 +343,7 @@ export function cargar(): Partida {
     p.enReserva ??= PLANTEL.filter((j) => j.reserva).map((j) => j.id);
     p.aclimatacion ??= 0;
     p.hito ??= null;
+    p.resultadoApuesta ??= null;
     p.estrella ??= null;
     p.estrellasVistas ??= [];
     return p;
@@ -1114,7 +1118,22 @@ export function resolverAsunto(p: Partida, asuntoId: string, opcionId: string): 
   if (a.situacion?.id === "sponsor") n.sponsorConBonus = opcionId === "variable";
 
   // situación de prensa, vestuario o dirigencia
-  const efecto = a.efectos?.[opcionId];
+  let efecto = a.efectos?.[opcionId];
+
+  // Si la opción era una apuesta, acá se tira la moneda. El resultado va en la
+  // partida para que la pantalla lo pueda mostrar antes de seguir.
+  const apuesta = a.situacion?.opciones.find((o) => o.id === opcionId)?.apuesta;
+  if (efecto && apuesta) {
+    const rng = new Rng(`apuesta-${a.id}-${opcionId}-${n.dia}`);
+    const salioBien = rng.chance(apuesta.exito);
+    if (!salioBien && efecto.siSaleMal) efecto = { ...efecto.siSaleMal };
+    n.resultadoApuesta = {
+      salioBien,
+      texto: salioBien ? apuesta.bien : apuesta.mal,
+      chance: apuesta.exito,
+    };
+  }
+
   if (efecto) {
     if (efecto.ambiente) n.ambiente = clamp(n.ambiente + efecto.ambiente, 0, 100);
     if (efecto.hinchada) n.hinchada = clamp(n.hinchada + efecto.hinchada, 0, 100);
@@ -1128,7 +1147,15 @@ export function resolverAsunto(p: Partida, asuntoId: string, opcionId: string): 
         n.plantel[id].condicion = clamp(n.plantel[id].condicion + efecto.condicionTodos, 0, 100);
       }
     }
-    n.bitacora.push({ dia: n.dia, texto: efecto.texto });
+    // un expulsado o roto se pierde la próxima
+    if (efecto.suspendeA && n.plantel[efecto.suspendeA]) {
+      n.plantel[efecto.suspendeA].suspendidoFechas = 1;
+    }
+    n.bitacora.push({
+      dia: n.dia,
+      texto: efecto.texto,
+      marca: n.resultadoApuesta && !n.resultadoApuesta.salioBien ? "golpe" : undefined,
+    });
   }
   return n;
 }

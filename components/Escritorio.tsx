@@ -19,6 +19,7 @@ import Alineador, { type EstadoAlineacion } from "./Alineador.tsx";
 import FichaJugador from "./FichaJugador.tsx";
 import PantallaEstrella from "./PantallaEstrella.tsx";
 import { ESTRELLAS } from "@/engine/estrellas.ts";
+import { comoLlega, estadoRival } from "@/lib/rivales.ts";
 import { TEXTO_ANIMO, animoDe } from "@/engine/tipos.ts";
 import { mejorMolde, MOLDE_DE, repartirEnMolde } from "@/lib/juego.ts";
 
@@ -398,6 +399,21 @@ export default function Escritorio({
                   <span className="apellido block truncate text-[14px] leading-tight">
                     {nombreCorto(partido.rivalId, partido.rivalNombre)}
                   </span>
+                  {/* Cómo llega el rival es la información que más cambia el
+                      partido, así que va acá: antes solo se veía entrando a
+                      armar el once, que ya no es el camino principal. */}
+                  {(() => {
+                    if (partido.ctx.competencia !== "clausura") return null;
+                    const e = estadoRival(partido.rivalId, partido.ctx.fecha);
+                    const l = comoLlega(e);
+                    if (!l.bueno) return null;
+                    return (
+                      <span className="block text-[9px] font-bold" style={{ color: "#1a7a44" }}>
+                        {l.texto.toLowerCase()}
+                        {e.vieneDeCopa ? ", jugó la copa el jueves" : ""} · apretalo
+                      </span>
+                    );
+                  })()}
                 </span>
                 <span className="shrink-0 text-[11px] font-extrabold uppercase tracking-wider">
                   Jugar →

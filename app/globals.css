@@ -361,3 +361,13 @@ button:active:not(:disabled) {
 @media (prefers-reduced-motion: reduce) {
   .entra-hito, .golpea-hito { animation: none; }
 }
+
+/* La aguja que cae donde salió la apuesta. */
+@keyframes caer-aguja {
+  0%   { left: 0%; opacity: 0; }
+  12%  { opacity: 1; }
+  55%  { left: 92%; }
+  100% { opacity: 1; }
+}
+.aguja-apuesta { animation: caer-aguja 900ms cubic-bezier(.3, .9, .3, 1) both; }
+@media (prefers-reduced-motion: reduce) { .aguja-apuesta { animation: none; } }

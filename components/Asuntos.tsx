@@ -56,8 +56,21 @@ export default function Asuntos({
               boxShadow: `inset 0 1px 0 rgba(255,255,255,0.07),
                           0 0 0 1px color-mix(in srgb, ${color} 38%, transparent)`,
             }}>
-            <span className="apellido block text-[14px] leading-tight">{o.etiqueta}</span>
+            <span className="flex items-baseline justify-between gap-2">
+              <span className="apellido block text-[14px] leading-tight">{o.etiqueta}</span>
+              {o.apuesta && (
+                <span className="num shrink-0 rounded px-1.5 py-0.5 text-[10px] font-extrabold"
+                      style={{ background: `color-mix(in srgb, ${color} 26%, transparent)`, color }}>
+                  {Math.round(o.apuesta.exito * 100)}%
+                </span>
+              )}
+            </span>
             <span className="block text-[11px]" style={{ color: "var(--tenue)" }}>{o.detalle}</span>
+            {o.apuesta && (
+              <span className="mt-1 block text-[10px] leading-snug" style={{ color: "var(--apagado)" }}>
+                Sale bien: {o.apuesta.bien}. Sale mal: {o.apuesta.mal}.
+              </span>
+            )}
             {o.efecto && <Efectos e={o.efecto} />}
           </button>
         ))}
@@ -66,8 +79,10 @@ export default function Asuntos({
   );
 }
 
-function opcionesDe(a: Asunto, p: Partida):
-  { id: string; etiqueta: string; detalle: string; efecto?: EfectoVisible }[] {
+function opcionesDe(a: Asunto, p: Partida): {
+  id: string; etiqueta: string; detalle: string; efecto?: EfectoVisible;
+  apuesta?: { exito: number; bien: string; mal: string };
+}[] {
   if (a.tipo === "entrenamiento") {
     return [
       { id: "recuperacion", etiqueta: "Recuperación",
