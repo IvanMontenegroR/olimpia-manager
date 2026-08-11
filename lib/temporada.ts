@@ -12,13 +12,16 @@ import rivalesJson from "@/data/rivales_internacionales.json";
 import { condicionRival, fuerzaBaseAjustada } from "./rivales.ts";
 import { sortearSituacion, type Efecto, type Situacion } from "@/engine/situaciones.ts";
 import { generarMercado, sortearOferta, type FichajeGenerado } from "@/engine/mercado.ts";
+import {
+  DIAS_DE_VENTANA, ESTRELLAS, impactoDe, jugadorDeEstrella, sortearEstrella,
+} from "@/engine/estrellas.ts";
 import type { Jugador } from "@/engine/tipos.ts";
 
 const EQUIPOS = equiposJson as any[];
 const FIXTURE = fixtureJson as any[];
 const RIVALES = rivalesJson as any[];
 const CLAVE = "olimpia-manager-clausura-2026";
-const VERSION = 13;
+const VERSION = 14;
 
 export const DIA_INICIAL = "2026-07-20";
 export const TOTAL_FECHAS = 22;
@@ -117,7 +120,8 @@ export interface EntradaDiario {
  * lo que pasa va a la bitácora.
  */
 export type TipoHito =
-  | "campeon_liga" | "campeon_copa" | "eliminado_copa" | "despedido" | "fin_temporada";
+  | "campeon_liga" | "campeon_copa" | "eliminado_copa" | "despedido"
+  | "fin_temporada" | "fichaje";
 
 export interface Hito {
   tipo: TipoHito;
@@ -161,6 +165,14 @@ export interface Partida {
   despedido: string | null;
   /** Lo que hay que mostrar a pantalla completa antes de seguir. */
   hito: Hito | null;
+
+  /**
+   * La oportunidad de fichaje que está sobre la mesa, si hay alguna. Tiene
+   * fecha de vencimiento: no es un catálogo donde ahorrar tranquilo.
+   */
+  estrella: { id: string; venceEl: string } | null;
+  /** Las que ya aparecieron, para no repetirlas. */
+  estrellasVistas: string[];
 
   /** Alineaciones guardadas por el DT: el titular, el equipo de copa, etc. */
   equipos: EquipoGuardado[];
@@ -280,6 +292,8 @@ export function partidaNueva(): Partida {
     paciencia: 70,
     despedido: null,
     hito: null,
+    estrella: null,
+    estrellasVistas: [],
     copa: { ronda: "octavos", rivalId: "vasco_da_gama", globalO: 0, globalR: 0, jugadosEnRonda: 0 },
     ofertas: [],
     fichajes: generarMercado(DIA_INICIAL),
@@ -326,6 +340,8 @@ export function cargar(): Partida {
     p.enReserva ??= PLANTEL.filter((j) => j.reserva).map((j) => j.id);
     p.aclimatacion ??= 0;
     p.hito ??= null;
+    p.estrella ??= null;
+    p.estrellasVistas ??= [];
     return p;
   } catch {
     return partidaNueva();
@@ -442,7 +458,11 @@ export const hayPartidoHoy = (p: Partida) => partidoDe(p)?.ctx.fecha === p.dia;
  * primero.
  */
 export function ocupacionDe(p: Partida, esClasico = false): number {
-  const porPrecio = clamp(1.45 - p.precioEntrada / 70, 0.25, 1.12);
+  // La curva es inelástica a propósito: cobrar caro tiene que recaudar más que
+  // llenar. Si llenar diera más plata y además más aliento, elegir la popular
+  // sería obvio y no habría nada que decidir. Así la decisión es de verdad:
+  // caja contra el Defensores lleno.
+  const porPrecio = clamp(1.15 - p.precioEntrada / 220, 0.28, 1.0);
   const porHumor = 0.55 + (p.hinchada / 100) * 0.55;
   return clamp(porPrecio * porHumor * (esClasico ? 1.25 : 1), 0.15, 1);
 }
@@ -920,6 +940,26 @@ export function avanzarUnDia(p: Partida): ResultadoAvance {
     }
   }
 
+  // Las oportunidades de estrella. Aparecen poco y duran poco: si fueran
+  // frecuentes o esperaran, alcanzaría con ahorrar y no habría decisión.
+  if (n.estrella && n.dia > n.estrella.venceEl) {
+    const e = ESTRELLAS.find((x) => x.id === n.estrella!.id);
+    n.bitacora.push({ dia: n.dia, marca: "aviso",
+      texto: `${e?.apellido ?? "El jugador"} firmó en otro club. Se cerró la ventana.` });
+    n.estrella = null;
+  }
+  // Calibrado con el simulador: ~2.5 oportunidades por temporada y una leyenda
+  // cada cuatro. Con más, deja de ser una oportunidad y pasa a ser un catálogo
+  // donde alcanza con ahorrar.
+  if (!n.estrella && !n.pendientes.length && rng.chance(0.018)) {
+    const e = sortearEstrella(n.dia, n.estrellasVistas);
+    if (e) {
+      n.estrella = { id: e.id, venceEl: sumarDias(n.dia, DIAS_DE_VENTANA) };
+      n.estrellasVistas.push(e.id);
+      novedades.push(`${e.titular}.`);
+    }
+  }
+
   // ofertas por los mejores
   if (!n.ofertas.length && rng.chance(0.14)) {
     const o = sortearOferta(plantelDe(n), n.dia);
@@ -943,6 +983,57 @@ export function avanzarUnDia(p: Partida): ResultadoAvance {
   }
 
   return { partida: n, novedades };
+}
+
+/**
+ * Traer al crack. Se paga al contado: si no está la plata, no está el jugador.
+ * Ocupa cupo de extranjero como cualquiera, que es parte de lo que duele.
+ */
+export function ficharEstrella(p: Partida): Partida {
+  const n: Partida = estructurado(p);
+  const e = ESTRELLAS.find((x) => x.id === n.estrella?.id);
+  if (!e || n.dineroUsd < e.precioUsd) return n;
+
+  const usados = new Set([...PLANTEL, ...n.incorporados].map((j) => j.numero));
+  let numero = e.categoria === "leyenda" ? 10 : 9;
+  while (usados.has(numero)) numero++;
+
+  const j = jugadorDeEstrella(e, numero);
+  n.incorporados.push(j);
+  n.plantel[j.id] = {
+    condicion: j.condicion, amarillas: 0, suspendidoFechas: 0, lesionadoHasta: null,
+    golesTorneo: 0, minutos: 0, animo: j.animo, crecimiento: 0,
+  };
+  n.dineroUsd -= e.precioUsd;
+
+  const imp = impactoDe(e);
+  n.hinchada = clamp(n.hinchada + imp.hinchada, 0, 100);
+  n.ambiente = clamp(n.ambiente + imp.ambiente, 0, 100);
+  n.paciencia = clamp(n.paciencia + imp.prestigio, 0, 100);
+  n.estrella = null;
+
+  n.bitacora.push({ dia: n.dia, marca: "titulo",
+    texto: `${e.nombre} ${e.apellido} firmó en Olimpia. Asunción es una fiesta.` });
+  n.hito = {
+    tipo: "fichaje",
+    titulo: `${e.apellido} es de Olimpia`,
+    detalle: e.historia,
+    cifra: String(e.nivel),
+    pie: "de nivel",
+  };
+  return n;
+}
+
+/** Dejarla pasar. No vuelve. */
+export function rechazarEstrella(p: Partida): Partida {
+  const n: Partida = estructurado(p);
+  const e = ESTRELLAS.find((x) => x.id === n.estrella?.id);
+  n.estrella = null;
+  if (e) {
+    n.bitacora.push({ dia: n.dia,
+      texto: `Olimpia dejó pasar a ${e.apellido}. No había con qué.` });
+  }
+  return n;
 }
 
 // ---------------------------------------------------------------- decisiones
@@ -983,7 +1074,7 @@ export function resolverAsunto(p: Partida, asuntoId: string, opcionId: string): 
   }
 
   if (a.tipo === "marketing") {
-    const precios: Record<string, number> = { barato: 35, normal: 60, caro: 100 };
+    const precios: Record<string, number> = { barato: 35, normal: 70, caro: 150 };
     n.precioEntrada = precios[opcionId] ?? 60;
     n.hinchada = clamp(
       n.hinchada + (opcionId === "barato" ? 6 : opcionId === "caro" ? -9 : -1), 0, 100);

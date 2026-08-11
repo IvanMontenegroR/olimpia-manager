@@ -45,6 +45,12 @@ const ESTILO: Record<TipoHito, Estilo> = {
     fondoAnimado: "lluvia",
     encabezado: "Dirigencia",
   },
+  fichaje: {
+    fondo: "radial-gradient(120% 90% at 50% 0%, #14304a, #0a120d 70%)",
+    acento: "#5fb0e8",
+    fondoAnimado: "papelitos",
+    encabezado: "Mercado de pases",
+  },
   fin_temporada: {
     fondo: "radial-gradient(120% 90% at 50% 0%, #1e2a24, #0a120d 70%)",
     acento: "#8fa396",

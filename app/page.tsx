@@ -3,11 +3,12 @@
 import { useEffect, useState } from "react";
 import ArmarOnce, { type Salida } from "@/components/ArmarOnce.tsx";
 import PantallaHito from "@/components/PantallaHito.tsx";
+import PantallaEstrella from "@/components/PantallaEstrella.tsx";
 import PartidoEnVivo from "@/components/PartidoEnVivo.tsx";
 import Escritorio from "@/components/Escritorio.tsx";
 import {
-  avanzarUnDia, cargar, cerrarPartido, fichar, guardar, partidaNueva,
-  partidoDe, plantelDe, resolverAsunto,
+  avanzarUnDia, cargar, cerrarPartido, fichar, ficharEstrella, guardar, partidaNueva,
+  partidoDe, plantelDe, rechazarEstrella, resolverAsunto,
   type CierrePartido, type Partida,
 } from "@/lib/temporada.ts";
 
@@ -37,6 +38,16 @@ export default function Page() {
     return (
       <PantallaHito hito={partida.hito}
         onCerrar={() => setPartida((p) => (p ? { ...p, hito: null } : p))} />
+    );
+  }
+
+  // La oportunidad de un crack manda sobre todo lo demás: es la decisión más
+  // grande del juego y tiene su propia pantalla.
+  if (partida.estrella) {
+    return (
+      <PantallaEstrella partida={partida}
+        onFichar={() => setPartida((p) => (p ? ficharEstrella(p) : p))}
+        onRechazar={() => setPartida((p) => (p ? rechazarEstrella(p) : p))} />
     );
   }
 

@@ -77,12 +77,13 @@ function opcionesDe(a: Asunto, p: Partida):
   if (a.tipo === "marketing") {
     return [
       { id: "barato", etiqueta: "Popular a 35 mil",
-        detalle: "Estadio lleno: más aliento en la cancha",
+        detalle: "Se llena y el equipo lo siente, pero entra la mitad de plata",
         efecto: { hinchada: 6 } },
-      { id: "normal", etiqueta: "Precio habitual, 60 mil",
-        detalle: "Lo de siempre", efecto: { hinchada: -1 } },
-      { id: "caro", etiqueta: "Aprovechar, 100 mil",
-        detalle: "Más plata por entrada, menos gente y menos aliento",
+      { id: "normal", etiqueta: "Precio habitual, 70 mil",
+        detalle: "Buena recaudación con el estadio a tres cuartos",
+        efecto: { hinchada: -1 } },
+      { id: "caro", etiqueta: "Aprovechar, 150 mil",
+        detalle: "La mejor caja del año, pero se juega con medio Defensores",
         efecto: { hinchada: -9 } },
     ];
   }
