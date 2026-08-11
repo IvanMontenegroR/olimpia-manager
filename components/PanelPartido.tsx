@@ -39,6 +39,12 @@ export default function PanelPartido({
   onTocar: (j: Jugador) => void;
 }) {
   const [pestania, setPestania] = useState<Pestania>("olimpia");
+  /**
+   * Durante el partido lo que se busca es a quién hay que sacar, así que por
+   * defecto arriba van los más gastados y no hay que bajar la lista para
+   * encontrarlos. Se puede volver al orden por puesto para leer el equipo.
+   */
+  const [porEstado, setPorEstado] = useState(true);
 
   const stats = useMemo(() => {
     const cuenta = (t: string) => eventos.filter((e) => e.tipo === t).length;
@@ -92,10 +98,26 @@ export default function PanelPartido({
           ))}
       </div>
 
+      {pestania === "olimpia" && (
+        <div className="mb-1 flex items-center justify-between px-0.5">
+          <span className="text-[8px] uppercase tracking-[0.14em]" style={{ color: "var(--apagado)" }}>
+            {porEstado ? "Los más gastados primero" : "Por puesto"}
+          </span>
+          <button onClick={() => setPorEstado((v) => !v)}
+            className="rounded px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider"
+            style={{ background: "var(--carbon)", color: "var(--tenue)" }}>
+            {porEstado ? "Ver por puesto" : "Ver por estado"}
+          </button>
+        </div>
+      )}
+
       <div className="scroll-y min-h-0 flex-1">
         {pestania === "olimpia" && [...once]
-          .sort((a, b) => linea(puestos.get(a.id) ?? a.posicion) -
-                          linea(puestos.get(b.id) ?? b.posicion))
+          .sort((a, b) => porEstado
+            // el lesionado siempre primero: es el cambio que no se puede postergar
+            ? Number(estado.get(b.id)?.lesionado ?? false) - Number(estado.get(a.id)?.lesionado ?? false) ||
+              condicionDe(a) - condicionDe(b)
+            : linea(puestos.get(a.id) ?? a.posicion) - linea(puestos.get(b.id) ?? b.posicion))
           .map((j) => {
             const pos = puestos.get(j.id) ?? j.posicion;
             const e = estado.get(j.id) ?? {

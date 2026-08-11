@@ -73,12 +73,14 @@ const AYUDAS: Record<Ayuda, { titulo: string; texto: string; mueve: string[] }> 
 
 export default function Escritorio({
   partida, onAvanzar, onDirigir, onResolver, onFichar, onReiniciar, onGuardarEquipos,
+  onMoverReserva,
 }: {
   partida: Partida;
   onAvanzar: () => void;
   onDirigir: () => void;
   onResolver: (asuntoId: string, opcionId: string) => void;
   onGuardarEquipos: (e: EquipoGuardado[]) => void;
+  onMoverReserva: (id: string, aReserva: boolean) => void;
   onFichar: (fichajeId: string) => void;
   onReiniciar: () => void;
 }) {
@@ -137,7 +139,8 @@ export default function Escritorio({
         mercado: "Mercado", bitacora: "Bitácora", copa: "Sudamericana",
       }[vista]} onVolver={() => setVista("escritorio")}>
         {vista === "plantel" && (
-          <VistaPlantel plantel={plantel} partida={partida} onGuardarEquipos={onGuardarEquipos} />
+          <VistaPlantel plantel={plantel} partida={partida} onGuardarEquipos={onGuardarEquipos}
+                        onMoverReserva={onMoverReserva} />
         )}
         {vista === "tabla" && <VistaTabla tabla={tabla} />}
         {vista === "fixture" && <VistaFixture partida={partida} />}
@@ -503,10 +506,16 @@ function Sub({ titulo, onVolver, children }: {
   );
 }
 
-function VistaPlantel({ plantel, partida, onGuardarEquipos }: {
+const SECCIONES = [
+  { clave: "primero", titulo: "Primer equipo", pie: "compiten cada fecha" },
+  { clave: "reserva", titulo: "Reserva", pie: "subilos con ↑ para poder usarlos" },
+] as const;
+
+function VistaPlantel({ plantel, partida, onGuardarEquipos, onMoverReserva }: {
   plantel: ReturnType<typeof plantelDe>;
   partida: Partida;
   onGuardarEquipos: (e: EquipoGuardado[]) => void;
+  onMoverReserva: (id: string, aReserva: boolean) => void;
 }) {
   const orden = ["ARQ", "DEF", "MED", "DEL"];
   const [pestana, setPestana] = useState<"lista" | "equipos">("lista");
@@ -559,10 +568,39 @@ function VistaPlantel({ plantel, partida, onGuardarEquipos }: {
         </div>
       </div>
 
-      {[...plantel]
-        .filter((j) => partida.plantel[j.id]?.lesionadoHasta !== "2099-01-01")
-        .sort((a, b) => orden.indexOf(a.posicion) - orden.indexOf(b.posicion) || b.nivel - a.nivel)
-        .map((j) => {
+      {(() => {
+        const activos = plantel.filter(
+          (j) => partida.plantel[j.id]?.lesionadoHasta !== "2099-01-01");
+        const reserva = activos.filter((j) => j.reserva).length;
+        return (
+          <div className="mb-2 flex items-baseline justify-between text-[10px]">
+            <span style={{ color: "var(--tenue)" }}>
+              Primer equipo <span className="num">{activos.length - reserva}</span>
+              {reserva > 0 && (
+                <> · reserva <span className="num">{reserva}</span></>
+              )}
+            </span>
+            <span style={{ color: "var(--apagado)" }}>tocá a uno para ver su ficha</span>
+          </div>
+        );
+      })()}
+
+      {SECCIONES.map(({ clave, titulo, pie }) => {
+        const js = [...plantel]
+          .filter((j) => partida.plantel[j.id]?.lesionadoHasta !== "2099-01-01")
+          .filter((j) => (clave === "reserva" ? j.reserva : !j.reserva))
+          .sort((a, b) => orden.indexOf(a.posicion) - orden.indexOf(b.posicion) || b.nivel - a.nivel);
+        if (!js.length) return null;
+        return (
+          <div key={clave} className="mb-3">
+            <div className="mb-1 flex items-baseline justify-between">
+              <span className="text-[9px] uppercase tracking-[0.16em]"
+                    style={{ color: clave === "reserva" ? "var(--apagado)" : "var(--tenue)" }}>
+                {titulo}
+              </span>
+              <span className="text-[9px]" style={{ color: "var(--apagado)" }}>{pie}</span>
+            </div>
+            {js.map((j) => {
           const e = partida.plantel[j.id];
           const fuera = j.suspendido ? "SUSPENDIDO" : j.lesionado_hasta ? "LESIONADO" : null;
           return (
@@ -598,9 +636,19 @@ function VistaPlantel({ plantel, partida, onGuardarEquipos }: {
                 </span>
               </span>
               <span className="num w-6 text-right text-[15px]">{j.nivel}</span>
+              <span
+                role="button" tabIndex={0}
+                onClick={(ev) => { ev.stopPropagation(); onMoverReserva(j.id, !j.reserva); }}
+                className="shrink-0 rounded px-1.5 py-1 text-[9px] font-bold"
+                style={{ background: "var(--linea)", color: "var(--tenue)" }}>
+                {j.reserva ? "↑" : "↓"}
+              </span>
             </button>
           );
         })}
+          </div>
+        );
+      })}
 
       {ficha && (() => {
         const j = plantel.find((x) => x.id === ficha);

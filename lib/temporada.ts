@@ -1,6 +1,9 @@
 "use client";
 
-import { PLANTEL, partidosDeOlimpia, type PartidoUI } from "./juego.ts";
+import {
+  CUPO_EXTRANJEROS, MOLDE_DE, PLANTEL, esSub18, partidosDeOlimpia, repartirEnMolde,
+  type PartidoUI,
+} from "./juego.ts";
 import { P, clamp, factorCondicion } from "@/engine/motor.ts";
 import { Rng } from "@/engine/rng.ts";
 import equiposJson from "@/data/equipos_2026.json";
@@ -15,7 +18,7 @@ const EQUIPOS = equiposJson as any[];
 const FIXTURE = fixtureJson as any[];
 const RIVALES = rivalesJson as any[];
 const CLAVE = "olimpia-manager-clausura-2026";
-const VERSION = 10;
+const VERSION = 11;
 
 export const DIA_INICIAL = "2026-07-20";
 export const TOTAL_FECHAS = 22;
@@ -120,6 +123,13 @@ export interface Partida {
   /** Alineaciones guardadas por el DT: el titular, el equipo de copa, etc. */
   equipos: EquipoGuardado[];
   /**
+   * Quiénes están en la reserva. Arranca con los que vienen marcados en el
+   * plantel y lo maneja el DT: subir a un pibe es una decisión, no un dato
+   * fijo. Sirve para que la pantalla del partido muestre a los que compiten y
+   * no a los treinta y tres del club.
+   */
+  enReserva: string[];
+  /**
    * Cómo se preparó el viaje del próximo partido de visitante, 0 a 1. Recorta
    * el castigo de la altura y el desgaste del vuelo. Se consume al jugar.
    */
@@ -151,6 +161,51 @@ export function formatoDia(dia: string): string {
 
 // ---------------------------------------------------------------- creación
 
+/**
+ * Los dos equipos con los que arranca el DT: el titular y un alternativo para
+ * rotar. Vienen armados porque rotar es el centro del juego y no tiene sentido
+ * que la primera vez que lo necesitás haya que armar once nombres a mano.
+ *
+ * El alternativo no es "los once peores": es el mejor equipo posible sin usar
+ * a ninguno de los titulares, que es lo que de verdad se pone un domingo
+ * cuando el jueves hay copa.
+ */
+function equiposIniciales(): EquipoGuardado[] {
+  const ctx = {
+    fecha: DIA_INICIAL, competencia: "clausura" as const, esLocal: true,
+    rivalFuerza: 62, rivalNombre: "—", viajeKm: 0, alturaM: 43,
+    diasDescanso: 6, esClasico: false,
+  };
+  const slots = MOLDE_DE("4-3-3");
+
+  const armar = (disponibles: typeof PLANTEL): string[] => {
+    // se respeta el cupo de extranjeros sacando a los que sobran por nivel
+    let ext = 0;
+    const elegibles = [...disponibles]
+      .sort((a, b) => b.nivel - a.nivel)
+      .filter((j) => {
+        if (!j.extranjero) return true;
+        if (ext >= CUPO_EXTRANJEROS) return false;
+        ext++;
+        return true;
+      });
+    return repartirEnMolde(elegibles, slots, ctx).filter(Boolean) as string[];
+  };
+
+  const primerEquipo = PLANTEL.filter((j) => !j.reserva);
+  const titular = armar(primerEquipo);
+  const usados = new Set(titular);
+  const suplente = armar(primerEquipo.filter((j) => !usados.has(j.id)));
+
+  const equipos: EquipoGuardado[] = [
+    { nombre: "Titular", formacion: "4-3-3", jugadores: titular },
+  ];
+  if (suplente.length === 11) {
+    equipos.push({ nombre: "Alternativo", formacion: "4-3-3", jugadores: suplente });
+  }
+  return equipos;
+}
+
 export function partidaNueva(): Partida {
   return {
     version: VERSION,
@@ -176,7 +231,8 @@ export function partidaNueva(): Partida {
     entrenamiento: null,
     entrenaA: null,
     precioEntrada: 60,
-    equipos: [],
+    equipos: equiposIniciales(),
+    enReserva: PLANTEL.filter((j) => j.reserva).map((j) => j.id),
     aclimatacion: 0,
     sponsorConBonus: false,
     puntosDescontados: 0,
@@ -218,6 +274,7 @@ export function cargar(): Partida {
     p.pendientes ??= [];
     p.bitacora ??= [];
     p.equipos ??= [];
+    p.enReserva ??= PLANTEL.filter((j) => j.reserva).map((j) => j.id);
     p.aclimatacion ??= 0;
     return p;
   } catch {
@@ -237,11 +294,13 @@ export function borrar(): void {
 // ---------------------------------------------------------------- consultas
 
 export function plantelDe(p: Partida): Jugador[] {
+  const reserva = new Set(p.enReserva ?? []);
   return [...PLANTEL, ...(p.incorporados ?? [])].map((j) => {
     const e = p.plantel[j.id];
-    if (!e) return j;
+    if (!e) return { ...j, reserva: reserva.has(j.id) };
     return {
       ...j,
+      reserva: reserva.has(j.id),
       nivel: j.nivel + Math.floor(e.crecimiento ?? 0),
       nivel_incertidumbre: Math.max(0, j.nivel_incertidumbre - Math.floor(e.crecimiento ?? 0)),
       condicion: Math.round(e.condicion),

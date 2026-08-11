@@ -12,17 +12,110 @@ export const CUPO_EXTRANJEROS = 4;
 export const SUB18_DESDE = "2007-01-01";
 export const esSub18 = (j: Jugador) => j.fecha_nacimiento >= SUB18_DESDE;
 
-/** Cada formación es una lista de once puestos concretos, no un conteo por línea. */
-export const MOLDES: { nombre: string; puestos: Posicion[] }[] = [
-  { nombre: "4-3-3",   puestos: ["ARQ", "LD", "DFC", "DFC", "LI", "MCD", "MC", "MC", "ED", "DC", "EI"] },
-  { nombre: "4-4-2",   puestos: ["ARQ", "LD", "DFC", "DFC", "LI", "MD", "MC", "MC", "MI", "DC", "DC"] },
-  { nombre: "4-2-3-1", puestos: ["ARQ", "LD", "DFC", "DFC", "LI", "MCD", "MCD", "ED", "MCO", "EI", "DC"] },
-  { nombre: "4-3-1-2", puestos: ["ARQ", "LD", "DFC", "DFC", "LI", "MCD", "MC", "MC", "MCO", "DC", "DC"] },
-  { nombre: "4-5-1",   puestos: ["ARQ", "LD", "DFC", "DFC", "LI", "MD", "MCD", "MC", "MCO", "MI", "DC"] },
-  { nombre: "3-5-2",   puestos: ["ARQ", "DFC", "DFC", "DFC", "MD", "MCD", "MC", "MCO", "MI", "DC", "DC"] },
-  { nombre: "5-3-2",   puestos: ["ARQ", "LD", "DFC", "DFC", "DFC", "LI", "MCD", "MC", "MC", "DC", "DC"] },
-  { nombre: "3-4-3",   puestos: ["ARQ", "DFC", "DFC", "DFC", "MD", "MCD", "MC", "MI", "ED", "DC", "EI"] },
+/**
+ * Las formaciones se declaran por líneas, que es como se dibujan y como se
+ * hablan: el 4-2-3-1 es cuatro atrás, doble cinco, tres por delante y un
+ * punta. Antes la posición en la cancha se deducía del puesto de cada
+ * jugador, y eso partía las líneas: el enganche de un 4-2-3-1 caía en una
+ * franja propia en vez de ir al lado de los extremos, como corresponde.
+ *
+ * `x` es la profundidad, 0 el arco propio y 100 el rival. Los `y` de cada
+ * línea se reparten solos a lo ancho.
+ */
+export interface Linea { x: number; puestos: Posicion[] }
+export interface Formacion {
+  nombre: string;
+  descripcion: string;
+  lineas: Linea[];
+}
+
+const ARQUERO: Linea = { x: 4, puestos: ["ARQ"] };
+
+export const MOLDES: Formacion[] = [
+  {
+    nombre: "4-3-3", descripcion: "Ancho y ofensivo",
+    lineas: [ARQUERO,
+      { x: 25, puestos: ["LI", "DFC", "DFC", "LD"] },
+      { x: 53, puestos: ["MC", "MCD", "MC"] },
+      { x: 83, puestos: ["EI", "DC", "ED"] }],
+  },
+  {
+    nombre: "4-4-2", descripcion: "Dos puntas, clásico",
+    lineas: [ARQUERO,
+      { x: 25, puestos: ["LI", "DFC", "DFC", "LD"] },
+      { x: 54, puestos: ["MI", "MC", "MC", "MD"] },
+      { x: 84, puestos: ["DC", "DC"] }],
+  },
+  {
+    nombre: "4-2-3-1", descripcion: "Doble cinco y enganche",
+    lineas: [ARQUERO,
+      { x: 23, puestos: ["LI", "DFC", "DFC", "LD"] },
+      { x: 45, puestos: ["MCD", "MCD"] },
+      { x: 69, puestos: ["EI", "MCO", "ED"] },
+      { x: 89, puestos: ["DC"] }],
+  },
+  {
+    nombre: "4-3-1-2", descripcion: "Enganche entre líneas",
+    lineas: [ARQUERO,
+      { x: 23, puestos: ["LI", "DFC", "DFC", "LD"] },
+      { x: 46, puestos: ["MC", "MCD", "MC"] },
+      { x: 68, puestos: ["MCO"] },
+      { x: 89, puestos: ["DC", "DC"] }],
+  },
+  {
+    nombre: "4-5-1", descripcion: "Poblar el medio",
+    lineas: [ARQUERO,
+      { x: 25, puestos: ["LI", "DFC", "DFC", "LD"] },
+      { x: 55, puestos: ["MI", "MC", "MCD", "MC", "MD"] },
+      { x: 87, puestos: ["DC"] }],
+  },
+  {
+    // tres centrales, dos carrileros y tres por el medio: la línea de cinco va
+    // plana, sin enganche descentrado entre medio
+    nombre: "3-5-2", descripcion: "Carrileros largos",
+    lineas: [ARQUERO,
+      { x: 23, puestos: ["DFC", "DFC", "DFC"] },
+      { x: 53, puestos: ["MI", "MC", "MCD", "MC", "MD"] },
+      { x: 85, puestos: ["DC", "DC"] }],
+  },
+  {
+    nombre: "5-3-2", descripcion: "Aguantar y salir",
+    lineas: [ARQUERO,
+      { x: 23, puestos: ["LI", "DFC", "DFC", "DFC", "LD"] },
+      { x: 53, puestos: ["MC", "MCD", "MC"] },
+      { x: 85, puestos: ["DC", "DC"] }],
+  },
+  {
+    nombre: "3-4-3", descripcion: "Todo al ataque",
+    lineas: [ARQUERO,
+      { x: 23, puestos: ["DFC", "DFC", "DFC"] },
+      { x: 51, puestos: ["MI", "MC", "MC", "MD"] },
+      { x: 83, puestos: ["EI", "DC", "ED"] }],
+  },
 ];
+
+/** Los once casilleros de una formación, de atrás hacia adelante. */
+export interface Casilla { puesto: Posicion; x: number; y: number }
+
+export function casillasDe(nombre: string): Casilla[] {
+  const f = MOLDES.find((m) => m.nombre === nombre) ?? MOLDES[0];
+  const casillas: Casilla[] = [];
+  for (const linea of f.lineas) {
+    const n = linea.puestos.length;
+    // Repartidos parejo a lo ancho, con las bandas bien abiertas cuando son
+    // varios y al medio cuando es uno solo.
+    const desde = n === 1 ? 50 : n === 2 ? 33 : 12;
+    const hasta = n === 1 ? 50 : n === 2 ? 67 : 88;
+    linea.puestos.forEach((puesto, i) => {
+      casillas.push({
+        puesto,
+        x: linea.x,
+        y: n === 1 ? 50 : desde + (i / (n - 1)) * (hasta - desde),
+      });
+    });
+  }
+  return casillas;
+}
 
 export interface Asignacion {
   molde: string;
@@ -32,8 +125,8 @@ export interface Asignacion {
   fueraDePuesto: Jugador[];
 }
 
-export const MOLDE_DE = (nombre: string) =>
-  MOLDES.find((m) => m.nombre === nombre)?.puestos ?? MOLDES[0].puestos;
+export const MOLDE_DE = (nombre: string): Posicion[] =>
+  casillasDe(nombre).map((c) => c.puesto);
 
 /** Una alineación son once casilleros: el jugador que ocupa cada puesto, o nadie. */
 export type Alineado = (string | null)[];
@@ -70,7 +163,8 @@ export function mejorMolde(
 ): { formacion: string; alineado: Alineado } {
   const porId = new Map(jugadores.map((j) => [j.id, j]));
   let mejor = { formacion: MOLDES[0].nombre, alineado: [] as Alineado, total: -Infinity };
-  for (const { nombre, puestos } of MOLDES) {
+  for (const { nombre } of MOLDES) {
+    const puestos = MOLDE_DE(nombre);
     const alineado = repartirEnMolde(jugadores, puestos, ctx);
     let total = 0;
     alineado.forEach((id, s) => {
@@ -92,7 +186,8 @@ export function asignarPuestos(once: Jugador[], ctx: ContextoPartido): Asignacio
   if (once.length !== 11) return null;
   let mejor: Asignacion | null = null;
 
-  for (const { nombre, puestos: slots } of MOLDES) {
+  for (const { nombre } of MOLDES) {
+    const slots = MOLDE_DE(nombre);
     // Todas las parejas jugador-slot ordenadas por lo que rinde cada una: se
     // van tomando de la mejor a la peor mientras los dos lados estén libres.
     const parejas: { j: Jugador; slot: number; valor: number }[] = [];

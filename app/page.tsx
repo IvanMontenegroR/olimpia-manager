@@ -70,6 +70,12 @@ export default function Page() {
         setPartida((p) => (p ? resolverAsunto(p, asuntoId, opcionId) : p))}
       onFichar={(id) => setPartida((p) => (p ? fichar(p, id) ?? p : p))}
       onGuardarEquipos={(equipos) => setPartida((p) => (p ? { ...p, equipos } : p))}
+      onMoverReserva={(id, aReserva) => setPartida((p) => (p ? {
+        ...p,
+        enReserva: aReserva
+          ? [...p.enReserva, id]
+          : p.enReserva.filter((x) => x !== id),
+      } : p))}
       onReiniciar={() => { setPartida(partidaNueva()); setFase("escritorio"); }} />
   );
 }

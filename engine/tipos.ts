@@ -88,6 +88,12 @@ export interface Jugador {
   historial_lesion_grave?: boolean;
   /** 0 a 100. Se mueve con lo que le pasa al jugador y al vestuario. */
   moral?: number;
+  /**
+   * Está en la reserva: entrena aparte y no aparece en el banco salvo que lo
+   * subas. Existe para que la pantalla de armar el equipo no tenga treinta y
+   * tres nombres cuando en un partido usás dieciocho.
+   */
+  reserva?: boolean;
   /** 1 a 5. No toca la simulación deportiva: es la moneda del marketing. */
   valor_comercial?: number;
 }

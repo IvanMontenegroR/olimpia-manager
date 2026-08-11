@@ -16,7 +16,7 @@ import Dorsal from "./Dorsal.tsx";
  * se diferencian solo en lo que va arriba y abajo.
  */
 
-const FILTROS = ["TODOS", "ARQ", "DEF", "MED", "DEL"] as const;
+const FILTROS = ["TODOS", "ARQ", "DEF", "MED", "DEL", "RES"] as const;
 type Filtro = (typeof FILTROS)[number];
 const ORDEN: Record<Linea, number> = { ARQ: 0, DEF: 1, MED: 2, DEL: 3 };
 const orden = (p: Posicion) => ORDEN[LINEA_DE[p]];
@@ -55,16 +55,23 @@ export default function Alineador({
 
   const banco = useMemo(() => {
     const dentro = new Set(alineado.filter(Boolean) as string[]);
-    const fuera = aptos.filter((j) => !dentro.has(j.id));
-    const base = filtro === "TODOS" ? fuera : fuera.filter((j) => LINEA_DE[j.posicion] === filtro);
+    // La reserva no aparece salvo que la pidas: el banco de un partido son
+    // siete, no todo el club, y tener treinta nombres acá era lo que hacía
+    // que la pantalla no se entendiera.
+    const fuera = aptos.filter((j) => !dentro.has(j.id) && (filtro === "RES" ? j.reserva : !j.reserva));
+    const base = filtro === "TODOS" || filtro === "RES"
+      ? fuera
+      : fuera.filter((j) => LINEA_DE[j.posicion] === filtro);
     // Sin filtro conviene ver primero a los mejores: si ordenara por puesto,
     // los tres arqueros suplentes se comerían el arranque del banco.
     return [...base].sort((a, b) =>
-      filtro === "TODOS"
+      filtro === "TODOS" || filtro === "RES"
         ? nivelEf(b, b.posicion, ctx) - nivelEf(a, a.posicion, ctx)
         : orden(a.posicion) - orden(b.posicion) ||
           nivelEf(b, b.posicion, ctx) - nivelEf(a, a.posicion, ctx));
   }, [filtro, alineado, ctx, aptos]);
+
+  const enReserva = aptos.filter((j) => j.reserva).length;
 
   /** Une dos puntas: dos casilleros se cambian entre sí, uno del banco entra. */
   const unir = (a: Punta, b: Punta) => {
@@ -125,7 +132,7 @@ export default function Alineador({
   return (
     <div className="flex min-h-0 flex-1 flex-col" {...handlers}>
       <div className="flex min-h-0 flex-1 flex-col py-2">
-        <CanchaArmado casilleros={casilleros} ctx={ctx}
+        <CanchaArmado casilleros={casilleros} formacion={formacion} ctx={ctx}
           seleccionado={
             marcado?.tipo === "cancha" && alineado[marcado.slot]
               ? alineado[marcado.slot]
@@ -157,17 +164,28 @@ export default function Alineador({
             {formacion} ▾
           </button>
           {extra}
-          {FILTROS.map((p) => (
-            <button key={p} onClick={() => setFiltro(p)}
-              className="flex-1 rounded py-1 text-[10px] font-bold uppercase tracking-wider"
-              style={{
-                background: filtro === p ? "var(--blanco)" : "var(--carbon)",
-                color: filtro === p ? "var(--negro)" : "var(--tenue)",
-              }}>
-              {p === "TODOS" ? "Todos" : p}
-            </button>
-          ))}
+          {FILTROS.map((p) => {
+            if (p === "RES" && !enReserva) return null;
+            const activo = filtro === p;
+            return (
+              <button key={p} onClick={() => setFiltro(p)}
+                className="flex-1 rounded py-1 text-[10px] font-bold uppercase tracking-wider"
+                style={{
+                  background: activo ? "var(--blanco)" : "var(--carbon)",
+                  color: activo ? "var(--negro)"
+                    : p === "RES" ? "var(--apagado)" : "var(--tenue)",
+                }}>
+                {p === "TODOS" ? "Todos" : p}
+              </button>
+            );
+          })}
         </div>
+
+        {filtro === "RES" && (
+          <div className="px-3 pb-1 text-[9px]" style={{ color: "var(--apagado)" }}>
+            Reserva: entrenan aparte y no cuentan para el banco salvo que los pongas.
+          </div>
+        )}
 
         <div className="scroll-x flex gap-1.5 px-3 pb-2">
           {banco.map((j) => {

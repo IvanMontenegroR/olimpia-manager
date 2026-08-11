@@ -38,7 +38,9 @@ export default function ArmarOnce({
   // El once vive como once casilleros, no como un conjunto: así se puede elegir
   // formación, arrastrar de un puesto a otro y guardar equipos armados.
   const inicial = useMemo<EstadoAlineacion>(() => {
-    const once = autoOnce(ctx, aptos).map((id) => porId.get(id)!).filter(Boolean);
+    // el once sugerido sale del primer equipo; la reserva se sube a mano
+    const once = autoOnce(ctx, aptos.filter((j) => !j.reserva))
+      .map((id) => porId.get(id)!).filter(Boolean);
     return mejorMolde(once, ctx);
   }, [ctx, aptos, porId]);
 
@@ -81,7 +83,8 @@ export default function ArmarOnce({
   const jugar = () => {
     if (problema) return;
     const dentro = new Set(once.map((j) => j.id));
-    const libres = aptos.filter((j) => !dentro.has(j.id));
+    // al banco van los del primer equipo, salvo que hayas subido a alguien
+    const libres = aptos.filter((j) => !dentro.has(j.id) && !j.reserva);
     const porNivel = (a: Jugador, b: Jugador) =>
       nivelEf(b, b.posicion, ctx) - nivelEf(a, a.posicion, ctx);
     const arquero = libres.filter((j) => j.posicion === "ARQ").sort(porNivel)[0];

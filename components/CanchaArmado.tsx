@@ -30,9 +30,10 @@ function useMedida() {
 }
 
 export default function CanchaArmado({
-  casilleros, ctx, seleccionado, destino, onTocar,
+  casilleros, formacion, ctx, seleccionado, destino, onTocar,
 }: {
   casilleros: Casillero[];
+  formacion: string;
   ctx: ContextoPartido;
   seleccionado: string | null;
   /** Casillero resaltado mientras se arrastra algo encima. */
@@ -40,14 +41,7 @@ export default function CanchaArmado({
   onTocar: (slot: number) => void;
 }) {
   const [ref, caja] = useMedida();
-  const margen = 34; // aire para que el bloque no se corte contra el borde
-  const { ubicados, escala } = repartirCancha(
-    casilleros,
-    (c) => c.puesto,
-    Math.max(0, caja.ancho - margen),
-    Math.max(0, caja.alto - margen),
-  );
-
+  const { ubicados, escala } = repartirCancha(formacion, caja.ancho, caja.alto);
   const tamDorsal = Math.round(32 * escala);
 
   return (
@@ -68,7 +62,9 @@ export default function CanchaArmado({
       <div className="absolute left-1/2 top-1/2 h-14 w-14 -translate-x-1/2 -translate-y-1/2 rounded-full"
            style={{ border: "1px solid rgba(255,255,255,0.28)" }} />
 
-      {ubicados.map(({ item: c, x, y }) => {
+      {ubicados.map(({ slot, x, y }) => {
+        const c = casilleros[slot];
+        if (!c) return null;
         const j = c.jugador;
         const elegido = !!j && seleccionado === j.id;
         const esDestino = destino === c.slot;
@@ -77,9 +73,9 @@ export default function CanchaArmado({
           <button key={c.slot} data-slot={c.slot} onClick={() => onTocar(c.slot)}
             className="absolute flex -translate-x-1/2 -translate-y-1/2 touch-none flex-col items-center"
             style={{
-              left: x + margen / 2,
-              top: y + margen / 2,
-              width: 68 * escala,
+              left: x,
+              top: y,
+              width: 66 * escala,
               opacity: elegido ? 0.35 : 1,
             }}>
             {j ? (

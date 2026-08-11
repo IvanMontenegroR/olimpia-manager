@@ -1,12 +1,12 @@
 "use client";
 
-import { BANDERA, colorCondicion, esSub18, MOLDES, nivelEf } from "@/lib/juego.ts";
+import { BANDERA, colorCondicion, esSub18, MOLDE_DE, MOLDES, nivelEf } from "@/lib/juego.ts";
 import { COORD, LINEA_DE, type ContextoPartido, type Jugador, type Posicion } from "@/engine/tipos.ts";
 import type { EstadoPlantel } from "@/lib/temporada.ts";
 import Dorsal from "./Dorsal.tsx";
 
 /** Los puestos que existen en alguna formación, para no listar los trece. */
-const PUESTOS: Posicion[] = [...new Set(MOLDES.flatMap((m) => m.puestos))];
+const PUESTOS: Posicion[] = [...new Set(MOLDES.flatMap((m) => MOLDE_DE(m.nombre)))];
 
 const NOMBRE_RASGO: Record<string, string> = {
   desequilibrante: "Desequilibrante",
