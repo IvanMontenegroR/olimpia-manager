@@ -150,13 +150,33 @@ export function partidaNueva(): Partida {
   };
 }
 
+/**
+ * Carga tolerante: en vez de descartar la partida cuando cambia el formato,
+ * completa lo que falte con los valores de una partida nueva. Descartar
+ * significaba perder la temporada del jugador en cada actualización.
+ */
 export function cargar(): Partida {
   if (typeof window === "undefined") return partidaNueva();
   try {
     const raw = window.localStorage.getItem(CLAVE);
     if (!raw) return partidaNueva();
-    const p = JSON.parse(raw) as Partida;
-    if (p.version !== VERSION) return partidaNueva();
+    const guardada = JSON.parse(raw) as Partial<Partida>;
+    if (!guardada || typeof guardada.dia !== "string") return partidaNueva();
+
+    const base = partidaNueva();
+    const p: Partida = { ...base, ...guardada, version: VERSION };
+
+    // los objetos anidados se completan campo por campo
+    p.copa = { ...base.copa, ...(guardada.copa ?? {}) };
+    p.plantel = { ...base.plantel };
+    for (const [id, e] of Object.entries(guardada.plantel ?? {})) {
+      if (p.plantel[id]) p.plantel[id] = { ...p.plantel[id], ...e };
+    }
+    p.resultados ??= [];
+    p.ofertas ??= [];
+    p.fichajes ??= [];
+    p.pendientes ??= [];
+    p.bitacora ??= [];
     return p;
   } catch {
     return partidaNueva();

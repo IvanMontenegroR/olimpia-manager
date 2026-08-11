@@ -368,6 +368,28 @@ SVG y otros en PNG.
 El fallback de monograma se queda igual: sigue haciendo falta para cualquier club
 que aparezca sin archivo.
 
+## Rediseño del escritorio
+
+El próximo partido dejó de ser el protagonista. Antes ocupaba el centro de la
+pantalla y el resto quedaba de adorno, lo que hacía sentir que el juego eran
+partidos con cosas alrededor.
+
+Ahora el centro es **el estado del club**: cuatro módulos con un dato grande cada
+uno (condición media del plantel, ronda de la Sudamericana, posición en la tabla,
+fichajes disponibles), que además son los accesos a esas secciones y muestran
+alertas en rojo cuando hay algo que mirar (bajas, ofertas). Debajo, la bitácora
+con lo que fue pasando.
+
+El partido quedó como **una barra al pie**: escudo del rival, "hoy se juega" o
+"faltan tres días", y el botón. Está siempre a mano pero no manda la pantalla.
+
+Cuando hay algo que decidir, el asunto toma el centro, porque ahí sí es lo único
+que importa.
+
+**Carga tolerante de la partida.** Antes, cualquier cambio de formato descartaba la
+temporada guardada. Ahora se completa lo que falte con los valores de una partida
+nueva: el jugador no pierde su Clausura cada vez que se actualiza el juego.
+
 ## Estado de los datos
 
 | Archivo | Estado |

@@ -6,6 +6,7 @@ import Asuntos from "./Asuntos.tsx";
 import Mercado from "./Mercado.tsx";
 import { COLOR_POS } from "./PanelPartido.tsx";
 import { colorCondicion, esSub18, nombreCorto, partidosDeOlimpia } from "@/lib/juego.ts";
+import RIVALES_COPA from "@/data/rivales_internacionales.json";
 import {
   CALENDARIO_COPA, OBJETIVO, TOTAL_FECHAS, borrar, diasAlPartido, esPartidoDeCopa,
   formatoDia, hayPartidoHoy, miles, partidoDe, plantelDe, posicionDe, sumarDias,
@@ -50,36 +51,43 @@ export default function Escritorio({
     );
   }
 
+  const bajas = plantel.filter((j) => j.suspendido || j.lesionado_hasta);
+  const condMedia = Math.round(
+    plantel.reduce((a, j) => a + j.condicion, 0) / Math.max(plantel.length, 1));
+  const lider = tabla[0];
+  const difLider = lider.id === "olimpia" ? 0 : lider.pts - yo.pts;
+  const rivalCopa = (RIVALES_COPA as any[]).find((r) => r.id === partida.copa.rivalId);
+  const NOMBRE_RONDA: Record<string, string> = {
+    octavos: "Octavos", cuartos: "Cuartos", semis: "Semifinal", final: "Final",
+    eliminado: "Eliminado", campeon: "Campeón",
+  };
+
   return (
     <div className="app">
-      {/* ---------- cabecera ---------- */}
+      {/* ---------- club ---------- */}
       <header className="px-4 pb-2 pt-3">
         <div className="flex items-center gap-2.5">
-          <Escudo id="olimpia" nombre="Olimpia" tam={38} />
+          <Escudo id="olimpia" nombre="Olimpia" tam={34} />
           <div className="min-w-0 flex-1">
-            <div className="apellido text-[17px] leading-none">Olimpia</div>
+            <div className="apellido text-[16px] leading-none">Olimpia</div>
             <div className="text-[10px]" style={{ color: "var(--tenue)" }}>
-              {formatoDia(partida.dia)} · Fecha {Math.min(partida.fechaActual, TOTAL_FECHAS)}
+              {formatoDia(partida.dia)}
             </div>
           </div>
-          <div className="text-right">
-            <div className="num text-[15px] leading-none">{posicion}° · {yo.pts} pts</div>
-            <div className="num text-[10px]" style={{ color: "#22c55e" }}>
-              {miles(partida.dineroUsd)}
-            </div>
+          <div className="num text-[13px]" style={{ color: "#22c55e" }}>
+            {miles(partida.dineroUsd)}
           </div>
         </div>
 
-        {/* medidores */}
         <div className="mt-2 flex gap-2">
           <Medidor etiqueta="Vestuario" valor={partida.ambiente} color="#22c55e" />
           <Medidor etiqueta="Hinchada" valor={partida.hinchada} color="#f59e0b" />
         </div>
       </header>
 
-      {/* ---------- calendario ---------- */}
-      <div className="scroll-x flex gap-1.5 px-3 pb-2">
-        {Array.from({ length: 12 }, (_, i) => {
+      {/* ---------- la semana ---------- */}
+      <div className="scroll-x flex gap-1 px-3 pb-2">
+        {Array.from({ length: 14 }, (_, i) => {
           const dia = sumarDias(partida.dia, i);
           const m = partidosDeOlimpia().find((x) => x.ctx.fecha === dia);
           const copaHoy = Object.values(CALENDARIO_COPA).some(
@@ -88,139 +96,141 @@ export default function Escritorio({
           const hoy = i === 0;
           return (
             <div key={dia}
-              className="flex w-[52px] shrink-0 flex-col items-center gap-1 rounded-lg py-1.5"
+              className="flex w-[38px] shrink-0 flex-col items-center gap-0.5 rounded-md py-1"
               style={{
                 background: hoy ? "var(--blanco)"
-                  : copaHoy ? "color-mix(in srgb, #a78bfa 26%, var(--carbon))"
-                  : m ? "color-mix(in srgb, #22c55e 20%, var(--carbon))"
+                  : copaHoy ? "color-mix(in srgb, #a78bfa 30%, var(--carbon))"
+                  : m ? "color-mix(in srgb, #22c55e 24%, var(--carbon))"
                   : "var(--carbon)",
                 color: hoy ? "var(--negro)" : "var(--blanco)",
               }}>
-              <span className="text-[8px] uppercase tracking-wider"
+              <span className="text-[7px] uppercase tracking-wider"
                     style={{ color: hoy ? "var(--negro)" : "var(--apagado)" }}>
                 {formatoDia(dia).slice(0, 3)}
               </span>
-              <span className="num text-[15px] leading-none">{dia.slice(8, 10)}</span>
-              {copaHoy ? (
-                <span className="text-[8px] font-extrabold" style={{ color: "#a78bfa" }}>COPA</span>
-              ) : m ? (
-                <Escudo id={m.rivalId} nombre={m.rivalNombre} tam={16} />
-              ) : (
-                <span className="h-4 text-[8px]" style={{ color: "var(--apagado)" }}>
-                  {i === 0 && partida.entrenamiento ? "ENT" : ""}
-                </span>
-              )}
+              <span className="num text-[13px] leading-none">{dia.slice(8, 10)}</span>
+              <span className="flex h-3.5 items-center">
+                {copaHoy ? <Punto color="#a78bfa" />
+                  : m ? <Escudo id={m.rivalId} nombre={m.rivalNombre} tam={13} />
+                  : null}
+              </span>
             </div>
           );
         })}
       </div>
 
-      {/* ---------- lo que hay que hacer hoy ---------- */}
-      <div className="min-h-0 flex-1 px-3">
-        {pendiente ? (
+      {/* ---------- lo que pasa si hay algo que decidir ---------- */}
+      {pendiente ? (
+        <div className="min-h-0 flex-1 px-3">
           <Asuntos asunto={pendiente} partida={partida} onResolver={onResolver} />
-        ) : esHoy && partido ? (
-          <div className="flex h-full flex-col justify-center rounded-xl p-4"
-               style={{ background: "color-mix(in srgb, #22c55e 12%, var(--carbon))" }}>
-            <span className="text-center text-[10px] uppercase tracking-[0.18em]"
-                  style={{ color: esPartidoDeCopa(partido) ? "#a78bfa" : "#22c55e" }}>
-              {esPartidoDeCopa(partido) ? partido.etiqueta : "Hoy se juega"}
-            </span>
-            <div className="mt-3 flex items-center justify-center gap-4">
-              <Escudo id="olimpia" nombre="Olimpia" tam={42} />
-              <span className="apellido text-[14px]" style={{ color: "var(--apagado)" }}>vs</span>
-              <Escudo id={partido.rivalId} nombre={partido.rivalNombre} tam={42} />
-            </div>
-            <p className="mt-2 text-center apellido text-[16px]">
-              {nombreCorto(partido.rivalId, partido.rivalNombre)}
-            </p>
-            <p className="text-center text-[11px]" style={{ color: "var(--tenue)" }}>
-              {partido.estadio}
-            </p>
-            <button onClick={onDirigir}
-              className="mt-4 w-full rounded-lg py-3.5 text-[15px] font-extrabold uppercase tracking-[0.14em]"
-              style={{ background: "var(--blanco)", color: "var(--negro)" }}>
-              Dirigir el partido
-            </button>
-          </div>
-        ) : partido ? (
-          <div className="flex h-full flex-col gap-2">
-            <div className="rounded-xl p-3" style={{ background: "var(--carbon)" }}>
-              <div className="flex items-center gap-2.5">
-                <Escudo id={partido.rivalId} nombre={partido.rivalNombre} tam={34} />
-                <div className="min-w-0 flex-1">
-                  <div className="text-[9px] uppercase tracking-[0.14em]"
-                       style={{ color: esPartidoDeCopa(partido) ? "#a78bfa" : "var(--apagado)" }}>
-                    {esPartidoDeCopa(partido) ? partido.etiqueta + " · " : ""}
-                    {partido.ctx.neutral ? "Cancha neutral" : partido.ctx.esLocal ? "Local" : "Visitante"}
-                    {" · en "}{faltan} día{faltan === 1 ? "" : "s"}
-                  </div>
-                  <div className="apellido truncate text-[15px] leading-tight">
-                    {nombreCorto(partido.rivalId, partido.rivalNombre)}
-                  </div>
-                </div>
-                {partido.ctx.esClasico && (
-                  <span className="rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase"
-                        style={{ background: "#ef4444", color: "#0b0b0c" }}>Clásico</span>
-                )}
-              </div>
-              {partida.entrenamiento && (
-                <div className="mt-2 text-[10px]" style={{ color: "var(--tenue)" }}>
-                  Trabajo de la semana: {
-                    { recuperacion: "recuperación", tactico: "táctico", individual: "individual" }[partida.entrenamiento]}
-                </div>
-              )}
-            </div>
+        </div>
+      ) : (
+        <div className="flex min-h-0 flex-1 flex-col px-3">
+          {/* tablero del club */}
+          <div className="grid shrink-0 grid-cols-2 gap-1.5">
+            <Modulo titulo="Plantel" color="#22c55e" onClick={() => setVista("plantel")}
+              principal={`${condMedia}%`} pie="condición media"
+              alerta={bajas.length ? `${bajas.length} baja${bajas.length > 1 ? "s" : ""}` : undefined} />
 
-            <div className="scroll-y min-h-0 flex-1 rounded-lg p-2.5" style={{ background: "var(--carbon)" }}>
-              <div className="mb-1.5 text-[9px] uppercase tracking-[0.14em]" style={{ color: "var(--apagado)" }}>
-                Últimos días
-              </div>
-              {partida.bitacora.slice(-6).reverse().map((b, i) => (
-                <div key={i} className="mb-1 flex gap-2 text-[11px]">
-                  <span className="num shrink-0" style={{ color: "var(--apagado)" }}>
-                    {b.dia.slice(8, 10)}/{b.dia.slice(5, 7)}
-                  </span>
-                  <span style={{ color: "var(--tenue)" }}>{b.texto}</span>
-                </div>
-              ))}
-            </div>
+            <Modulo titulo="Sudamericana" color="#a78bfa" onClick={() => setVista("copa")}
+              principal={NOMBRE_RONDA[partida.copa.ronda]}
+              pie={rivalCopa ? `vs ${rivalCopa.nombre}` : "sin rival"}
+              escudo={partida.copa.ronda !== "eliminado" && partida.copa.ronda !== "campeon"
+                ? partida.copa.rivalId : undefined} />
+
+            <Modulo titulo="Tabla" color="#3b82f6" onClick={() => setVista("tabla")}
+              principal={`${posicion}°`}
+              pie={difLider === 0 ? "puntero" : `a ${difLider} del líder`} />
+
+            <Modulo titulo="Pases" color="#22d3ee" onClick={() => setVista("mercado")}
+              principal={String(partida.fichajes.length)} pie="disponibles"
+              alerta={partida.ofertas.length ? `${partida.ofertas.length} oferta` : undefined} />
           </div>
-        ) : (
-          <div className="flex h-full flex-col items-center justify-center gap-3 rounded-xl p-6 text-center"
+
+          {/* último movimiento */}
+          <div className="scroll-y mt-1.5 min-h-0 flex-1 rounded-lg p-2.5"
                style={{ background: "var(--carbon)" }}>
-            <span className="apellido text-[22px]">Terminó el Clausura</span>
-            <span className="text-[13px]" style={{ color: "var(--tenue)" }}>
-              Olimpia salió {posicion}° con {yo.pts} puntos.
-            </span>
-            <button onClick={() => { borrar(); onReiniciar(); }}
-              className="mt-2 rounded-lg px-5 py-3 text-[13px] font-extrabold uppercase tracking-wider"
-              style={{ background: "var(--blanco)", color: "var(--negro)" }}>
-              Empezar de nuevo
-            </button>
+            <div className="mb-1 flex items-center justify-between">
+              <span className="text-[9px] uppercase tracking-[0.14em]" style={{ color: "var(--apagado)" }}>
+                Últimos días
+              </span>
+              <button onClick={() => setVista("bitacora")} className="text-[9px]"
+                      style={{ color: "var(--apagado)" }}>ver todo</button>
+            </div>
+            {[...partida.bitacora].reverse().slice(0, 12).map((b, i) => (
+              <div key={i} className="mb-1 flex gap-2 text-[11px]">
+                <span className="num shrink-0" style={{ color: "var(--apagado)" }}>
+                  {b.dia.slice(8, 10)}/{b.dia.slice(5, 7)}
+                </span>
+                <span style={{ color: "var(--tenue)" }}>{b.texto}</span>
+              </div>
+            ))}
           </div>
-        )}
-      </div>
-
-      {/* ---------- avanzar ---------- */}
-      {!pendiente && partido && !esHoy && (
-        <div className="px-3 pt-2">
-          <button onClick={onAvanzar}
-            className="w-full rounded-lg py-3 text-[14px] font-extrabold uppercase tracking-[0.14em]"
-            style={{ background: "var(--blanco)", color: "var(--negro)" }}>
-            Avanzar día
-          </button>
         </div>
       )}
 
-      {/* ---------- accesos ---------- */}
-      <div className="grid grid-cols-5 gap-1 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2">
-        {([["plantel", "Plantel", "#22c55e"], ["mercado", "Pases", "#22d3ee"],
-           ["copa", "Copa", "#a78bfa"], ["tabla", "Tabla", "#3b82f6"],
-           ["fixture", "Fixture", "#f59e0b"]] as const).map(([id, texto, color]) => (
+      {/* ---------- la acción del día ---------- */}
+      {!pendiente && (
+        <div className="px-3 pt-2">
+          {esHoy && partido ? (
+            <button onClick={onDirigir}
+              className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5"
+              style={{ background: "var(--blanco)", color: "var(--negro)" }}>
+              <Escudo id={partido.rivalId} nombre={partido.rivalNombre} tam={30} />
+              <span className="min-w-0 flex-1 text-left">
+                <span className="block text-[9px] uppercase tracking-[0.14em] opacity-60">
+                  {esPartidoDeCopa(partido) ? partido.etiqueta : "Hoy se juega"}
+                </span>
+                <span className="apellido block truncate text-[14px] leading-tight">
+                  {nombreCorto(partido.rivalId, partido.rivalNombre)}
+                </span>
+              </span>
+              <span className="shrink-0 text-[11px] font-extrabold uppercase tracking-wider">
+                Dirigir →
+              </span>
+            </button>
+          ) : partido ? (
+            <button onClick={onAvanzar}
+              className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5"
+              style={{ background: "var(--carbon)" }}>
+              <span className="num flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[13px]"
+                    style={{ background: "var(--blanco)", color: "var(--negro)" }}>
+                +1
+              </span>
+              <span className="min-w-0 flex-1 text-left">
+                <span className="block text-[9px] uppercase tracking-[0.14em]"
+                      style={{ color: "var(--apagado)" }}>
+                  Avanzar el día
+                </span>
+                <span className="block truncate text-[12px]" style={{ color: "var(--tenue)" }}>
+                  {nombreCorto(partido.rivalId, partido.rivalNombre)} en {faltan} día{faltan === 1 ? "" : "s"}
+                </span>
+              </span>
+              <Escudo id={partido.rivalId} nombre={partido.rivalNombre} tam={24} />
+            </button>
+          ) : (
+            <div className="rounded-lg p-3 text-center" style={{ background: "var(--carbon)" }}>
+              <div className="apellido text-[15px]">Terminó el Clausura</div>
+              <div className="mt-0.5 text-[11px]" style={{ color: "var(--tenue)" }}>
+                {posicion}° con {yo.pts} puntos
+              </div>
+              <button onClick={() => { borrar(); onReiniciar(); }}
+                className="mt-2 rounded-md px-4 py-2 text-[11px] font-extrabold uppercase tracking-wider"
+                style={{ background: "var(--blanco)", color: "var(--negro)" }}>
+                Empezar de nuevo
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ---------- resto ---------- */}
+      <div className="grid grid-cols-3 gap-1 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-1.5">
+        {([["fixture", "Fixture", "#f59e0b"], ["plantel", "Plantel", "#22c55e"],
+           ["bitacora", "Diario", "#8b8b95"]] as const).map(([id, texto, color]) => (
           <button key={id} onClick={() => setVista(id)}
-            className="rounded-lg py-2.5 text-[9px] font-bold uppercase tracking-wider"
-            style={{ background: `color-mix(in srgb, ${color} 16%, var(--carbon))`, color }}>
+            className="rounded-md py-2 text-[9px] font-bold uppercase tracking-wider"
+            style={{ background: `color-mix(in srgb, ${color} 14%, var(--carbon))`, color }}>
             {texto}
           </button>
         ))}
@@ -230,6 +240,34 @@ export default function Escritorio({
 }
 
 // ---------------------------------------------------------------- piezas
+
+function Punto({ color }: { color: string }) {
+  return <span className="block h-2 w-2 rounded-full" style={{ background: color }} />;
+}
+
+/** Tarjeta del tablero: un dato grande, un pie y, si hace falta, una alerta. */
+function Modulo({ titulo, color, principal, pie, alerta, escudo, onClick }: {
+  titulo: string; color: string; principal: string; pie: string;
+  alerta?: string; escudo?: string; onClick: () => void;
+}) {
+  return (
+    <button onClick={onClick} className="rounded-lg p-2.5 text-left"
+            style={{ background: `color-mix(in srgb, ${color} 13%, var(--carbon))` }}>
+      <div className="flex items-center justify-between">
+        <span className="text-[9px] uppercase tracking-[0.14em]" style={{ color }}>{titulo}</span>
+        {escudo && <Escudo id={escudo} nombre={titulo} tam={16} />}
+      </div>
+      <div className="apellido mt-1 truncate text-[19px] leading-none">{principal}</div>
+      <div className="mt-0.5 truncate text-[10px]" style={{ color: "var(--tenue)" }}>{pie}</div>
+      {alerta && (
+        <div className="mt-1.5 inline-block rounded px-1.5 py-0.5 text-[8px] font-extrabold uppercase tracking-wider"
+             style={{ background: "#ef4444", color: "#0b0b0c" }}>
+          {alerta}
+        </div>
+      )}
+    </button>
+  );
+}
 
 function Medidor({ etiqueta, valor, color }: { etiqueta: string; valor: number; color: string }) {
   return (
