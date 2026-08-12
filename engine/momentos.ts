@@ -22,6 +22,21 @@ export interface OpcionMomento {
   jugadorId?: string;
 }
 
+/**
+ * Lo que puede salir mal de una opción, además de no salir bien.
+ *
+ * Sin esto las decisiones del partido estaban dominadas: las tres opciones
+ * producían el mismo resultado (gol o no gol) y solo cambiaba la
+ * probabilidad, así que siempre elegías la del número más alto y no había
+ * nada que decidir. Ahora la opción de más chance también es la que más
+ * expone, y cuál conviene depende del minuto y del marcador.
+ */
+export interface RiesgoOpcion {
+  /** Probabilidad de que además termine en gol del rival. */
+  contra: number;
+  texto: string;
+}
+
 export interface Momento {
   tipo: TipoMomento;
   minuto: number;
@@ -36,6 +51,8 @@ export interface Momento {
 export interface ResueltoMomento {
   texto: string;
   exito: boolean;
+  /** Un golazo levanta a la gente, más allá del gol. */
+  levantaHinchada?: number;
   golOlimpia?: boolean;
   golRival?: boolean;
   rojaA?: string;
@@ -96,20 +113,18 @@ export function chanceDe(
     case "tiro_libre": {
       if (opcionId === "arco") {
         const j = buscar(m.opciones[0].jugadorId);
-        return j ? acotar(0.10 + (nivel(j) - 60) * 0.004, 0.05, 0.6) : null;
+        return j ? acotar(0.12 + (nivel(j) - 60) * 0.004, 0.05, 0.6) : null;
       }
-      if (opcionId === "centro") {
-        return a.once.some((x) => x.rasgos.includes("juego_aereo")) ? 0.20 : 0.11;
-      }
-      return 0.07;
+      return a.once.some((x) => x.rasgos.includes("juego_aereo")) ? 0.22 : 0.13;
     }
     case "mano_a_mano": {
       const j = buscar(m.opciones[0].jugadorId);
       if (!j) return null;
       const base = (nivel(j) - 55) * 0.006;
+      // buscar al compañero es lo que más gol da, pero es lo que más expone
       let p = opcionId === "cruzar" ? 0.52 + base
         : opcionId === "picar" ? 0.38 + base
-        : 0.44 + base;
+        : 0.62 + base;
       if (j.rasgos.includes("definidor")) p += 0.08;
       if (j.rasgos.includes("definicion_irregular")) p -= 0.04;
       return acotar(p, 0.15, 0.9);
@@ -122,6 +137,26 @@ export function chanceDe(
     default:
       return null;
   }
+}
+
+/**
+ * El riesgo de cada opción: qué puede salir mal además de no entrar.
+ *
+ * Es lo que rompe el empate entre opciones que si no serían la misma cosa con
+ * distinta probabilidad. Al minuto veinte tomás lo seguro; al ochenta y ocho
+ * perdiendo, arriesgás.
+ */
+export function riesgoDe(m: Momento, opcionId: string): RiesgoOpcion | null {
+  if (m.tipo === "mano_a_mano" && opcionId === "aguantar") {
+    return { contra: 0.24, texto: "si la pierde, sale de contra" };
+  }
+  if (m.tipo === "tiro_libre" && opcionId === "centro") {
+    return { contra: 0.14, texto: "si la rechazan, contra con todos arriba" };
+  }
+  if (m.tipo === "penal_contra" && opcionId === "centro") {
+    return { contra: 0.10, texto: "si se tira a un palo, queda el rebote" };
+  }
+  return null;
 }
 
 /** Ordena a los del once por lo bien que patearían. */
@@ -191,13 +226,13 @@ export function generarMomento(
         contexto: "Al borde del área, de frente al arco.",
         opciones: [
           { id: "arco", etiqueta: "Al arco",
-            detalle: `La pega ${apellido(tirador)}`, jugadorId: tirador.id },
+            detalle: `La pega ${apellido(tirador)}. Si entra es un golazo (+8 hinchada)`,
+            jugadorId: tirador.id },
           { id: "centro", etiqueta: "Centro al área",
-            detalle: aereo.length ? `${apellido(aereo[0])} gana arriba` : "Sin nadie fuerte de cabeza" },
-          { id: "corta", etiqueta: "Jugarla corta",
-            detalle: "Poco riesgo, poca chance" },
+            detalle: (aereo.length ? `${apellido(aereo[0])} gana arriba` : "Sin nadie fuerte de cabeza")
+              + ". Van todos, y si la rechazan quedás abierto" },
         ],
-        porDefecto: "corta",
+        porDefecto: "arco",
       };
     }
 
@@ -211,7 +246,7 @@ export function generarMomento(
         opciones: [
           { id: "sacar", etiqueta: "Sacarlo", detalle: "Te gasta un cambio", jugadorId: j.id },
           { id: "hablar", etiqueta: "Hablarle", detalle: "Puede que se calme", jugadorId: j.id },
-          { id: "dejar", etiqueta: "Dejarlo", detalle: "Riesgo de roja", jugadorId: j.id },
+          { id: "dejar", etiqueta: "Dejarlo", detalle: "Riesgo de roja, pero si aguanta la cancha se prende (+10 hinchada)", jugadorId: j.id },
         ],
         porDefecto: "hablar",
       };
@@ -261,9 +296,14 @@ export function generarMomento(
         titulo: "MANO A MANO",
         contexto: `${apellido(del)} quedó solo contra el arquero.`,
         opciones: [
-          { id: "cruzar", etiqueta: "Cruzarla", detalle: "Lo más probable", jugadorId: del.id },
-          { id: "picar", etiqueta: "Picarla", detalle: "Si sale, es golazo", jugadorId: del.id },
-          { id: "aguantar", etiqueta: "Aguantar y asistir", detalle: "Busca al que llega", jugadorId: del.id },
+          { id: "cruzar", etiqueta: "Cruzarla",
+            detalle: "Definición segura. Si falla, no pasa nada", jugadorId: del.id },
+          { id: "picar", etiqueta: "Picarla",
+            detalle: "Difícil. Si entra, el Defensores se viene abajo (+9 hinchada)",
+            jugadorId: del.id },
+          { id: "aguantar", etiqueta: "Aguantar y asistir",
+            detalle: "El que llega la tiene más fácil, pero si la pierde te matan de contra",
+            jugadorId: del.id },
         ],
         porDefecto: "cruzar",
       };
@@ -304,6 +344,14 @@ export function resolverMomento(
       let p = acerto ? 0.34 + (nivel(arq) - 60) * 0.008 : 0.05;
       if (opcionId === "centro" && acerto) p += 0.08;
       const ataja = rng.chance(Math.max(0.02, Math.min(0.7, p)));
+      // quedarse parado deja la pelota viva adelante: puede volver el rebote
+      if (ataja && opcionId === "centro") {
+        const r = riesgoDe(m, "centro");
+        if (r && rng.chance(r.contra)) {
+          return { exito: false, golRival: true,
+            texto: `${apellido(arq)} la sacó con el cuerpo pero quedó picando y la empujaron. Gol del rival.` };
+        }
+      }
       return {
         exito: ataja,
         golRival: !ataja,
@@ -318,35 +366,33 @@ export function resolverMomento(
     case "tiro_libre": {
       if (opcionId === "arco") {
         const j = buscar(m.opciones[0].jugadorId)!;
-        const mete = rng.chance(Math.max(0.05, 0.10 + (nivel(j) - 60) * 0.004));
+        const mete = rng.chance(Math.max(0.05, 0.12 + (nivel(j) - 60) * 0.004));
         return {
           exito: mete, golOlimpia: mete,
+          levantaHinchada: mete ? 8 : undefined,
           texto: mete
             ? `GOLAZO. ${apellido(j)} la puso en el ángulo. No hay arquero.`
             : `${apellido(j)} la mandó a la barrera.`,
         };
       }
-      if (opcionId === "centro") {
+      {
         const aereo = a.once.filter((x) => x.rasgos.includes("juego_aereo"));
         const cabeceador = aereo.length
           ? aereo.sort((x, y) => nivel(y) - nivel(x))[0]
           : [...a.once].filter((x) => (a.puestos.get(x.id) ?? x.posicion) !== "ARQ")
               .sort((x, y) => nivel(y) - nivel(x))[0];
-        const mete = rng.chance(aereo.length ? 0.20 : 0.11);
-        return {
-          exito: mete, golOlimpia: mete,
-          texto: mete
-            ? `GOL. Centro al área y ${apellido(cabeceador)} le ganó a todos de cabeza.`
-            : `El centro pasó largo y no llegó nadie.`,
-        };
+        const mete = rng.chance(aereo.length ? 0.22 : 0.13);
+        if (mete) {
+          return { exito: true, golOlimpia: true,
+            texto: `GOL. Centro al área y ${apellido(cabeceador)} le ganó a todos de cabeza.` };
+        }
+        const r = riesgoDe(m, "centro");
+        if (r && rng.chance(r.contra)) {
+          return { exito: false, golRival: true,
+            texto: "Rechazaron el centro y salieron de contra con todos arriba. Gol del rival." };
+        }
+        return { exito: false, texto: "El centro pasó largo y no llegó nadie." };
       }
-      const mete = rng.chance(0.07);
-      return {
-        exito: mete, golOlimpia: mete,
-        texto: mete
-          ? `GOL. La jugaron corta, sorprendieron a la defensa y la metieron.`
-          : `La jugaron corta y terminaron perdiendo la pelota. Sin riesgo, sin premio.`,
-      };
     }
 
     case "jugador_caliente": {
@@ -366,9 +412,10 @@ export function resolverMomento(
       }
       const roja = rng.chance(0.32);
       return { exito: !roja, rojaA: roja ? j.id : undefined,
+        levantaHinchada: roja ? undefined : 10,
         texto: roja
           ? `ROJA. Era cuestión de tiempo. ${apellido(j)} se va y quedan diez.`
-          : `${apellido(j)} siguió al límite y aguantó. Salió bien la apuesta.` };
+          : `${apellido(j)} siguió al límite, metió otra y la tribuna se vino abajo.` };
     }
 
     case "penal_ultima": {
@@ -402,7 +449,7 @@ export function resolverMomento(
       const base = (nivel(j) - 55) * 0.006;
       let p = opcionId === "cruzar" ? 0.52 + base
         : opcionId === "picar" ? 0.38 + base
-        : 0.44 + base;
+        : 0.62 + base;
       if (j.rasgos.includes("definidor")) p += 0.08;
       if (j.rasgos.includes("definicion_irregular")) p += rng.entre(-0.18, 0.10);
       const mete = rng.chance(Math.max(0.15, Math.min(0.9, p)));
@@ -415,7 +462,17 @@ export function resolverMomento(
                    `${apellido(j)} esperó demasiado y lo terminaron cerrando.`],
       };
       const [ok, mal] = textos[opcionId] ?? textos.cruzar;
-      return { exito: mete, golOlimpia: mete, texto: mete ? ok : mal };
+      if (mete) {
+        return { exito: true, golOlimpia: true, texto: ok,
+          levantaHinchada: opcionId === "picar" ? 9 : undefined };
+      }
+      // lo que se arriesgó al elegir: si salió mal, puede terminar en contra
+      const r = riesgoDe(m, opcionId);
+      if (r && rng.chance(r.contra)) {
+        return { exito: false, golRival: true,
+          texto: `${mal} Y el rival salió de contra: gol en contra.` };
+      }
+      return { exito: false, texto: mal };
     }
   }
 }

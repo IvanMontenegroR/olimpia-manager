@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { chanceDe, type Momento, type ResueltoMomento } from "@/engine/momentos.ts";
+import { chanceDe, riesgoDe, type Momento, type ResueltoMomento } from "@/engine/momentos.ts";
 import type { Alineacion, ContextoPartido } from "@/engine/tipos.ts";
 import Definicion, { type TipoDefinicion } from "./Definicion.tsx";
 
@@ -104,6 +104,7 @@ export default function MomentoOverlay({
             <div className="flex flex-col gap-1.5">
               {momento.opciones.map((o) => {
                 const chance = chanceDe(momento, o.id, alineacion, ctx);
+                const riesgo = riesgoDe(momento, o.id);
                 return (
                   <button key={o.id} onClick={() => elegir(o.id)}
                     className="w-full rounded-lg px-3.5 py-3 text-left"
@@ -124,11 +125,26 @@ export default function MomentoOverlay({
                     <span className="block text-[11px]" style={{ color: "var(--tenue)" }}>
                       {o.detalle}
                     </span>
+                    {/* La barra muestra las dos caras: lo que ganás y lo que
+                        arriesgás. Sin el rojo, la de más porcentaje siempre
+                        ganaba y no había nada que decidir. */}
                     {chance !== null && (
-                      <span className="mt-1.5 block h-1 overflow-hidden rounded-full"
+                      <span className="mt-1.5 flex h-1.5 overflow-hidden rounded-full"
                             style={{ background: "var(--linea)" }}>
-                        <span className="block h-full rounded-full"
-                              style={{ width: `${chance * 100}%`, background: color }} />
+                        <span style={{ width: `${chance * 100}%`, background: color }} />
+                        {riesgo && (
+                          <span style={{ width: `${riesgo.contra * 100}%`, background: "#c0392b" }} />
+                        )}
+                      </span>
+                    )}
+                    {riesgo && (
+                      <span className="mt-1 flex items-center gap-1 text-[10px] font-bold"
+                            style={{ color: "#e07a6f" }}>
+                        <span className="num rounded px-1"
+                              style={{ background: "#c0392b", color: "#0a120d" }}>
+                          {Math.round(riesgo.contra * 100)}%
+                        </span>
+                        {riesgo.texto}
                       </span>
                     )}
                   </button>
@@ -156,6 +172,13 @@ export default function MomentoOverlay({
                     style={{ color: resuelto.exito ? "var(--ok)" : "var(--critico)" }}>
                 {resuelto.texto}
               </span>
+              {/* El premio de haber elegido la difícil, a la vista. */}
+              {!!resuelto.levantaHinchada && (
+                <span className="num mt-1.5 inline-block rounded px-1.5 py-0.5 text-[11px] font-extrabold"
+                      style={{ background: "var(--ok)", color: "#0a120d" }}>
+                  +{resuelto.levantaHinchada} hinchada
+                </span>
+              )}
             </div>
             <button onClick={onSeguir} disabled={animando}
               className="w-full rounded-lg py-3.5 text-[14px] font-extrabold uppercase tracking-[0.14em]"

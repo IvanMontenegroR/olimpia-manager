@@ -532,6 +532,8 @@ export interface CierrePartido {
   rojas: string[];
   lesionados: { id: string; dias: number }[];
   goleadores: string[];
+  /** Lo que levantó la gente por los golazos del partido. */
+  hinchadaExtra?: number;
 }
 
 const AMARILLAS_PARA_SUSPENSION = 5;
@@ -676,7 +678,7 @@ export function cerrarPartido(p: Partida, partido: PartidoUI, c: CierrePartido):
   }
 
   // La gente se enoja con los malos resultados y se enoja el doble en el clásico.
-  n.hinchada = clamp(n.hinchada + (gano ? 5 : empate ? -2 : -8)
+  n.hinchada = clamp(n.hinchada + (c.hinchadaExtra ?? 0) + (gano ? 5 : empate ? -2 : -8)
     + (partido.ctx.esClasico ? (gano ? 7 : empate ? -2 : -10) : 0), 0, 100);
 
   // El vestuario sigue a los resultados y también al humor de la calle: cuando

@@ -68,6 +68,8 @@ export default function PartidoEnVivo({
   const [corriendo, setCorriendo] = useState(true);
   const [vel, setVel] = useState(0);
   const [cambios, setCambios] = useState(3);
+  /** Lo que sumó la gente por un golazo, para pasarlo al cierre. */
+  const hinchadaPorGolazos = useRef(0);
   const [actitudUsada, setActitudUsada] = useState(false);
   const [panel, setPanel] = useState<"cambio" | "actitud" | null>(null);
   const [terminado, setTerminado] = useState(false);
@@ -204,6 +206,8 @@ export default function PartidoEnVivo({
     const r = resolverMomento(momento, opcionId, alineacion, ctx,
                               new Rng(`${ctx.fecha}-${momento.minuto}-${opcionId}`));
     setResuelto(r);
+    // un golazo se paga aunque el partido ya estuviera resuelto
+    if (r.levantaHinchada) hinchadaPorGolazos.current += r.levantaHinchada;
 
     const nuevoO = gO + (r.golOlimpia ? 1 : 0);
     const nuevoR = gR + (r.golRival ? 1 : 0);
@@ -356,6 +360,8 @@ export default function PartidoEnVivo({
       lesionados: visibles.filter((e) => e.tipo === "lesion" && e.jugadorId)
         .map((e) => ({ id: e.jugadorId!, dias: 7 + Math.floor(Math.random() * 30) })),
       goleadores: visibles.filter((e) => e.tipo === "gol" && e.jugadorId).map((e) => e.jugadorId!),
+      // los golazos de los momentos levantan a la gente más allá del resultado
+      hinchadaExtra: hinchadaPorGolazos.current,
     };
   };
 
