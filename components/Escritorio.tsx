@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Escudo from "./Escudo.tsx";
+import IconoModulo, { type ClaveIcono } from "./IconoModulo.tsx";
 import Numero from "./Numero.tsx";
 import Dorsal from "./Dorsal.tsx";
 import Asuntos from "./Asuntos.tsx";
@@ -94,6 +95,8 @@ export default function Escritorio({
 }) {
   const [vista, setVista] = useState<Vista>("escritorio");
   const [ayuda, setAyuda] = useState<Ayuda | null>(null);
+  /** Borrar la partida es irreversible: se pregunta antes. */
+  const [reiniciar, setReiniciar] = useState(false);
   const tabla = useMemo(() => tablaDe(partida), [partida]);
   const plantel = useMemo(() => plantelDe(partida), [partida]);
   const posicion = useMemo(() => posicionDe(partida), [partida]);
@@ -205,6 +208,14 @@ export default function Escritorio({
           </div>
           <Numero valor={partida.dineroUsd} formato={(n) => miles(Math.round(n))}
                   className="num text-[13px]" style={{ color: "var(--cesped)" }} />
+          {/* Empezar de nuevo estaba solo al terminar la temporada, así que si
+              te ibas al descenso no había forma de arrancar otra vez. */}
+          <button onClick={() => setReiniciar(true)}
+                  className="shrink-0 rounded px-1.5 py-1 text-[13px] leading-none"
+                  style={{ background: "var(--carbon)", color: "var(--apagado)" }}
+                  aria-label="Empezar de nuevo">
+            ⟲
+          </button>
         </div>
 
         {/* El prestigio manda sobre las otras dos: es el titular de tu ciclo,
@@ -343,24 +354,24 @@ export default function Escritorio({
         <div className="flex min-h-0 flex-1 flex-col px-3">
           {/* tablero del club */}
           <div className="escalona grid shrink-0 grid-cols-2 gap-1.5">
-            <Modulo titulo="Plantel" color="#3fa76a" onClick={() => setVista("plantel")}
+            <Modulo titulo="Plantel" color="#3fa76a" icono="plantel" onClick={() => setVista("plantel")}
               numero={condMedia} sufijo="%" pie="condición media"
               alerta={
                 !sub18.alcanza ? `Sub-18: faltan ${sub18.faltan}'`
                 : bajas.length ? `${bajas.length} baja${bajas.length > 1 ? "s" : ""}`
                 : undefined} />
 
-            <Modulo titulo="Sudamericana" color="#d9a832" onClick={() => setVista("copa")}
+            <Modulo titulo="Sudamericana" color="#d9a832" icono="copa" onClick={() => setVista("copa")}
               principal={NOMBRE_RONDA[partida.copa.ronda]}
               pie={rivalCopa ? `vs ${rivalCopa.nombre}` : "sin rival"}
               escudo={partida.copa.ronda !== "eliminado" && partida.copa.ronda !== "campeon"
                 ? partida.copa.rivalId : undefined} />
 
-            <Modulo titulo="Tabla" color="#4a7fb5" onClick={() => setVista("tabla")}
+            <Modulo titulo="Tabla" color="#4a7fb5" icono="tabla" onClick={() => setVista("tabla")}
               numero={posicion} sufijo="°"
               pie={difLider === 0 ? "puntero" : `a ${difLider} del líder`} />
 
-            <Modulo titulo="Pases" color="#e0902a" onClick={() => setVista("mercado")}
+            <Modulo titulo="Pases" color="#e0902a" icono="pases" onClick={() => setVista("mercado")}
               numero={partida.fichajes.length} pie="disponibles"
               alerta={partida.ofertas.length ? `${partida.ofertas.length} oferta` : undefined} />
           </div>
@@ -492,6 +503,32 @@ export default function Escritorio({
         ))}
       </div>
 
+      {reiniciar && (
+        <div className="fixed inset-0 z-40 flex flex-col justify-end"
+             style={{ background: "rgba(0,0,0,0.7)" }} onClick={() => setReiniciar(false)}>
+          <div className="entra-abajo rounded-t-2xl px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4"
+               style={{ background: "var(--negro)", borderTop: "1px solid var(--linea)",
+                        boxShadow: "0 -12px 40px rgba(0,0,0,0.75)" }}
+               onClick={(e) => e.stopPropagation()}>
+            <h2 className="apellido text-[19px]">¿Empezar de nuevo?</h2>
+            <p className="mt-1.5 text-[12px] leading-relaxed" style={{ color: "var(--tenue)" }}>
+              Se borra todo: los {partida.resultados.length} partidos dirigidos, los
+              refuerzos que trajiste y lo que juntaste en caja. No hay vuelta atrás.
+            </p>
+            <button onClick={() => { borrar(); onReiniciar(); }}
+              className="mt-4 w-full rounded-lg py-3.5 text-[13px] font-extrabold uppercase tracking-[0.14em]"
+              style={{ background: "var(--ladrillo)", color: "var(--blanco)" }}>
+              Borrar y empezar de nuevo
+            </button>
+            <button onClick={() => setReiniciar(false)}
+              className="mt-1.5 w-full rounded-lg py-3 text-[12px] font-bold uppercase tracking-[0.12em]"
+              style={{ background: "var(--carbon)", color: "var(--blanco)" }}>
+              Seguir con esta
+            </button>
+          </div>
+        </div>
+      )}
+
       {ayuda && (
         <div className="fixed inset-0 z-40 flex flex-col justify-end"
              style={{ background: "rgba(0,0,0,0.6)" }} onClick={() => setAyuda(null)}>
@@ -533,8 +570,9 @@ function Punto({ color }: { color: string }) {
 }
 
 /** Tarjeta del tablero: un dato grande, un pie y, si hace falta, una alerta. */
-function Modulo({ titulo, color, principal, numero, sufijo, pie, alerta, escudo, onClick }: {
-  titulo: string; color: string; principal?: string; numero?: number; sufijo?: string;
+function Modulo({ titulo, color, icono, principal, numero, sufijo, pie, alerta, escudo, onClick }: {
+  titulo: string; color: string; icono: ClaveIcono; principal?: string;
+  numero?: number; sufijo?: string;
   pie: string; alerta?: string; escudo?: string; onClick: () => void;
 }) {
   return (
@@ -546,7 +584,9 @@ function Modulo({ titulo, color, principal, numero, sufijo, pie, alerta, escudo,
             }}>
       <div className="flex items-start justify-between gap-1">
         <span className="text-[9px] uppercase tracking-[0.14em]" style={{ color }}>{titulo}</span>
-        {escudo && <Escudo id={escudo} nombre={titulo} tam={34} />}
+        {escudo
+          ? <Escudo id={escudo} nombre={titulo} tam={34} />
+          : <IconoModulo clave={icono} color={color} tam={30} />}
       </div>
       <div className="apellido mt-1 truncate text-[19px] leading-none">
         {numero !== undefined

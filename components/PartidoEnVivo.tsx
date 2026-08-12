@@ -417,8 +417,7 @@ export default function PartidoEnVivo({
       {/* ---------- estado de los once ---------- */}
       <PanelPartido once={once} puestos={puestos} estado={estadoJugadores}
                     condicionDe={condAhora} minuto={minuto} alineacion={alineacion}
-                    ctx={ctx} dominio={dominio} rival11={rival11} estadoRival={estadoRival}
-                    eventos={visibles} rivalNombre={nombreCorto(partido.rivalId, partido.rivalNombre)}
+                    ctx={ctx} dominio={dominio}
                     onTocar={(j) => {
                         setCorriendo(false);
                         setSalen([j.id]);
