@@ -998,7 +998,10 @@ export function avanzarUnDia(p: Partida): ResultadoAvance {
         montoUsd: o.montoUsd, venceEl: sumarDias(n.dia, 4),
         quiereIrse: o.quiereIrse,
       });
-      const j = PLANTEL.find((x) => x.id === o.jugadorId)!;
+      // OJO: en el plantel del JSON no están las estrellas que fichaste, y la
+      // oferta puede ser justo por una de ellas
+      const j = plantelDe(n).find((x) => x.id === o.jugadorId);
+      if (!j) return { partida: n, novedades };
       n.pendientes.push({
         id: `ofp-${n.dia}`, tipo: "oferta", dia: n.dia,
         titulo: "Llegó una oferta",
@@ -1153,7 +1156,8 @@ export function resolverAsunto(p: Partida, asuntoId: string, opcionId: string): 
     const oferta = n.ofertas.find((o) => o.id === (a.datos?.ofertaId as string));
     if (!oferta) return n;
     n.ofertas = n.ofertas.filter((o) => o.id !== oferta.id);
-    const j = PLANTEL.find((x) => x.id === oferta.jugadorId)!;
+    const j = plantelDe(n).find((x) => x.id === oferta.jugadorId);
+    if (!j) return n;
     if (opcionId === "vender") {
       n.dineroUsd += oferta.montoUsd;
       n.plantel[oferta.jugadorId].lesionadoHasta = "2099-01-01"; // sale del plantel
