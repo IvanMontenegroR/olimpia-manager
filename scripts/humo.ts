@@ -8,7 +8,7 @@
  */
 
 import {
-  avanzarUnDia, cerrarPartido, estadoSub18, ficharEstrella, hayPartidoHoy,
+  TOTAL_FECHAS, avanzarUnDia, cerrarPartido, ficharEstrella, hayPartidoHoy,
   partidaNueva, partidoDe, plantelDe, rechazarEstrella, resolverAsunto, tablaDe,
   type CierrePartido, type Partida,
 } from "../lib/temporada.ts";
@@ -68,7 +68,10 @@ for (let s = 0; s < temporadas; s++) {
 /** Juega el partido de hoy pasando por todos los momentos posibles. */
 function jugar(p: Partida, rng: Rng, semilla: number): Partida {
   const partido = partidoDe(p)!;
-  const salida = salidaAutomatica(partido, plantelDe(p), estadoSub18(p));
+  const salida = salidaAutomatica(partido, plantelDe(p), {
+    minutos: p.minutosSub18,
+    partidosRestantes: Math.max(0, TOTAL_FECHAS - p.fechaActual + 1),
+  });
   const jugadores = salida.once;
   if (jugadores.length < 11) return { ...p, dia: p.dia };
 
