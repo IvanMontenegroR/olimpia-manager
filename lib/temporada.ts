@@ -325,6 +325,19 @@ export function cargar(): Partida {
     // los objetos anidados se completan campo por campo
     p.copa = { ...base.copa, ...(guardada.copa ?? {}) };
     p.plantel = { ...base.plantel };
+    /*
+     * Los que fichaste no están en el plantel del JSON, así que el filtro de
+     * abajo los tiraba: al recargar perdían condición, ánimo y minutos, y
+     * cualquier cosa que después les escribiera encima mataba la app entera
+     * ("Cannot set properties of undefined"). Sus ids valen igual que los del
+     * JSON.
+     */
+    for (const j of p.incorporados ?? []) {
+      p.plantel[j.id] ??= {
+        condicion: j.condicion, amarillas: 0, suspendidoFechas: 0, lesionadoHasta: null,
+        golesTorneo: 0, minutos: 0, animo: j.animo, crecimiento: 0,
+      };
+    }
     for (const [id, e] of Object.entries(guardada.plantel ?? {})) {
       if (!p.plantel[id]) continue;
       p.plantel[id] = { ...p.plantel[id], ...e };
@@ -347,6 +360,7 @@ export function cargar(): Partida {
     p.resultadoApuesta ??= null;
     p.estrella ??= null;
     p.estrellasVistas ??= [];
+    p.incorporados ??= [];
     return p;
   } catch {
     return partidaNueva();
@@ -363,6 +377,21 @@ export function borrar(): void {
 }
 
 // ---------------------------------------------------------------- consultas
+
+/**
+ * Le da estado a cualquiera que esté en el plantel y no lo tenga. Es la red
+ * abajo del arreglo de `cargar`: una partida vieja guardada con el hueco tiene
+ * que poder seguir jugándose, no reventar.
+ */
+export function completarPlantel(p: Partida): Partida {
+  for (const j of plantelDe(p)) {
+    p.plantel[j.id] ??= {
+      condicion: j.condicion, amarillas: 0, suspendidoFechas: 0, lesionadoHasta: null,
+      golesTorneo: 0, minutos: 0, animo: j.animo, crecimiento: 0,
+    };
+  }
+  return p;
+}
 
 export function plantelDe(p: Partida): Jugador[] {
   const reserva = new Set(p.enReserva ?? []);
@@ -896,8 +925,11 @@ export function avanzarUnDia(p: Partida): ResultadoAvance {
   const rng = new Rng(`dia-${n.dia}-${n.fechaActual}`);
 
   void novedades;
-  for (const j of PLANTEL) {
+  // Los fichados también se recuperan, se cansan y se lesionan. Con PLANTEL a
+  // secas quedaban congelados en la condición del día que llegaron.
+  for (const j of plantelDe(n)) {
     const e = n.plantel[j.id];
+    if (!e) continue;
     if (e.lesionadoHasta && e.lesionadoHasta <= n.dia) {
       e.lesionadoHasta = null;
       novedades.push(`${j.apellido} se recuperó y ya está a disposición.`);
@@ -1186,7 +1218,10 @@ export function resolverAsunto(p: Partida, asuntoId: string, opcionId: string): 
     if (!j) return n;
     if (opcionId === "vender") {
       n.dineroUsd += oferta.montoUsd;
-      n.plantel[oferta.jugadorId].lesionadoHasta = "2099-01-01"; // sale del plantel
+      // sale del plantel; el estado puede faltar si viene de una partida vieja
+      if (n.plantel[oferta.jugadorId]) {
+        n.plantel[oferta.jugadorId].lesionadoHasta = "2099-01-01";
+      }
       n.hinchada = clamp(n.hinchada - (j.nivel >= 68 ? 9 : 3), 0, 100);
       n.ambiente = clamp(n.ambiente - 3, 0, 100);
       n.bitacora.push({ dia: n.dia, marca: "plata",

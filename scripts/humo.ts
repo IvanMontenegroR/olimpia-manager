@@ -8,7 +8,7 @@
  */
 
 import {
-  TOTAL_FECHAS, avanzarUnDia, cerrarPartido, ficharEstrella, hayPartidoHoy,
+  TOTAL_FECHAS, avanzarUnDia, cerrarPartido, fichar, ficharEstrella, hayPartidoHoy,
   partidaNueva, partidoDe, plantelDe, rechazarEstrella, resolverAsunto, tablaDe,
   type CierrePartido, type Partida,
 } from "../lib/temporada.ts";
@@ -38,9 +38,25 @@ for (let s = 0; s < temporadas; s++) {
       // lo que espera decisión se resuelve al azar, como haría un jugador
       if (p.pendientes.length) {
         const a = p.pendientes[0];
-        const ops = Object.keys(a.efectos ?? {});
+        /*
+         * Cada tipo tiene sus opciones propias y no salen de `efectos`. Antes
+         * acá se mandaba "" para todos, así que vender un jugador, viajar y
+         * poner precio a la entrada nunca se probaban: se caían siempre en el
+         * else de cada rama.
+         */
+        const ops = a.tipo === "oferta" ? ["vender", "rechazar"]
+          : a.tipo === "marketing" ? ["barato", "normal", "caro"]
+          : a.tipo === "viaje" ? ["vispera", "dosdias", "semana"]
+          : Object.keys(a.efectos ?? {});
         p = resolverAsunto(p, a.id, ops.length ? rng.elegir(ops) : "");
         continue;
+      }
+
+      // fichar del mercado, que es la otra forma de mover el plantel
+      if (p.fichajes.length && rng.chance(0.12)) {
+        const f = rng.elegir(p.fichajes);
+        const traido = fichar(p, f.id);
+        if (traido) { p = traido; continue; }
       }
       if (p.hito) { p = { ...p, hito: null }; continue; }
       if (p.resultadoApuesta) { p = { ...p, resultadoApuesta: null }; continue; }
@@ -56,6 +72,13 @@ for (let s = 0; s < temporadas; s++) {
 
       const r = avanzarUnDia(p);
       p = r.partida;
+
+      /*
+       * Cada tanto se simula que cerrás y volvés: guardar y cargar. Acá saltó
+       * que `cargar` tiraba el estado de todo jugador fichado, porque filtraba
+       * contra el plantel del JSON, donde esos no están.
+       */
+      if (dias % 17 === 0) p = comoSiRecargara(p);
     }
 
     // las pantallas que leen la temporada terminada
@@ -64,6 +87,28 @@ for (let s = 0; s < temporadas; s++) {
     const m = e instanceof Error ? `${e.message}\n    ${e.stack?.split("\n")[1]?.trim()}` : String(e);
     fallas.push(`temporada ${s}, día ${p.dia} (fecha ${p.fechaActual}): ${m}`);
   }
+}
+
+/**
+ * Lo mismo que hace `cargar` al volver a abrir el juego, sin localStorage:
+ * pasa por JSON y se completa contra una partida nueva.
+ */
+function comoSiRecargara(p: Partida): Partida {
+  const guardada = JSON.parse(JSON.stringify(p)) as Partida;
+  const base = partidaNueva();
+  const n: Partida = { ...base, ...guardada };
+  n.plantel = { ...base.plantel };
+  for (const j of n.incorporados ?? []) {
+    n.plantel[j.id] ??= {
+      condicion: j.condicion, amarillas: 0, suspendidoFechas: 0, lesionadoHasta: null,
+      golesTorneo: 0, minutos: 0, animo: j.animo, crecimiento: 0,
+    };
+  }
+  for (const [id, e] of Object.entries(guardada.plantel ?? {})) {
+    if (!n.plantel[id]) continue;
+    n.plantel[id] = { ...n.plantel[id], ...e };
+  }
+  return n;
 }
 
 /** Juega el partido de hoy pasando por todos los momentos posibles. */

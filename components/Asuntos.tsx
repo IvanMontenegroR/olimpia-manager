@@ -1,7 +1,6 @@
 "use client";
 
-import { miles, type Asunto, type Partida } from "@/lib/temporada.ts";
-import { PLANTEL } from "@/lib/juego.ts";
+import { miles, plantelDe, type Asunto, type Partida } from "@/lib/temporada.ts";
 import Efectos, { type EfectoVisible } from "./Efectos.tsx";
 import { DibujoEscena, ESCENAS, type TipoEscena } from "./Escena.tsx";
 
@@ -117,7 +116,9 @@ function opcionesDe(a: Asunto, p: Partida): {
 
   if (a.tipo === "oferta") {
     const oferta = p.ofertas.find((o) => o.id === (a.datos?.ofertaId as string));
-    const j = PLANTEL.find((x) => x.id === oferta?.jugadorId);
+    // del plantel de verdad, no del JSON: la oferta puede ser por uno que
+    // fichaste, y entonces la pantalla decía "Perdés a el jugador"
+    const j = plantelDe(p).find((x) => x.id === oferta?.jugadorId);
     return [
       { id: "vender", etiqueta: `Vender por ${oferta ? miles(oferta.montoUsd) : ""}`,
         detalle: `Perdés a ${j?.apellido ?? "el jugador"}`,
