@@ -31,13 +31,20 @@ export default function PantallaApuesta({ resultado, onSeguir }: {
          }}>
 
       <div className="flex w-full max-w-xs flex-col items-center text-center">
-        <Sorteo
-          chance={chance}
-          exito={salioBien}
-          riesgo={null}
-          grande
-          caras={{ pregunta: "se juega", bien: "SALIÓ BIEN", mal: "SALIÓ MAL" }}
-          onTermina={() => setListo(true)} />
+        <div className="w-full">
+          <div className="mb-1 flex items-baseline justify-between text-[9px] uppercase tracking-[0.16em]"
+               style={{ color: "var(--apagado)" }}>
+            <span>tenías {Math.round(chance * 100)}%</span>
+            <span>{100 - Math.round(chance * 100)}%</span>
+          </div>
+          <Sorteo
+            chance={chance}
+            exito={salioBien}
+            riesgo={null}
+            bien="SALIÓ BIEN" mal="SALIÓ MAL"
+            semilla={Math.round(chance * 100) + 3}
+            onTermina={() => setListo(true)} />
+        </div>
 
         {/* Lo que pasó no se lee hasta que el cartel frenó. */}
         <div style={{ opacity: listo ? 1 : 0, transition: "opacity 320ms ease-out" }}>

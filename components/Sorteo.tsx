@@ -3,128 +3,134 @@
 import { useEffect, useRef, useState } from "react";
 
 /**
- * El sorteo, a la vista.
+ * El dado, tirado sobre la misma barra que estabas mirando.
  *
- * Antes la chance se mostraba antes de elegir y después aparecía el resultado
- * ya cocinado: entre una cosa y la otra no pasaba nada, así que el azar no se
- * sentía. Acá el cartel alterna entre las dos caras cada vez más lento y frena
- * en la que salió, con la barra de proporción al lado para que se vea que un
- * 69% no es lo mismo que un 45%.
+ * La barra ya decía dónde estaba lo verde y dónde lo rojo. Lo único que
+ * faltaba era ver caer la bolilla ahí adentro: recorre la barra rebotando de
+ * punta a punta, desacelera y frena en el tramo que salió. Si tenías 81% y
+ * frena en la franja roja del final, se entiende de una que fue mala suerte y
+ * no una mala decisión.
  *
- * La alternancia es estricta y la cantidad de pasos se calcula para terminar en
- * el resultado real: nada de esto decide nada, el dado ya se tiró.
+ * Nada de esto sortea nada: el resultado ya está resuelto, esto solo lo cuenta.
  */
 
-/** Cuántas veces parpadea antes de frenar. */
-const PASOS = 11;
-const PRIMER_MS = 30;
-const FRENO = 1.26;
+/** Cuántas veces cruza la barra antes de frenar. */
+const VUELTAS = 3;
+const DURACION = 1750;
+/** Lo que espera con el resultado a la vista antes de dejar seguir. */
+const REMATE = 620;
 
-export interface CarasSorteo {
-  /** La pregunta de arriba: "¿ENTRA?", "¿LA SACA?". */
-  pregunta: string;
-  bien: string;
-  mal: string;
-}
-
-export default function Sorteo({ chance, exito, riesgo, caras, grande, onTermina }: {
+export default function Sorteo({ chance, riesgo, exito, bien, mal, semilla, onTermina }: {
   /** Lo que decía la barra antes de elegir, 0 a 1. */
   chance: number;
-  exito: boolean;
-  /** La parte roja que además termina en gol del rival, si la había. */
+  /** La franja de gol en contra, si esta opción la tenía. */
   riesgo: number | null;
-  caras: CarasSorteo;
-  /** En pantalla completa el cartel tiene que pesar más. */
-  grande?: boolean;
+  exito: boolean;
+  /** Cómo se llama cada tramo: "GOL", "NO ENTRA". */
+  bien: string;
+  mal: string;
+  /** Cualquier número estable: mueve el punto exacto donde frena. */
+  semilla: number;
   onTermina: () => void;
 }) {
-  const [paso, setPaso] = useState(0);
+  const [pos, setPos] = useState(0);
   const [frenado, setFrenado] = useState(false);
-  const timers = useRef<number[]>([]);
-  /**
-   * El callback se guarda aparte porque el padre lo pasa como arrow inline: si
-   * el efecto dependiera de él, cada render del partido de fondo reiniciaba la
-   * ruleta y frenaba en cualquier cara.
-   */
+  // el padre pasa un arrow inline; sin el ref, cada render del partido de
+  // fondo reiniciaba la tirada
   const avisar = useRef(onTermina);
   avisar.current = onTermina;
 
-  // la secuencia arranca donde haga falta para caer en `exito` al final
-  const cara = (i: number) => ((PASOS - 1 - i) % 2 === 0 ? exito : !exito);
+  const pct = Math.max(2, Math.min(98, chance * 100));
+
+  /** Dónde frena: adentro del tramo que salió, nunca pegado a la división. */
+  const destino = useRef(
+    exito
+      ? 2 + ((semilla * 37) % 100) / 100 * Math.max(2, pct - 5)
+      : pct + 3 + ((semilla * 37) % 100) / 100 * Math.max(2, 100 - pct - 5),
+  ).current;
 
   useEffect(() => {
     const corto = typeof window !== "undefined" &&
       window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
     if (corto) {
-      setPaso(PASOS - 1);
+      setPos(destino);
       setFrenado(true);
-      const t = window.setTimeout(() => avisar.current(), 420);
+      const t = window.setTimeout(() => avisar.current(), 400);
       return () => window.clearTimeout(t);
     }
 
-    let t = 0;
-    let ms = PRIMER_MS;
-    for (let i = 1; i < PASOS; i++) {
-      t += ms;
-      ms *= FRENO;
-      timers.current.push(window.setTimeout(() => setPaso(i), t));
-    }
-    timers.current.push(window.setTimeout(() => setFrenado(true), t + 40));
-    timers.current.push(window.setTimeout(() => avisar.current(), t + 560));
-    return () => { timers.current.forEach(window.clearTimeout); timers.current = []; };
+    // recorre VUELTAS barras completas y termina justo en el destino
+    const total = 200 * VUELTAS + destino;
+    let raf = 0;
+    let fin = 0;
+    const inicio = performance.now();
+    const paso = (ahora: number) => {
+      const t = Math.min(1, (ahora - inicio) / DURACION);
+      const avance = (total * (1 - Math.pow(1 - t, 5))) % 200;
+      setPos(avance <= 100 ? avance : 200 - avance);
+      if (t < 1) { raf = requestAnimationFrame(paso); return; }
+      setPos(destino);
+      setFrenado(true);
+      fin = window.setTimeout(() => avisar.current(), REMATE);
+    };
+    raf = requestAnimationFrame(paso);
+    return () => { cancelAnimationFrame(raf); window.clearTimeout(fin); };
   }, []);
 
-  const va = cara(paso);
-  const color = va ? "#3fa76a" : "#c0392b";
-  const pct = Math.round(chance * 100);
+  const color = exito ? "#3fa76a" : "#c0392b";
+  const rotulo = Math.max(13, Math.min(87, frenado ? destino : pos));
 
   return (
-    <div className={grande ? "w-full overflow-hidden rounded-xl px-4 py-4"
-                           : "mb-3 overflow-hidden rounded-lg px-3 py-3"}
-         style={{ background: grande ? "#00000044" : "#0d1a13",
-                  outline: "1px solid #ffffff14" }}>
-
-      <div className="mb-1.5 flex items-baseline justify-between">
-        <span className="text-[9px] uppercase tracking-[0.2em]" style={{ color: "#ffffff66" }}>
-          {caras.pregunta}
-        </span>
-        <span className="num text-[11px] font-extrabold" style={{ color: "#3fa76a" }}>
-          {pct}%
-        </span>
-      </div>
-
-      {/* la proporción real: lo verde es lo que tenías a favor */}
-      <span className="mb-3 flex h-1.5 overflow-hidden rounded-full" style={{ background: "#c0392b" }}>
-        <span style={{ width: `${pct}%`, background: "#3fa76a" }} />
+    <span className="mt-2 block">
+      <span className="relative block h-5 overflow-hidden rounded-md"
+            style={{
+              background: "#c0392b",
+              outline: frenado ? `1.5px solid ${color}` : "1px solid #ffffff1a",
+              boxShadow: frenado ? `0 0 22px ${color}66` : "none",
+              transition: "box-shadow 200ms ease-out",
+            }}>
+        {/* lo que tenías a favor */}
+        <span className="absolute inset-y-0 left-0"
+              style={{ width: `${pct}%`, background: "#3fa76a" }} />
+        {/* de lo que falla, esta parte además termina en gol del rival */}
         {riesgo !== null && (
-          // el riesgo cae sobre la parte que falla, no sobre el total
-          <span style={{ width: `${(1 - chance) * riesgo * 100}%`, background: "#7a1f16" }} />
+          <span className="absolute inset-y-0"
+                style={{ left: `${pct}%`, width: `${(100 - pct) * riesgo}%`, background: "#7a1f16" }} />
         )}
+        {/* el rayado hace visible el movimiento sobre el color plano */}
+        <span className="absolute inset-0" style={{
+          backgroundImage: "repeating-linear-gradient(90deg, transparent 0 8px, rgba(0,0,0,0.16) 8px 9px)",
+        }} />
+        {/* la división entre ganar y perder */}
+        <span className="absolute inset-y-0"
+              style={{ left: `${pct}%`, width: 1, background: "#0a120daa" }} />
+
+        {/* la bolilla */}
+        <span className="absolute inset-y-0"
+              style={{
+                left: `${pos}%`,
+                width: frenado ? 5 : 3,
+                marginLeft: frenado ? -2.5 : -1.5,
+                background: "#fff",
+                boxShadow: frenado ? "0 0 14px #fff, 0 0 4px #fff" : "0 0 8px #ffffffcc",
+                transition: "width 180ms ease-out, margin-left 180ms ease-out",
+              }} />
       </span>
 
-      {/* el cartel que alterna y frena */}
-      <div className="flex justify-center">
-        <span
-          key={`${paso}-${frenado}`}
-          className={frenado ? "golpea-hito" : undefined}
-          style={{
-            display: "block",
-            padding: grande ? (frenado ? "16px 34px" : "13px 28px")
-                            : (frenado ? "10px 22px" : "8px 18px"),
-            borderRadius: 8,
-            background: frenado ? color : `${color}22`,
-            outline: `1.5px solid ${color}`,
-            color: frenado ? "#0a120d" : color,
-            transition: "padding 160ms ease-out",
-            boxShadow: frenado ? `0 0 30px ${color}88` : "none",
-          }}>
-          <span className="apellido block leading-none"
-                style={{ fontSize: grande ? (frenado ? 38 : 30) : (frenado ? 26 : 20),
-                         letterSpacing: "0.02em" }}>
-            {va ? caras.bien : caras.mal}
-          </span>
+      {/* qué tramo tocó, debajo de donde frenó */}
+      <span className="relative block h-[19px]">
+        <span className="num absolute whitespace-nowrap rounded px-1.5 py-[1px] text-[10px] font-extrabold"
+              style={{
+                left: `${rotulo}%`,
+                top: 5,
+                transform: "translateX(-50%)",
+                background: frenado ? color : "transparent",
+                color: frenado ? "#0a120d" : "transparent",
+                transition: "background 160ms ease-out, color 160ms ease-out",
+              }}>
+          {exito ? bien : mal}
         </span>
-      </div>
-    </div>
+      </span>
+    </span>
   );
 }

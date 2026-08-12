@@ -3,8 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { chanceDe, riesgoDe, type Momento, type ResueltoMomento } from "@/engine/momentos.ts";
 import type { Alineacion, ContextoPartido } from "@/engine/tipos.ts";
-import Definicion, { type TipoDefinicion } from "./Definicion.tsx";
-import Sorteo, { type CarasSorteo } from "./Sorteo.tsx";
+import Sorteo from "./Sorteo.tsx";
 
 const COLOR: Record<string, string> = {
   penal_favor: "var(--ok)",
@@ -15,31 +14,26 @@ const COLOR: Record<string, string> = {
 };
 
 /**
- * Decisión con el reloj corriendo. Si no elegís a tiempo se toma la opción
- * conservadora: no decidir también es decidir.
+ * Cómo se llama cada tramo de la barra. Sin esto la bolilla frenaría sobre un
+ * color y no sobre algo que se pueda leer.
  */
-/** Los momentos que terminan en un remate al arco se dibujan. */
-const DEFINICION: Partial<Record<string, TipoDefinicion>> = {
-  penal_favor: "remate",
-  penal_ultima: "remate",
-  penal_contra: "atajada",
-  tiro_libre: "remate",
-  mano_a_mano: "remate",
+const TRAMOS: Partial<Record<string, [string, string]>> = {
+  penal_favor:      ["GOL", "AFUERA"],
+  penal_ultima:     ["GOL", "AFUERA"],
+  tiro_libre:       ["GOL", "NO ENTRA"],
+  mano_a_mano:      ["GOL", "NO ENTRA"],
+  penal_contra:     ["LA ATAJA", "GOL RIVAL"],
+  jugador_caliente: ["AGUANTA", "ROJA"],
 };
 
 /**
- * Las dos caras del sorteo, por momento. Sin esto la ruleta diría "bien" y
- * "mal", que no quiere decir nada: hay que leer lo que está en juego.
+ * Decisión con el reloj corriendo. Si no elegís a tiempo se toma la opción
+ * conservadora: no decidir también es decidir.
+ *
+ * Todo pasa acá adentro: elegís, la bolilla cae sobre la barra de esa misma
+ * opción y debajo aparece qué pasó. Antes al elegir se reemplazaba la pantalla
+ * por otra y perdías de vista lo que habías apostado.
  */
-const CARAS: Partial<Record<string, CarasSorteo>> = {
-  penal_favor:      { pregunta: "¿la mete?",     bien: "GOL",      mal: "AFUERA" },
-  penal_ultima:     { pregunta: "¿la mete?",     bien: "GOL",      mal: "AFUERA" },
-  tiro_libre:       { pregunta: "¿entra?",       bien: "GOL",      mal: "NO ENTRA" },
-  mano_a_mano:      { pregunta: "¿entra?",       bien: "GOL",      mal: "NO ENTRA" },
-  penal_contra:     { pregunta: "¿la saca?",     bien: "LA ATAJA", mal: "GOL RIVAL" },
-  jugador_caliente: { pregunta: "¿se la banca?", bien: "AGUANTA",  mal: "ROJA" },
-};
-
 export default function MomentoOverlay({
   momento, resuelto, alineacion, ctx, onElegir, onSeguir,
 }: {
@@ -51,12 +45,11 @@ export default function MomentoOverlay({
   onSeguir: () => void;
 }) {
   const [restante, setRestante] = useState(momento.segundos * 10);
-  /** sorteo: la ruleta. jugada: el remate dibujado. texto: lo que pasó. */
-  const [fase, setFase] = useState<"sorteo" | "jugada" | "texto">("sorteo");
+  const [listo, setListo] = useState(false);
   const yaElegido = useRef(false);
-  const elegida = useRef<string | null>(null);
+  const [elegida, setElegida] = useState<string | null>(null);
   const color = COLOR[momento.tipo] ?? "var(--blanco)";
-  const tipoDef = DEFINICION[momento.tipo];
+  const tramos = TRAMOS[momento.tipo];
 
   useEffect(() => {
     if (resuelto) return;
@@ -66,6 +59,7 @@ export default function MomentoOverlay({
           clearInterval(t);
           if (!yaElegido.current) {
             yaElegido.current = true;
+            setElegida(momento.porDefecto);
             onElegir(momento.porDefecto);
           }
           return 0;
@@ -76,25 +70,23 @@ export default function MomentoOverlay({
     return () => clearInterval(t);
   }, [momento, resuelto, onElegir]);
 
+  const idElegida = elegida ?? momento.porDefecto;
+  const chanceElegida = chanceDe(momento, idElegida, alineacion, ctx);
+  /** Cuando la opción no era una apuesta (sacarlo del campo) no hay tirada. */
+  const haySorteo = resuelto !== null && chanceElegida !== null && !!tramos;
+
   useEffect(() => {
-    if (!resuelto) return;
-    const hayApuesta = chanceDe(momento, elegida.current ?? momento.porDefecto,
-                                alineacion, ctx) !== null && !!CARAS[momento.tipo];
-    if (!hayApuesta) setFase(tipoDef ? "jugada" : "texto");
-  }, [resuelto]);
+    if (resuelto && !haySorteo) setListo(true);
+  }, [resuelto, haySorteo]);
 
   const elegir = (id: string) => {
     if (yaElegido.current) return;
     yaElegido.current = true;
-    elegida.current = id;
+    setElegida(id);
     onElegir(id);
   };
 
   const proporcion = restante / (momento.segundos * 10);
-  const idElegida = elegida.current ?? momento.porDefecto;
-  const chanceElegida = chanceDe(momento, idElegida, alineacion, ctx);
-  const riesgoElegido = riesgoDe(momento, idElegida);
-  const caras = CARAS[momento.tipo];
 
   return (
     <div className="absolute inset-0 z-20 flex flex-col justify-end"
@@ -113,47 +105,67 @@ export default function MomentoOverlay({
           {momento.contexto}
         </p>
 
-        {!resuelto ? (
-          <>
-            {/* el reloj corriendo */}
-            <div className="mb-3 h-1 w-full overflow-hidden rounded-full"
-                 style={{ background: "var(--linea)" }}>
-              <div className="h-full rounded-full"
-                   style={{
-                     width: `${proporcion * 100}%`,
-                     background: proporcion < 0.3 ? "var(--critico)" : color,
-                     transition: "width 100ms linear",
-                   }} />
-            </div>
+        {/* el reloj corriendo, solo mientras hay algo que decidir */}
+        <div className="mb-3 h-1 w-full overflow-hidden rounded-full"
+             style={{ background: "var(--linea)", opacity: resuelto ? 0 : 1,
+                      transition: "opacity 200ms" }}>
+          <div className="h-full rounded-full"
+               style={{
+                 width: `${proporcion * 100}%`,
+                 background: proporcion < 0.3 ? "var(--critico)" : color,
+                 transition: "width 100ms linear",
+               }} />
+        </div>
 
-            <div className="flex flex-col gap-1.5">
-              {momento.opciones.map((o) => {
-                const chance = chanceDe(momento, o.id, alineacion, ctx);
-                const riesgo = riesgoDe(momento, o.id);
-                return (
-                  <button key={o.id} onClick={() => elegir(o.id)}
-                    className="w-full rounded-lg px-3.5 py-3 text-left"
-                    style={{ background: `color-mix(in srgb, ${color} 12%, var(--carbon))`,
-                             outline: `1px solid color-mix(in srgb, ${color} 45%, transparent)` }}>
-                    <span className="flex items-center gap-2">
-                      <span className="apellido min-w-0 flex-1 truncate text-[15px] leading-tight">
-                        {o.etiqueta}
-                      </span>
-                      {/* Sin esto no se notaba que elegir pateador cambia algo. */}
-                      {chance !== null && (
-                        <span className="num shrink-0 rounded px-1.5 py-0.5 text-[12px] font-extrabold"
-                              style={{ background: color, color: "#0a120d" }}>
-                          {Math.round(chance * 100)}%
-                        </span>
-                      )}
+        <div className="flex flex-col gap-1.5">
+          {momento.opciones.map((o) => {
+            const chance = chanceDe(momento, o.id, alineacion, ctx);
+            const riesgo = riesgoDe(momento, o.id);
+            const esta = resuelto !== null && o.id === idElegida;
+            /* Las descartadas se achican pero no se van: parte de la gracia es
+               ver la barra que dejaste pasar. */
+            const descartada = resuelto !== null && !esta;
+
+            return (
+              <button key={o.id} onClick={() => elegir(o.id)} disabled={resuelto !== null}
+                className="w-full rounded-lg text-left"
+                style={{
+                  padding: descartada ? "6px 14px" : "12px 14px",
+                  opacity: descartada ? 0.32 : 1,
+                  background: `color-mix(in srgb, ${color} ${esta ? 20 : 12}%, var(--carbon))`,
+                  outline: `1px solid color-mix(in srgb, ${color} ${esta ? 80 : 45}%, transparent)`,
+                  transition: "padding 240ms ease-out, opacity 240ms ease-out",
+                }}>
+                <span className="flex items-center gap-2">
+                  <span className="apellido min-w-0 flex-1 truncate leading-tight"
+                        style={{ fontSize: descartada ? 12 : 15, transition: "font-size 240ms" }}>
+                    {o.etiqueta}
+                  </span>
+                  {chance !== null && (
+                    <span className="num shrink-0 rounded px-1.5 py-0.5 text-[12px] font-extrabold"
+                          style={{ background: color, color: "#0a120d" }}>
+                      {Math.round(chance * 100)}%
                     </span>
+                  )}
+                </span>
+
+                {!descartada && (
+                  <>
                     <span className="block text-[11px]" style={{ color: "var(--tenue)" }}>
                       {o.detalle}
                     </span>
-                    {/* La barra muestra las dos caras: lo que ganás y lo que
-                        arriesgás. Sin el rojo, la de más porcentaje siempre
-                        ganaba y no había nada que decidir. */}
-                    {chance !== null && (
+
+                    {/* Antes de elegir: la apuesta. Después: la misma barra,
+                        con la bolilla cayendo adentro. */}
+                    {esta && haySorteo && tramos ? (
+                      <Sorteo
+                        chance={chanceElegida!}
+                        riesgo={riesgo?.contra ?? null}
+                        exito={resuelto!.exito}
+                        bien={tramos[0]} mal={tramos[1]}
+                        semilla={momento.minuto * 7 + o.id.length}
+                        onTermina={() => setListo(true)} />
+                    ) : chance !== null && (
                       <span className="mt-1.5 flex h-1.5 overflow-hidden rounded-full"
                             style={{ background: "var(--linea)" }}>
                         <span style={{ width: `${chance * 100}%`, background: color }} />
@@ -163,7 +175,8 @@ export default function MomentoOverlay({
                         )}
                       </span>
                     )}
-                    {riesgo && (
+
+                    {riesgo && !esta && (
                       <span className="mt-1 flex items-center gap-1 text-[10px] font-bold"
                             style={{ color: "#e07a6f" }}>
                         <span className="num rounded px-1"
@@ -173,59 +186,32 @@ export default function MomentoOverlay({
                         {riesgo.texto}
                       </span>
                     )}
-                  </button>
-                );
-              })}
-            </div>
-          </>
-        ) : (
-          <>
-            {/* El orden importa: primero se ve caer el dado, después el
-                remate, y recién al final el texto. Antes se pasaba de la
-                chance al resultado ya cocinado y el azar no se veía nunca. */}
-            {fase === "sorteo" && chanceElegida !== null && caras && (
-              <Sorteo
-                chance={chanceElegida}
-                exito={resuelto.exito}
-                riesgo={riesgoElegido?.contra ?? null}
-                caras={caras}
-                onTermina={() => setFase(tipoDef ? "jugada" : "texto")} />
-            )}
+                  </>
+                )}
+              </button>
+            );
+          })}
+        </div>
 
-            {fase === "jugada" && tipoDef && (
-              <Definicion
-                tipo={tipoDef}
-                entro={tipoDef === "remate" ? !!resuelto.golOlimpia : !!resuelto.golRival}
-                chance={chanceElegida}
-                semilla={momento.minuto * 7 + momento.titulo.length}
-                onTermina={() => setFase("texto")} />
-            )}
-
-            <div className="mb-3 rounded-lg px-3.5 py-3"
-                 style={{ opacity: fase === "texto" ? 1 : 0, transition: "opacity 260ms ease-out" }}
-                 >
-              <span className="apellido block text-[15px] leading-snug"
-                    style={{ color: resuelto.exito ? "var(--ok)" : "var(--critico)" }}>
-                {resuelto.texto}
+        {/* Lo que pasó, recién cuando la bolilla frenó. */}
+        {resuelto && (
+          <div style={{ opacity: listo ? 1 : 0, transition: "opacity 280ms ease-out" }}>
+            <p className="apellido mt-3 text-[15px] leading-snug"
+               style={{ color: resuelto.exito ? "var(--ok)" : "var(--critico)" }}>
+              {resuelto.texto}
+            </p>
+            {!!resuelto.levantaHinchada && (
+              <span className="num mt-1.5 inline-block rounded px-1.5 py-0.5 text-[11px] font-extrabold"
+                    style={{ background: "var(--ok)", color: "#0a120d" }}>
+                +{resuelto.levantaHinchada} hinchada
               </span>
-              {/* El premio de haber elegido la difícil, a la vista. */}
-              {!!resuelto.levantaHinchada && (
-                <span className="num mt-1.5 inline-block rounded px-1.5 py-0.5 text-[11px] font-extrabold"
-                      style={{ background: "var(--ok)", color: "#0a120d" }}>
-                  +{resuelto.levantaHinchada} hinchada
-                </span>
-              )}
-            </div>
-            <button onClick={onSeguir} disabled={fase !== "texto"}
-              className="w-full rounded-lg py-3.5 text-[14px] font-extrabold uppercase tracking-[0.14em]"
-              style={{
-                background: fase === "texto" ? "var(--blanco)" : "var(--carbon)",
-                color: fase === "texto" ? "var(--negro)" : "var(--apagado)",
-                transition: "background 260ms",
-              }}>
+            )}
+            <button onClick={onSeguir} disabled={!listo}
+              className="mt-3 w-full rounded-lg py-3.5 text-[14px] font-extrabold uppercase tracking-[0.14em]"
+              style={{ background: "var(--blanco)", color: "var(--negro)" }}>
               Seguir
             </button>
-          </>
+          </div>
         )}
       </div>
     </div>
