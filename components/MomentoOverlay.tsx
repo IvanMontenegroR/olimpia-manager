@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { chanceDe, riesgoDe, type Momento, type ResueltoMomento } from "@/engine/momentos.ts";
 import type { Alineacion, ContextoPartido } from "@/engine/tipos.ts";
 import Definicion, { type TipoDefinicion } from "./Definicion.tsx";
+import Sorteo, { type CarasSorteo } from "./Sorteo.tsx";
 
 const COLOR: Record<string, string> = {
   penal_favor: "var(--ok)",
@@ -26,6 +27,19 @@ const DEFINICION: Partial<Record<string, TipoDefinicion>> = {
   mano_a_mano: "remate",
 };
 
+/**
+ * Las dos caras del sorteo, por momento. Sin esto la ruleta diría "bien" y
+ * "mal", que no quiere decir nada: hay que leer lo que está en juego.
+ */
+const CARAS: Partial<Record<string, CarasSorteo>> = {
+  penal_favor:      { pregunta: "¿la mete?",     bien: "GOL",      mal: "AFUERA" },
+  penal_ultima:     { pregunta: "¿la mete?",     bien: "GOL",      mal: "AFUERA" },
+  tiro_libre:       { pregunta: "¿entra?",       bien: "GOL",      mal: "NO ENTRA" },
+  mano_a_mano:      { pregunta: "¿entra?",       bien: "GOL",      mal: "NO ENTRA" },
+  penal_contra:     { pregunta: "¿la saca?",     bien: "LA ATAJA", mal: "GOL RIVAL" },
+  jugador_caliente: { pregunta: "¿se la banca?", bien: "AGUANTA",  mal: "ROJA" },
+};
+
 export default function MomentoOverlay({
   momento, resuelto, alineacion, ctx, onElegir, onSeguir,
 }: {
@@ -37,7 +51,8 @@ export default function MomentoOverlay({
   onSeguir: () => void;
 }) {
   const [restante, setRestante] = useState(momento.segundos * 10);
-  const [animando, setAnimando] = useState(false);
+  /** sorteo: la ruleta. jugada: el remate dibujado. texto: lo que pasó. */
+  const [fase, setFase] = useState<"sorteo" | "jugada" | "texto">("sorteo");
   const yaElegido = useRef(false);
   const elegida = useRef<string | null>(null);
   const color = COLOR[momento.tipo] ?? "var(--blanco)";
@@ -61,15 +76,25 @@ export default function MomentoOverlay({
     return () => clearInterval(t);
   }, [momento, resuelto, onElegir]);
 
+  useEffect(() => {
+    if (!resuelto) return;
+    const hayApuesta = chanceDe(momento, elegida.current ?? momento.porDefecto,
+                                alineacion, ctx) !== null && !!CARAS[momento.tipo];
+    if (!hayApuesta) setFase(tipoDef ? "jugada" : "texto");
+  }, [resuelto]);
+
   const elegir = (id: string) => {
     if (yaElegido.current) return;
     yaElegido.current = true;
     elegida.current = id;
-    if (tipoDef) setAnimando(true);
     onElegir(id);
   };
 
   const proporcion = restante / (momento.segundos * 10);
+  const idElegida = elegida.current ?? momento.porDefecto;
+  const chanceElegida = chanceDe(momento, idElegida, alineacion, ctx);
+  const riesgoElegido = riesgoDe(momento, idElegida);
+  const caras = CARAS[momento.tipo];
 
   return (
     <div className="absolute inset-0 z-20 flex flex-col justify-end"
@@ -133,7 +158,8 @@ export default function MomentoOverlay({
                             style={{ background: "var(--linea)" }}>
                         <span style={{ width: `${chance * 100}%`, background: color }} />
                         {riesgo && (
-                          <span style={{ width: `${riesgo.contra * 100}%`, background: "#c0392b" }} />
+                          <span style={{ width: `${(1 - chance) * riesgo.contra * 100}%`,
+                                         background: "#c0392b" }} />
                         )}
                       </span>
                     )}
@@ -154,19 +180,29 @@ export default function MomentoOverlay({
           </>
         ) : (
           <>
-            {/* Primero se ve la jugada y recién después el texto: el remate
-                tiene que pasar en pantalla, no contarse. */}
-            {tipoDef && (
+            {/* El orden importa: primero se ve caer el dado, después el
+                remate, y recién al final el texto. Antes se pasaba de la
+                chance al resultado ya cocinado y el azar no se veía nunca. */}
+            {fase === "sorteo" && chanceElegida !== null && caras && (
+              <Sorteo
+                chance={chanceElegida}
+                exito={resuelto.exito}
+                riesgo={riesgoElegido?.contra ?? null}
+                caras={caras}
+                onTermina={() => setFase(tipoDef ? "jugada" : "texto")} />
+            )}
+
+            {fase === "jugada" && tipoDef && (
               <Definicion
                 tipo={tipoDef}
                 entro={tipoDef === "remate" ? !!resuelto.golOlimpia : !!resuelto.golRival}
-                chance={chanceDe(momento, elegida.current ?? momento.porDefecto, alineacion, ctx)}
+                chance={chanceElegida}
                 semilla={momento.minuto * 7 + momento.titulo.length}
-                onTermina={() => setAnimando(false)} />
+                onTermina={() => setFase("texto")} />
             )}
 
             <div className="mb-3 rounded-lg px-3.5 py-3"
-                 style={{ opacity: animando ? 0 : 1, transition: "opacity 260ms ease-out" }}
+                 style={{ opacity: fase === "texto" ? 1 : 0, transition: "opacity 260ms ease-out" }}
                  >
               <span className="apellido block text-[15px] leading-snug"
                     style={{ color: resuelto.exito ? "var(--ok)" : "var(--critico)" }}>
@@ -180,11 +216,11 @@ export default function MomentoOverlay({
                 </span>
               )}
             </div>
-            <button onClick={onSeguir} disabled={animando}
+            <button onClick={onSeguir} disabled={fase !== "texto"}
               className="w-full rounded-lg py-3.5 text-[14px] font-extrabold uppercase tracking-[0.14em]"
               style={{
-                background: animando ? "var(--carbon)" : "var(--blanco)",
-                color: animando ? "var(--apagado)" : "var(--negro)",
+                background: fase === "texto" ? "var(--blanco)" : "var(--carbon)",
+                color: fase === "texto" ? "var(--negro)" : "var(--apagado)",
                 transition: "background 260ms",
               }}>
               Seguir

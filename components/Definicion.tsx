@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 /**
  * La definición, dibujada.
@@ -28,12 +28,16 @@ export default function Definicion({ tipo, entro, chance, semilla, onTermina }: 
   onTermina: () => void;
 }) {
   const [fase, setFase] = useState<"espera" | "vuela" | "listo">("espera");
+  // igual que en el sorteo: el padre pasa un arrow inline y cada render del
+  // partido reiniciaba el remate
+  const avisar = useRef(onTermina);
+  avisar.current = onTermina;
 
   useEffect(() => {
     const a = setTimeout(() => setFase("vuela"), 120);
-    const b = setTimeout(() => { setFase("listo"); onTermina(); }, 1500);
+    const b = setTimeout(() => { setFase("listo"); avisar.current(); }, 1400);
     return () => { clearTimeout(a); clearTimeout(b); };
-  }, [onTermina]);
+  }, []);
 
   // A qué rincón va. Si entró, adentro de los tres palos; si no, afuera o al
   // cuerpo del arquero.

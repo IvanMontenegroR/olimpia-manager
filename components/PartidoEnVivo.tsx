@@ -117,7 +117,9 @@ export default function PartidoEnVivo({
   };
 
   useEffect(() => {
-    if (!corriendo || terminado) return;
+    // con un momento abierto el partido se detiene: si no, decidís un mano a
+    // mano del minuto 11 mientras el marcador ya va por el 45.
+    if (!corriendo || terminado || momento) return;
     const t = setTimeout(() => {
       const siguiente = minuto + 1;
       const ahora: EventoRelato[] = [];
@@ -154,7 +156,7 @@ export default function PartidoEnVivo({
       }
     }, VELOCIDADES[vel].ms);
     return () => clearTimeout(t);
-  }, [minuto, corriendo, vel, pendientes, terminado, cambios]);
+  }, [minuto, corriendo, vel, pendientes, terminado, cambios, momento]);
 
   useEffect(() => {
     scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: "smooth" });
