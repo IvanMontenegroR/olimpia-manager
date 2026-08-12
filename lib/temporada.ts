@@ -574,6 +574,13 @@ export interface CierrePartido {
 const AMARILLAS_PARA_SUSPENSION = 5;
 
 /** Lo que falta de Sub-18 y si el ritmo alcanza para llegar. */
+/** Lo que suelta el sponsor cuando el título llega de verdad. */
+function pagarBonus(n: Partida, que: string) {
+  n.dineroUsd += 2_500_000;
+  n.bitacora.push({ dia: n.dia, marca: "plata",
+    texto: `El sponsor pagó el bonus por objetivos: ${miles(2_500_000)} por ganar ${que}.` });
+}
+
 export function estadoSub18(p: Partida) {
   const faltan = Math.max(0, 900 - p.minutosSub18);
   const fechasRestantes = Math.max(0, TOTAL_FECHAS - p.fechaActual + 1);
@@ -744,18 +751,18 @@ export function cerrarPartido(p: Partida, partido: PartidoUI, c: CierrePartido):
         `La APF descuenta 3 puntos.` });
     }
 
-    // el sponsor con bonus paga cuando hay algo que festejar
-    if (n.sponsorConBonus && gano && n.fechaActual > TOTAL_FECHAS) {
-      n.dineroUsd += 2_500_000;
-      n.bitacora.push({ dia: p.dia, marca: "plata",
-        texto: "El sponsor pagó el bonus por objetivos." });
-    }
 
     // se terminó el torneo: campeón o no, la temporada merece su pantalla
     if (n.fechaActual > TOTAL_FECHAS) {
       const tabla = tablaDe(n);
       const yo = tabla.findIndex((f) => f.id === "olimpia") + 1;
       const mios = tabla.find((f) => f.id === "olimpia");
+      /*
+       * El bonus del sponsor pagaba por ganar el último partido de la fecha 22
+       * y no por salir campeón, que es lo que dice el contrato. Ahora paga por
+       * el título, que es lo que estabas firmando.
+       */
+      if (n.sponsorConBonus && yo === 1) pagarBonus(n, "el Clausura");
       n.hito = yo === 1
         ? {
             tipo: "campeon_liga",
@@ -838,6 +845,7 @@ function avanzarLlave(n: Partida, c: CierrePartido, partido: PartidoUI) {
   const siguiente = SIGUIENTE[copa.ronda];
   if (siguiente === "campeon") {
     copa.ronda = "campeon";
+    if (n.sponsorConBonus) pagarBonus(n, "la Sudamericana");
     n.bitacora.push({ dia: n.dia, marca: "titulo",
       texto: "Olimpia campeón de la Copa Sudamericana." });
     n.hito = {
