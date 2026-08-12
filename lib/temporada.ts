@@ -164,8 +164,6 @@ export interface Partida {
   despedido: string | null;
   /** Lo que hay que mostrar a pantalla completa antes de seguir. */
   hito: Hito | null;
-  /** Cómo salió la última apuesta, para poder mostrarla antes de continuar. */
-  resultadoApuesta: { salioBien: boolean; texto: string; chance: number } | null;
 
   /**
    * La oportunidad de fichaje que está sobre la mesa, si hay alguna. Tiene
@@ -295,7 +293,6 @@ export function partidaNueva(): Partida {
     paciencia: 70,
     despedido: null,
     hito: null,
-    resultadoApuesta: null,
     estrella: null,
     estrellasVistas: [],
     copa: { ronda: "octavos", rivalId: "vasco_da_gama", globalO: 0, globalR: 0, jugadosEnRonda: 0 },
@@ -357,7 +354,6 @@ export function cargar(): Partida {
     p.enReserva ??= PLANTEL.filter((j) => j.reserva).map((j) => j.id);
     p.aclimatacion ??= 0;
     p.hito ??= null;
-    p.resultadoApuesta ??= null;
     p.estrella ??= null;
     p.estrellasVistas ??= [];
     p.incorporados ??= [];
@@ -1186,6 +1182,19 @@ function sumarPibe(n: Partida, pueblo: string): void {
 
 // ---------------------------------------------------------------- decisiones
 
+/**
+ * Cómo sale una apuesta de las del día a día.
+ *
+ * Está afuera de `resolverAsunto` para que la pantalla pueda preguntarlo antes
+ * de aplicar nada y mostrar la bolilla cayendo. Depende solo del asunto, la
+ * opción y el día, así que preguntarlo dos veces da lo mismo.
+ */
+export function salioBienLaApuesta(
+  asuntoId: string, opcionId: string, dia: string, exito: number,
+): boolean {
+  return new Rng(`apuesta-${asuntoId}-${opcionId}-${dia}`).chance(exito);
+}
+
 export function resolverAsunto(p: Partida, asuntoId: string, opcionId: string): Partida {
   const n: Partida = estructurado(p);
   const a = n.pendientes.find((x) => x.id === asuntoId);
@@ -1251,18 +1260,17 @@ export function resolverAsunto(p: Partida, asuntoId: string, opcionId: string): 
   // situación de prensa, vestuario o dirigencia
   let efecto = a.efectos?.[opcionId];
 
-  // Si la opción era una apuesta, acá se tira la moneda. El resultado va en la
-  // partida para que la pantalla lo pueda mostrar antes de seguir.
+  /*
+   * Si la opción era una apuesta, acá se aplica lo que salió. El sorteo en sí
+   * lo hace `salioBienLaApuesta`, que la pantalla llama primero para poder
+   * animar la bolilla: como la semilla es la misma, las dos ven el mismo
+   * resultado y nadie tira el dado dos veces.
+   */
   const apuesta = a.situacion?.opciones.find((o) => o.id === opcionId)?.apuesta;
+  let salioBien = true;
   if (efecto && apuesta) {
-    const rng = new Rng(`apuesta-${a.id}-${opcionId}-${n.dia}`);
-    const salioBien = rng.chance(apuesta.exito);
+    salioBien = salioBienLaApuesta(a.id, opcionId, n.dia, apuesta.exito);
     if (!salioBien && efecto.siSaleMal) efecto = { ...efecto.siSaleMal };
-    n.resultadoApuesta = {
-      salioBien,
-      texto: salioBien ? apuesta.bien : apuesta.mal,
-      chance: apuesta.exito,
-    };
   }
 
   if (efecto) {
@@ -1291,7 +1299,7 @@ export function resolverAsunto(p: Partida, asuntoId: string, opcionId: string): 
     n.bitacora.push({
       dia: n.dia,
       texto: efecto.texto,
-      marca: n.resultadoApuesta && !n.resultadoApuesta.salioBien ? "golpe" : undefined,
+      marca: apuesta && !salioBien ? "golpe" : undefined,
     });
   }
   return n;

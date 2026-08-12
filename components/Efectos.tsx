@@ -9,6 +9,9 @@ export interface EfectoVisible {
   condicionTodos?: number;
   moralDe?: { id: string; delta: number };
   moralTexto?: string;
+  paciencia?: number;
+  /** Los números del otro desenlace, si la opción era una apuesta. */
+  siSaleMal?: EfectoVisible;
 }
 
 /**
@@ -26,6 +29,7 @@ export default function Efectos({ e }: { e: EfectoVisible }) {
   }
   if (e.ambiente) chips.push({ texto: `${signo(e.ambiente)} vestuario`, bueno: e.ambiente > 0 });
   if (e.hinchada) chips.push({ texto: `${signo(e.hinchada)} hinchada`, bueno: e.hinchada > 0 });
+  if (e.paciencia) chips.push({ texto: `${signo(e.paciencia)} dirigencia`, bueno: e.paciencia > 0 });
   if (e.condicionTodos) {
     chips.push({
       texto: `${signo(e.condicionTodos)} condición a todo el plantel`,

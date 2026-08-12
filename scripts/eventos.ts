@@ -34,7 +34,6 @@ for (let s = 0; s < temporadas; s++) {
       continue;
     }
     if (p.hito) { p = { ...p, hito: null }; continue; }
-    if (p.resultadoApuesta) { p = { ...p, resultadoApuesta: null }; continue; }
     if (p.estrella) {
       porTipo.set("estrella", (porTipo.get("estrella") ?? 0) + 1);
       p = rng.chance(0.3) ? ficharEstrella(p) : rechazarEstrella(p);

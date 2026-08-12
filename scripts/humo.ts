@@ -59,8 +59,7 @@ for (let s = 0; s < temporadas; s++) {
         if (traido) { p = traido; continue; }
       }
       if (p.hito) { p = { ...p, hito: null }; continue; }
-      if (p.resultadoApuesta) { p = { ...p, resultadoApuesta: null }; continue; }
-      if (p.estrella) {
+        if (p.estrella) {
         p = rng.chance(0.3) ? ficharEstrella(p) : rechazarEstrella(p);
         continue;
       }

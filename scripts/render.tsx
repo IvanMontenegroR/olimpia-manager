@@ -16,7 +16,6 @@ void React;
 import Asuntos from "@/components/Asuntos.tsx";
 import Mercado from "@/components/Mercado.tsx";
 import PantallaEstrella from "@/components/PantallaEstrella.tsx";
-import PantallaApuesta from "@/components/PantallaApuesta.tsx";
 import PantallaHito from "@/components/PantallaHito.tsx";
 import Escritorio from "@/components/Escritorio.tsx";
 import { ESTRELLAS } from "@/engine/estrellas.ts";
@@ -158,12 +157,6 @@ for (const [que, p2] of escritorios) {
                   onJugarDirecto={() => {}} />);
   });
 }
-
-probar("apuesta", () => {
-  renderToStaticMarkup(
-    <PantallaApuesta resultado={{ salioBien: false, texto: "x", chance: 0.6 }}
-                     onSeguir={() => {}} />);
-});
 
 // ----------------------------------------------------------------
 if (fallas.length) {
