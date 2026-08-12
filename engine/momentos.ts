@@ -45,6 +45,85 @@ export interface ResueltoMomento {
 
 const apellido = (j: Jugador) => j.apellido;
 
+const acotar = (p: number, min: number, max: number) => Math.max(min, Math.min(max, p));
+
+/**
+ * La chance de que salga bien cada opción, sin tirar el dado.
+ *
+ * Existe para poder mostrarla antes de elegir. Sin esto el azar estaba dentro
+ * de la resolución y desde afuera parecía que daba igual a quién ponías a
+ * patear, cuando en realidad un definidor suma nueve puntos y un juvenil
+ * pierde nueve en la última pelota del partido.
+ *
+ * Los rasgos irregulares se muestran con su media: son los únicos donde el
+ * número que ves no es exactamente el que se juega, y por eso el detalle
+ * avisa que es impredecible.
+ */
+export function chanceDe(
+  m: Momento, opcionId: string, a: Alineacion, ctx: ContextoPartido,
+): number | null {
+  const buscar = (id?: string) => a.once.find((j) => j.id === id);
+  const nivel = (j: Jugador) => nivelEfectivo(j, a.puestos.get(j.id) ?? j.posicion, ctx);
+
+  switch (m.tipo) {
+    case "penal_favor": {
+      const j = buscar(opcionId);
+      if (!j) return null;
+      let p = 0.58 + (nivel(j) - 55) * 0.006;
+      if (j.rasgos.includes("definidor")) p += 0.09;
+      if (j.rasgos.includes("definicion_irregular")) p -= 0.03; // media del ruido
+      if (j.condicion < 50) p -= 0.07;
+      return acotar(p, 0.32, 0.93);
+    }
+    case "penal_ultima": {
+      const j = buscar(opcionId);
+      if (!j) return null;
+      let p = 0.52 + (nivel(j) - 55) * 0.005;
+      p += Math.min(0.12, j.partidos_internacionales * 0.002);
+      if (j.edad <= 21) p -= 0.09;
+      if (j.rasgos.includes("definidor")) p += 0.08;
+      if (j.rasgos.includes("definicion_irregular")) p -= 0.06;
+      return acotar(p, 0.25, 0.92);
+    }
+    case "penal_contra": {
+      const arq = a.once.find((j) => (a.puestos.get(j.id) ?? j.posicion) === "ARQ");
+      if (!arq) return null;
+      // un tercio de acertar el palo, y si acertás depende del arquero
+      let siAcierta = 0.34 + (nivel(arq) - 60) * 0.008;
+      if (opcionId === "centro") siAcierta += 0.08;
+      return acotar((1 / 3) * acotar(siAcierta, 0.02, 0.7) + (2 / 3) * 0.05, 0.02, 0.7);
+    }
+    case "tiro_libre": {
+      if (opcionId === "arco") {
+        const j = buscar(m.opciones[0].jugadorId);
+        return j ? acotar(0.10 + (nivel(j) - 60) * 0.004, 0.05, 0.6) : null;
+      }
+      if (opcionId === "centro") {
+        return a.once.some((x) => x.rasgos.includes("juego_aereo")) ? 0.20 : 0.11;
+      }
+      return 0.07;
+    }
+    case "mano_a_mano": {
+      const j = buscar(m.opciones[0].jugadorId);
+      if (!j) return null;
+      const base = (nivel(j) - 55) * 0.006;
+      let p = opcionId === "cruzar" ? 0.52 + base
+        : opcionId === "picar" ? 0.38 + base
+        : 0.44 + base;
+      if (j.rasgos.includes("definidor")) p += 0.08;
+      if (j.rasgos.includes("definicion_irregular")) p -= 0.04;
+      return acotar(p, 0.15, 0.9);
+    }
+    case "jugador_caliente": {
+      if (opcionId === "sacar") return null;      // no es una apuesta: es seguro
+      if (opcionId === "hablar") return 0.58 + 0.42 * 0.65; // se calma, o zafa igual
+      return 0.68;                                 // dejarlo: no lo expulsan
+    }
+    default:
+      return null;
+  }
+}
+
 /** Ordena a los del once por lo bien que patearían. */
 function pateadores(a: Alineacion, ctx: ContextoPartido): Jugador[] {
   const valor = (j: Jugador) => {

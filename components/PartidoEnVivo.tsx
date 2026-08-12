@@ -582,6 +582,7 @@ export default function PartidoEnVivo({
 
       {momento && (
         <MomentoOverlay momento={momento} resuelto={resueltoMomento}
+                        alineacion={alineacion} ctx={ctx}
                         onElegir={elegirEnMomento} onSeguir={seguirTrasMomento} />
       )}
 

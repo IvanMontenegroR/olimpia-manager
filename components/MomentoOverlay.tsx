@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { Momento, ResueltoMomento } from "@/engine/momentos.ts";
+import { chanceDe, type Momento, type ResueltoMomento } from "@/engine/momentos.ts";
+import type { Alineacion, ContextoPartido } from "@/engine/tipos.ts";
+import Definicion, { type TipoDefinicion } from "./Definicion.tsx";
 
 const COLOR: Record<string, string> = {
   penal_favor: "var(--ok)",
@@ -15,17 +17,31 @@ const COLOR: Record<string, string> = {
  * Decisión con el reloj corriendo. Si no elegís a tiempo se toma la opción
  * conservadora: no decidir también es decidir.
  */
+/** Los momentos que terminan en un remate al arco se dibujan. */
+const DEFINICION: Partial<Record<string, TipoDefinicion>> = {
+  penal_favor: "remate",
+  penal_ultima: "remate",
+  penal_contra: "atajada",
+  tiro_libre: "remate",
+  mano_a_mano: "remate",
+};
+
 export default function MomentoOverlay({
-  momento, resuelto, onElegir, onSeguir,
+  momento, resuelto, alineacion, ctx, onElegir, onSeguir,
 }: {
   momento: Momento;
   resuelto: ResueltoMomento | null;
+  alineacion: Alineacion;
+  ctx: ContextoPartido;
   onElegir: (opcionId: string) => void;
   onSeguir: () => void;
 }) {
   const [restante, setRestante] = useState(momento.segundos * 10);
+  const [animando, setAnimando] = useState(false);
   const yaElegido = useRef(false);
+  const elegida = useRef<string | null>(null);
   const color = COLOR[momento.tipo] ?? "var(--blanco)";
+  const tipoDef = DEFINICION[momento.tipo];
 
   useEffect(() => {
     if (resuelto) return;
@@ -48,6 +64,8 @@ export default function MomentoOverlay({
   const elegir = (id: string) => {
     if (yaElegido.current) return;
     yaElegido.current = true;
+    elegida.current = id;
+    if (tipoDef) setAnimando(true);
     onElegir(id);
   };
 
@@ -84,34 +102,68 @@ export default function MomentoOverlay({
             </div>
 
             <div className="flex flex-col gap-1.5">
-              {momento.opciones.map((o) => (
-                <button key={o.id} onClick={() => elegir(o.id)}
-                  className="w-full rounded-lg px-3.5 py-3 text-left"
-                  style={{ background: `color-mix(in srgb, ${color} 12%, var(--carbon))`,
-                           outline: `1px solid color-mix(in srgb, ${color} 45%, transparent)` }}>
-                  <span className="apellido block text-[15px] leading-tight">{o.etiqueta}</span>
-                  <span className="block text-[11px]" style={{ color: "var(--tenue)" }}>
-                    {o.detalle}
-                  </span>
-                </button>
-              ))}
+              {momento.opciones.map((o) => {
+                const chance = chanceDe(momento, o.id, alineacion, ctx);
+                return (
+                  <button key={o.id} onClick={() => elegir(o.id)}
+                    className="w-full rounded-lg px-3.5 py-3 text-left"
+                    style={{ background: `color-mix(in srgb, ${color} 12%, var(--carbon))`,
+                             outline: `1px solid color-mix(in srgb, ${color} 45%, transparent)` }}>
+                    <span className="flex items-center gap-2">
+                      <span className="apellido min-w-0 flex-1 truncate text-[15px] leading-tight">
+                        {o.etiqueta}
+                      </span>
+                      {/* Sin esto no se notaba que elegir pateador cambia algo. */}
+                      {chance !== null && (
+                        <span className="num shrink-0 rounded px-1.5 py-0.5 text-[12px] font-extrabold"
+                              style={{ background: color, color: "#0a120d" }}>
+                          {Math.round(chance * 100)}%
+                        </span>
+                      )}
+                    </span>
+                    <span className="block text-[11px]" style={{ color: "var(--tenue)" }}>
+                      {o.detalle}
+                    </span>
+                    {chance !== null && (
+                      <span className="mt-1.5 block h-1 overflow-hidden rounded-full"
+                            style={{ background: "var(--linea)" }}>
+                        <span className="block h-full rounded-full"
+                              style={{ width: `${chance * 100}%`, background: color }} />
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </>
         ) : (
           <>
+            {/* Primero se ve la jugada y recién después el texto: el remate
+                tiene que pasar en pantalla, no contarse. */}
+            {tipoDef && (
+              <Definicion
+                tipo={tipoDef}
+                entro={tipoDef === "remate" ? !!resuelto.golOlimpia : !!resuelto.golRival}
+                chance={chanceDe(momento, elegida.current ?? momento.porDefecto, alineacion, ctx)}
+                semilla={momento.minuto * 7 + momento.titulo.length}
+                onTermina={() => setAnimando(false)} />
+            )}
+
             <div className="mb-3 rounded-lg px-3.5 py-3"
-                 style={{
-                   background: `color-mix(in srgb, ${resuelto.exito ? "#3fa76a" : "#c0392b"} 16%, var(--carbon))`,
-                   outline: `1px solid color-mix(in srgb, ${resuelto.exito ? "#3fa76a" : "#c0392b"} 50%, transparent)`,
-                 }}>
+                 style={{ opacity: animando ? 0 : 1, transition: "opacity 260ms ease-out" }}
+                 >
               <span className="apellido block text-[15px] leading-snug"
                     style={{ color: resuelto.exito ? "var(--ok)" : "var(--critico)" }}>
                 {resuelto.texto}
               </span>
             </div>
-            <button onClick={onSeguir}
+            <button onClick={onSeguir} disabled={animando}
               className="w-full rounded-lg py-3.5 text-[14px] font-extrabold uppercase tracking-[0.14em]"
-              style={{ background: "var(--blanco)", color: "var(--negro)" }}>
+              style={{
+                background: animando ? "var(--carbon)" : "var(--blanco)",
+                color: animando ? "var(--apagado)" : "var(--negro)",
+                transition: "background 260ms",
+              }}>
               Seguir
             </button>
           </>
