@@ -20,6 +20,7 @@ import type { Alineacion } from "../engine/tipos.ts";
 const TIPOS: TipoMomento[] = [
   "penal_favor", "penal_contra", "tiro_libre", "jugador_caliente",
   "mano_a_mano", "penal_ultima", "rival_con_diez",
+  "festejo", "arquero_al_area", "cerrar_o_seguir",
 ];
 
 const temporadas = Number(process.argv[2] ?? 40);

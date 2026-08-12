@@ -14,6 +14,8 @@ export interface Efecto {
   dineroUsd?: number;
   moralDe?: { id: string; delta: number };
   condicionTodos?: number;
+  /** Cuánto te banca la dirigencia después de esto. */
+  paciencia?: number;
   texto: string;
   /** Si la opción es una apuesta, el otro resultado posible. */
   siSaleMal?: Omit<Efecto, "siSaleMal">;
@@ -60,6 +62,12 @@ type Contexto = {
   /** Para las que solo tienen sentido en cierto momento. */
   esSemanaDeClasico?: boolean;
   faltanDias?: number | null;
+  /**
+   * Las que ya te tocaron esta temporada. Sin esto el sorteo era con
+   * reposición y el sponsor te aparecía cuatro veces mientras había doce
+   * situaciones que no veías nunca.
+   */
+  vistas?: string[];
 };
 
 type Plantilla = {
@@ -849,10 +857,427 @@ const PLANTILLAS: Plantilla[] = [
       },
     }),
   },
+  // ------------------------------------------------- las que se juegan al azar
+  {
+    id: "arbitro_denuncia",
+    cuando: (c) => c.racha.includes("P"),
+    armar: () => ({
+      s: {
+        id: "arbitro_denuncia",
+        escena: "prensa",
+        titulo: "El arbitraje del domingo",
+        contexto: "Te cobraron dos penales en contra que no eran. El periodismo te " +
+          "pone el micrófono y espera que estalles.",
+        opciones: [
+          { id: "denunciar", etiqueta: "Salir a denunciarlo",
+            detalle: "La gente se prende, pero la APF puede tomarlo como desacato",
+            apuesta: { exito: 0.55,
+              bien: "La APF aparta al árbitro y quedás como el que la peleó",
+              mal: "Te abren expediente y la dirigencia se agarra la cabeza" } },
+          { id: "medido", etiqueta: "Marcarlo sin nombrarlo",
+            detalle: "Queda dicho y no te expone" },
+          { id: "callar", etiqueta: "No hablar del tema",
+            detalle: "Se apaga solo, pero la gente lo lee como que no bancás" },
+        ],
+      },
+      efectos: {
+        denunciar: {
+          hinchada: 14, ambiente: 5,
+          texto: "Saliste a bancar al plantel y la gente se prendió.",
+          siSaleMal: { paciencia: -12, hinchada: 4, dineroUsd: -40_000,
+            texto: "Expediente abierto y multa. La dirigencia no lo festejó." },
+        },
+        medido: { hinchada: 4, texto: "Lo marcaste sin dar nombres. Quedó dicho." },
+        callar: { hinchada: -5, ambiente: -2,
+          texto: "No hablaste del arbitraje. Adentro lo notaron." },
+      },
+    }),
+  },
+  {
+    id: "video_boliche",
+    cuando: (c) => c.plantel.some((j) => j.edad <= 24),
+    armar: (c, rng) => {
+      const j = rng.elegir(c.plantel.filter((x) => x.edad <= 24));
+      return {
+        s: {
+          id: "video_boliche",
+          escena: "prensa",
+          titulo: `Un video de ${j.apellido}`,
+          contexto: `Circula un video de ${j.apellido} de madrugada, tres días antes del ` +
+            "partido. Todavía no llegó a la tele pero está en todos los grupos.",
+          opciones: [
+            { id: "adelantarse", etiqueta: "Adelantarse y contarlo vos",
+              detalle: "Si le pegás primero al tema se desactiva; si no, lo agrandás",
+              apuesta: { exito: 0.62,
+                bien: "Saliste antes que la tele y se murió el tema",
+                mal: "Le diste aire y ahora hablan de eso toda la semana" } },
+            { id: "multar", etiqueta: "Multarlo puertas adentro",
+              detalle: "Queda claro el límite, y él lo va a sentir" },
+            { id: "nada", etiqueta: "Hacer como que no viste nada",
+              detalle: "No pasa nada hoy. El plantel toma nota igual" },
+          ],
+        },
+        efectos: {
+          adelantarse: {
+            hinchada: 6, ambiente: 3,
+            texto: "Lo contaste vos primero y el tema se apagó en un día.",
+            siSaleMal: { hinchada: -8, ambiente: -5, moralDe: { id: j.id, delta: -8 },
+              texto: `Se habló del video toda la semana. ${j.apellido} quedó marcado.` },
+          },
+          multar: { ambiente: 4, dineroUsd: 15_000, moralDe: { id: j.id, delta: -10 },
+            texto: `Se multó a ${j.apellido}. El resto entendió el mensaje.` },
+          nada: { ambiente: -5, moralDe: { id: j.id, delta: 5 },
+            texto: "No se dijo nada del video. Algunos lo leyeron como debilidad." },
+        },
+      };
+    },
+  },
+  {
+    id: "luz_del_defensores",
+    cuando: (c) => (c.faltanDias ?? 99) >= 2 && (c.faltanDias ?? 99) <= 5,
+    armar: () => ({
+      s: {
+        id: "luz_del_defensores",
+        escena: "cancha",
+        titulo: "Se quemó la iluminación",
+        contexto: "Falló un sector de las torres del Defensores. O se arregla a las " +
+          "corridas o el partido se juega a las tres de la tarde, con cuarenta grados.",
+        opciones: [
+          { id: "arreglar", etiqueta: "Pagar el arreglo urgente",
+            detalle: "Sale caro y hay que confiar en que llegan a tiempo",
+            apuesta: { exito: 0.7,
+              bien: "Llegaron y se juega de noche con el estadio lleno",
+              mal: "No terminaron: se juega de tarde y encima gastaste" } },
+          { id: "tarde", etiqueta: "Jugar a las tres de la tarde",
+            detalle: "No se gasta un peso, pero va menos gente y se corre peor" },
+        ],
+      },
+      efectos: {
+        arreglar: {
+          dineroUsd: -110_000, hinchada: 6,
+          texto: "Se arregló a tiempo. Partido de noche y el Defensores lleno.",
+          siSaleMal: { dineroUsd: -110_000, hinchada: -6, condicionTodos: -4,
+            texto: "No llegaron con el arreglo. Se jugó de tarde y encima se pagó." },
+        },
+        tarde: { hinchada: -7, condicionTodos: -4,
+          texto: "Se juega a las tres de la tarde. Va a haber media cancha vacía." },
+      },
+    }),
+  },
+  {
+    id: "oferta_al_dt",
+    cuando: (c) => c.posicion <= 3 || c.racha.filter((r) => r === "G").length >= 2,
+    armar: () => ({
+      s: {
+        id: "oferta_al_dt",
+        escena: "dirigencia",
+        titulo: "Te vinieron a buscar",
+        contexto: "Un club de afuera pregunta por vos. No es una oferta formal todavía, " +
+          "pero la dirigencia ya se enteró y quiere saber qué vas a hacer.",
+        opciones: [
+          { id: "quedarme", etiqueta: "Decir que te quedás",
+            detalle: "La dirigencia y la gente lo agradecen" },
+          { id: "usarla", etiqueta: "Usarla para pedir refuerzos",
+            detalle: "Si te la compran entra plata; si se ofenden, te quedás sin crédito",
+            apuesta: { exito: 0.5,
+              bien: "Aflojaron la caja para retenerte",
+              mal: "Les cayó pésimo que los aprietes" } },
+          { id: "escuchar", etiqueta: "Escuchar qué ofrecen",
+            detalle: "Nadie te lo va a perdonar acá adentro" },
+        ],
+      },
+      efectos: {
+        quedarme: { paciencia: 10, hinchada: 8, ambiente: 4,
+          texto: "Dijiste que te quedás y en el club se respiró." },
+        usarla: {
+          dineroUsd: 500_000, paciencia: 4,
+          texto: "Aflojaron la caja con tal de retenerte.",
+          siSaleMal: { paciencia: -18, ambiente: -5,
+            texto: "Les cayó pésimo el apriete. Quedaste sin crédito arriba." },
+        },
+        escuchar: { paciencia: -14, hinchada: -10,
+          texto: "Se supo que escuchaste la oferta. Nadie te lo perdonó." },
+      },
+    }),
+  },
+  {
+    id: "socio_vitalicio",
+    cuando: () => true,
+    armar: () => ({
+      s: {
+        id: "socio_vitalicio",
+        escena: "tribuna",
+        titulo: "El socio de toda la vida",
+        contexto: "Don Ramón tiene ochenta y siete años y es socio desde el 62. Pide " +
+          "entrar al vestuario antes del partido a saludar al plantel.",
+        opciones: [
+          { id: "recibirlo", etiqueta: "Que entre al vestuario",
+            detalle: "Puede ser el mejor discurso de la temporada, o una distracción",
+            apuesta: { exito: 0.78,
+              bien: "Habló tres minutos y los dejó a todos con la piel de gallina",
+              mal: "Se emocionó, se puso a llorar y quedó un clima raro" } },
+          { id: "cancha", etiqueta: "Homenajearlo en la cancha",
+            detalle: "Lo ve toda la tribuna y no toca el vestuario" },
+        ],
+      },
+      efectos: {
+        recibirlo: {
+          ambiente: 12, hinchada: 5,
+          texto: "Don Ramón habló tres minutos y los dejó a todos temblando.",
+          siSaleMal: { ambiente: -4, hinchada: 5,
+            texto: "Se emocionó de más y quedó un clima raro antes de salir." },
+        },
+        cancha: { hinchada: 10, ambiente: 3,
+          texto: "Se lo homenajeó en el círculo central. El Defensores se puso de pie." },
+      },
+    }),
+  },
+  {
+    id: "kinesiologo",
+    cuando: (c) => c.plantel.filter((j) => j.condicion < 78).length >= 4,
+    armar: () => ({
+      s: {
+        id: "kinesiologo",
+        escena: "sanidad",
+        titulo: "El cuerpo médico pide refuerzos",
+        contexto: "Hay demasiados tocados. El médico quiere sumar un kinesiólogo más " +
+          "y equipo de recuperación. Sale plata y no hay garantía.",
+        opciones: [
+          { id: "invertir", etiqueta: "Traerlo y comprar el equipo",
+            detalle: "Si engancha, todo el plantel se recupera mejor",
+            apuesta: { exito: 0.72,
+              bien: "El plantel entero levantó físicamente",
+              mal: "No cambió nada y la plata ya se fue" } },
+          { id: "esperar", etiqueta: "Aguantar con lo que hay",
+            detalle: "No se gasta, y el que está tocado sigue tocado" },
+        ],
+      },
+      efectos: {
+        invertir: {
+          dineroUsd: -150_000, condicionTodos: 9, ambiente: 4,
+          texto: "Se sumó el kinesiólogo y el plantel levantó físicamente.",
+          siSaleMal: { dineroUsd: -150_000, condicionTodos: 1,
+            texto: "Se gastó la plata y en la práctica no cambió nada." },
+        },
+        esperar: { ambiente: -4,
+          texto: "No se sumó nadie al cuerpo médico. Los tocados siguen tocados." },
+      },
+    }),
+  },
+  {
+    id: "banderazo_visitante",
+    cuando: (c) => (c.faltanDias ?? 99) <= 3 && c.hinchada >= 45,
+    armar: () => ({
+      s: {
+        id: "banderazo_visitante",
+        escena: "ruta",
+        titulo: "La gente quiere ir",
+        contexto: "Se están organizando micros para acompañar al equipo. Piden que el " +
+          "club ponga la mitad del viaje.",
+        opciones: [
+          { id: "pagar", etiqueta: "Poner los micros",
+            detalle: "Sale plata y el aliento se escucha del otro lado",
+            apuesta: { exito: 0.8,
+              bien: "Coparon la tribuna visitante y se escuchó todo el partido",
+              mal: "Hubo incidentes en la ruta y el club quedó pegado" } },
+          { id: "no", etiqueta: "Que se arreglen solos",
+            detalle: "No se gasta, pero van cuatro gatos locos" },
+        ],
+      },
+      efectos: {
+        pagar: {
+          dineroUsd: -70_000, hinchada: 13, ambiente: 5,
+          texto: "Coparon la visitante. Se escuchó el aliento los noventa minutos.",
+          siSaleMal: { dineroUsd: -70_000, hinchada: -6, paciencia: -6,
+            texto: "Hubo incidentes en la ruta y el club quedó pegado al quilombo." },
+        },
+        no: { hinchada: -6,
+          texto: "El club no puso nada. Fueron cuatro gatos locos a la visitante." },
+      },
+    }),
+  },
+  {
+    id: "reserva_golea",
+    cuando: (c) => c.plantel.some((j) => j.reserva && j.edad <= 21),
+    armar: (c, rng) => {
+      const j = rng.elegir(c.plantel.filter((x) => x.reserva && x.edad <= 21));
+      return {
+        s: {
+          id: "reserva_golea",
+          escena: "predio",
+          titulo: `${j.apellido} la está rompiendo en reserva`,
+          contexto: `Lleva cinco goles en tres partidos y el predio habla de él. El ` +
+            "técnico de reserva dice que ya no tiene nada más que hacer ahí abajo.",
+          opciones: [
+            { id: "subir", etiqueta: "Subirlo al plantel principal",
+              detalle: "Ocupa lugar, pero si explota es tuyo" },
+            { id: "prestamo", etiqueta: "Mandarlo a préstamo a jugar",
+              detalle: "Vuelve rodado, o vuelve quemado",
+              apuesta: { exito: 0.6,
+                bien: "Volvió jugando todo y con otra cabeza",
+                mal: "No jugó nada y volvió peor de lo que se fue" } },
+            { id: "esperar", etiqueta: "Que siga abajo",
+              detalle: "Se sigue formando tranquilo. Él no lo va a entender" },
+          ],
+        },
+        efectos: {
+          subir: { subirDeReserva: j.id, ambiente: 5, moralDe: { id: j.id, delta: 15 },
+            texto: `${j.apellido} sube al plantel principal.` },
+          prestamo: {
+            moralDe: { id: j.id, delta: 10 },
+            texto: `${j.apellido} se fue a préstamo y volvió con otra cabeza.`,
+            siSaleMal: { moralDe: { id: j.id, delta: -14 },
+              texto: `${j.apellido} no jugó nada en el préstamo. Volvió peor.` },
+          },
+          esperar: { moralDe: { id: j.id, delta: -9 },
+            texto: `${j.apellido} sigue en reserva. No le gustó nada.` },
+        },
+      };
+    },
+  },
+  {
+    id: "escuelita",
+    cuando: () => true,
+    armar: () => ({
+      s: {
+        id: "escuelita",
+        escena: "predio",
+        titulo: "La escuelita del club",
+        contexto: "Las inferiores entrenan en una cancha sin pasto y con dos arcos rotos. " +
+          "El coordinador te muestra las fotos y te pide que muevas el tema arriba.",
+        opciones: [
+          { id: "bancar", etiqueta: "Poner plata del club",
+            detalle: "La cantera te lo devuelve, tarde o temprano" },
+          { id: "campaña", etiqueta: "Pedirle a la gente que ayude",
+            detalle: "Si la hinchada se prende sale gratis; si no, quedás como el que no puso",
+            apuesta: { exito: 0.65,
+              bien: "La gente juntó la plata en cuatro días",
+              mal: "No se juntó nada y quedaste como el que pasó la gorra" } },
+          { id: "despues", etiqueta: "Ahora no hay plata",
+            detalle: "Es verdad, y también es una respuesta" },
+        ],
+      },
+      efectos: {
+        bancar: { dineroUsd: -80_000, ambiente: 6, hinchada: 5,
+          texto: "El club arregló la cancha de inferiores." },
+        campaña: {
+          hinchada: 12, ambiente: 4,
+          texto: "La gente juntó la plata para la cancha en cuatro días.",
+          siSaleMal: { hinchada: -8,
+            texto: "No se juntó casi nada. Quedaste como el que pasó la gorra." },
+        },
+        despues: { ambiente: -4, texto: "Se le dijo que no al coordinador de inferiores." },
+      },
+    }),
+  },
+  {
+    id: "pizarron_filtrado",
+    cuando: (c) => (c.faltanDias ?? 99) <= 2,
+    armar: () => ({
+      s: {
+        id: "pizarron_filtrado",
+        escena: "predio",
+        titulo: "Se filtró el once",
+        contexto: "Salió publicado el equipo que ibas a poner, con nombres y todo. " +
+          "Alguien de adentro lo pasó.",
+        opciones: [
+          { id: "cambiar", etiqueta: "Cambiar el equipo",
+            detalle: "Sorprendés al rival, pero movés lo que venía funcionando",
+            apuesta: { exito: 0.55,
+              bien: "El rival se comió el amague y salió bárbaro",
+              mal: "Tocaste lo que andaba y se notó adentro de la cancha" } },
+          { id: "sostener", etiqueta: "Poner el mismo once",
+            detalle: "Que se lo banquen. El rival ya lo sabe" },
+          { id: "buscar", etiqueta: "Buscar quién fue",
+            detalle: "Se corta la filtración y se pudre el vestuario" },
+        ],
+      },
+      efectos: {
+        cambiar: {
+          ambiente: 3,
+          texto: "Se cambió el equipo y el rival quedó pagando.",
+          siSaleMal: { ambiente: -7, condicionTodos: -2,
+            texto: "Se tocó lo que andaba y se notó adentro de la cancha." },
+        },
+        sostener: { ambiente: 4, hinchada: 3,
+          texto: "Salió el mismo once. No se le movió un pelo a nadie." },
+        buscar: { ambiente: -10,
+          texto: "Se salió a buscar al que filtró. El vestuario quedó mirándose feo." },
+      },
+    }),
+  },
+  {
+    id: "presidente_promete",
+    cuando: (c) => c.posicion <= 4,
+    armar: () => ({
+      s: {
+        id: "presidente_promete",
+        escena: "dirigencia",
+        titulo: "El presidente quiere anunciar",
+        contexto: "Está por salir a decir en la radio que este año salimos campeones. " +
+          "Te pregunta si lo firmás con él.",
+        opciones: [
+          { id: "firmar", etiqueta: "Bancar el anuncio",
+            detalle: "Si sale, sos un profeta; si no, sos el que prometió",
+            apuesta: { exito: 0.5,
+              bien: "La promesa encendió al plantel y a la gente",
+              mal: "Quedó la vara altísima y la primera derrota pesa el doble" } },
+          { id: "bajar", etiqueta: "Pedirle que baje un cambio",
+            detalle: "Menos ruido, menos presión, menos entusiasmo" },
+        ],
+      },
+      efectos: {
+        firmar: {
+          hinchada: 14, ambiente: 8, paciencia: 5,
+          texto: "Se bancó el anuncio y se encendió todo el mundo.",
+          siSaleMal: { paciencia: -12, ambiente: -6,
+            texto: "Quedó la vara altísima. Cualquier tropiezo ahora pesa el doble." },
+        },
+        bajar: { paciencia: -4, ambiente: 3,
+          texto: "Le pediste al presidente que baje un cambio con los anuncios." },
+      },
+    }),
+  },
+  {
+    id: "utilero",
+    cuando: () => true,
+    armar: () => ({
+      s: {
+        id: "utilero",
+        escena: "vestuario",
+        titulo: "Se jubila el utilero",
+        contexto: "Cuarenta y un años lavando las camisetas del club. Se va en junio y " +
+          "el plantel quiere hacerle algo.",
+        opciones: [
+          { id: "homenaje", etiqueta: "Homenaje en el Defensores",
+            detalle: "Se lo merece y el vestuario lo va a sentir" },
+          { id: "sueldo", etiqueta: "Pagarle un año más de sueldo",
+            detalle: "Sale plata del club y nadie se entera afuera" },
+          { id: "nada", etiqueta: "Un aplauso en la práctica",
+            detalle: "Sale gratis. También se nota" },
+        ],
+      },
+      efectos: {
+        homenaje: { hinchada: 8, ambiente: 9,
+          texto: "Le hicieron el homenaje en el Defensores. Lloró el vestuario entero." },
+        sueldo: { dineroUsd: -25_000, ambiente: 12,
+          texto: "Se le pagó un año más de sueldo. Adentro no se olvidó." },
+        nada: { ambiente: -6,
+          texto: "Un aplauso en la práctica y listo. El plantel esperaba otra cosa." },
+      },
+    }),
+  },
 ];
 
 export function sortearSituacion(c: Contexto, rng: Rng) {
   const posibles = PLANTILLAS.filter((p) => p.cuando(c));
   if (!posibles.length) return null;
-  return rng.elegir(posibles).armar(c, rng);
+  // primero las que todavía no te tocaron; recién cuando se acaba el mazo se
+  // vuelve a repartir
+  const vistas = new Set(c.vistas ?? []);
+  const frescas = posibles.filter((p) => !vistas.has(p.id));
+  return rng.elegir(frescas.length ? frescas : posibles).armar(c, rng);
 }
+
+/** Cuántas hay en total, para saber cuándo se dio la vuelta al mazo. */
+export const TOTAL_SITUACIONES = PLANTILLAS.length;

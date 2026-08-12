@@ -10,7 +10,9 @@ import equiposJson from "@/data/equipos_2026.json";
 import fixtureJson from "@/data/fixture_clausura2026_final.json";
 import rivalesJson from "@/data/rivales_internacionales.json";
 import { condicionRival, fuerzaBaseAjustada } from "./rivales.ts";
-import { sortearSituacion, type Efecto, type Situacion } from "@/engine/situaciones.ts";
+import {
+  TOTAL_SITUACIONES, sortearSituacion, type Efecto, type Situacion,
+} from "@/engine/situaciones.ts";
 import { generarMercado, sortearOferta, type FichajeGenerado } from "@/engine/mercado.ts";
 import {
   DIAS_DE_VENTANA, ESTRELLAS, impactoDe, jugadorDeEstrella, sortearEstrella,
@@ -172,6 +174,10 @@ export interface Partida {
   estrella: { id: string; venceEl: string } | null;
   /** Las que ya aparecieron, para no repetirlas. */
   estrellasVistas: string[];
+  /** Cuándo llegó la última oferta, para que no lluevan una atrás de otra. */
+  ultimaOfertaEl?: string;
+  /** Las situaciones que ya te tocaron, para no repetirlas hasta agotarlas. */
+  situacionesVistas?: string[];
 
   /** Alineaciones guardadas por el DT: el titular, el equipo de copa, etc. */
   equipos: EquipoGuardado[];
@@ -935,19 +941,31 @@ export function avanzarUnDia(p: Partida): ResultadoAvance {
     }
   }
 
+  /*
+   * El precio de la entrada se preguntaba antes de cada partido de local: once
+   * veces la misma decisión, con las mismas tres opciones. Ahora el precio
+   * queda puesto y solo se vuelve a preguntar cuando el partido cambia de peso
+   * (el primero, un clásico, o uno de copa), que es cuando de verdad se
+   * repiensa.
+   */
   if (alPartido === 1 && !n.pendientes.some((a) => a.tipo === "marketing")) {
     const m = partidoDe(n);
-    if (m?.ctx.esLocal) {
+    const especial = !!m?.ctx.esClasico || m?.ctx.competencia === "sudamericana";
+    if (m?.ctx.esLocal && (especial || n.resultados.length === 0)) {
       n.pendientes.push({
         id: `mkt-${n.dia}`, tipo: "marketing", dia: n.dia,
         titulo: "Precio de la entrada",
-        detalle: `Mañana se juega en ${m.estadio}. ¿A cuánto se vende?`,
+        detalle: m.ctx.esClasico
+          ? `Mañana es el clásico en ${m.estadio}. La gente va a venir igual. ¿A cuánto se vende?`
+          : m.ctx.competencia === "sudamericana"
+            ? `Mañana es noche de copa en ${m.estadio}. ¿A cuánto se vende?`
+            : `Mañana se juega en ${m.estadio}. Lo que pongas queda para el resto del torneo.`,
       });
     }
   }
 
   // una situación cada tanto, nunca el día del partido ni el anterior
-  if ((alPartido === null || alPartido > 1) && !n.pendientes.length && rng.chance(0.3)) {
+  if ((alPartido === null || alPartido > 1) && !n.pendientes.length && rng.chance(0.45)) {
     const proximo = partidoDe(n);
     const armada = sortearSituacion({
       plantel: plantelDe(n),
@@ -959,8 +977,12 @@ export function avanzarUnDia(p: Partida): ResultadoAvance {
       // hay situaciones que solo tienen sentido en cierto momento
       esSemanaDeClasico: !!proximo?.ctx.esClasico && (diasAlPartido(n) ?? 99) <= 6,
       faltanDias: diasAlPartido(n),
+      vistas: n.situacionesVistas,
     }, rng);
     if (armada) {
+      n.situacionesVistas = [...(n.situacionesVistas ?? []), armada.s.id];
+      // dada la vuelta al mazo, se vuelve a repartir
+      if (n.situacionesVistas.length >= TOTAL_SITUACIONES) n.situacionesVistas = [];
       n.pendientes.push({
         id: `sit-${n.dia}`, tipo: "evento", dia: n.dia,
         titulo: armada.s.titulo, detalle: armada.s.contexto,
@@ -989,8 +1011,11 @@ export function avanzarUnDia(p: Partida): ResultadoAvance {
     }
   }
 
-  // ofertas por los mejores
-  if (!n.ofertas.length && rng.chance(0.14)) {
+  // Ofertas por los mejores. Estaban en 14% diario, o sea una cada semana, y
+  // terminaban siendo casi todo lo que pasaba fuera de la cancha.
+  const descansoDeOfertas = n.ultimaOfertaEl
+    ? diasEntre(n.ultimaOfertaEl, n.dia) < 12 : false;
+  if (!n.ofertas.length && !descansoDeOfertas && rng.chance(0.05)) {
     const o = sortearOferta(plantelDe(n), n.dia);
     if (o) {
       n.ofertas.push({
@@ -1002,6 +1027,7 @@ export function avanzarUnDia(p: Partida): ResultadoAvance {
       // oferta puede ser justo por una de ellas
       const j = plantelDe(n).find((x) => x.id === o.jugadorId);
       if (!j) return { partida: n, novedades };
+      n.ultimaOfertaEl = n.dia;
       n.pendientes.push({
         id: `ofp-${n.dia}`, tipo: "oferta", dia: n.dia,
         titulo: "Llegó una oferta",
@@ -1200,6 +1226,7 @@ export function resolverAsunto(p: Partida, asuntoId: string, opcionId: string): 
     if (efecto.ambiente) n.ambiente = clamp(n.ambiente + efecto.ambiente, 0, 100);
     if (efecto.hinchada) n.hinchada = clamp(n.hinchada + efecto.hinchada, 0, 100);
     if (efecto.dineroUsd) n.dineroUsd += efecto.dineroUsd;
+    if (efecto.paciencia) n.paciencia = clamp(n.paciencia + efecto.paciencia, 0, 100);
     if (efecto.moralDe) {
       const e = n.plantel[efecto.moralDe.id];
       if (e) e.animo = clamp(e.animo + efecto.moralDe.delta, 0, 100);

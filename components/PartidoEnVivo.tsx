@@ -218,8 +218,10 @@ export default function PartidoEnVivo({
 
     setVisibles((v) => [...v, {
       minuto: momento.minuto,
-      tipo: r.golOlimpia ? "gol" : r.golRival ? "gol_rival" : r.rojaA ? "roja" : "cambio",
+      tipo: r.golOlimpia ? "gol" : r.golRival ? "gol_rival"
+        : r.rojaA ? "roja" : r.amarillaA ? "amarilla" : "cambio",
       texto: r.texto,
+      jugadorId: r.amarillaA ?? r.rojaA,
       golesOlimpia: nuevoO, golesRival: nuevoR,
     }]);
 
@@ -244,11 +246,15 @@ export default function PartidoEnVivo({
       }
     }
 
+    // hay momentos que cambian cómo te parás para lo que queda
+    const nuevaActitud = r.cambiaActitud ?? actitud;
+    if (r.cambiaActitud && r.cambiaActitud !== actitud) setActitud(r.cambiaActitud);
+
     // el resto del partido se vuelve a simular con el marcador y el equipo nuevos
     semilla.current++;
     cursor.current = 0;
     setPendientes(relatarTramo(
-      { once: nuevoOnce, suplentes: nuevoBanco, actitud, puestos: nuevosPuestos },
+      { once: nuevoOnce, suplentes: nuevoBanco, actitud: nuevaActitud, puestos: nuevosPuestos },
       ctx, new Rng(`${ctx.fecha}-${ctx.rivalNombre}-${semilla.current}`),
       momento.minuto, 90, nuevoO, nuevoR, amonestados, rival11));
   };

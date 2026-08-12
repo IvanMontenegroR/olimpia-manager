@@ -63,18 +63,38 @@ export default function Sorteo({ chance, riesgo, exito, bien, mal, semilla, onTe
     const total = 200 * VUELTAS + destino;
     let raf = 0;
     let fin = 0;
+    let termino = false;
+    const parar = () => {
+      if (termino) return;
+      termino = true;
+      setPos(destino);
+      setFrenado(true);
+      fin = window.setTimeout(() => avisar.current(), REMATE);
+    };
     const inicio = performance.now();
     const paso = (ahora: number) => {
       const t = Math.min(1, (ahora - inicio) / DURACION);
       const avance = (total * (1 - Math.pow(1 - t, 5))) % 200;
       setPos(avance <= 100 ? avance : 200 - avance);
       if (t < 1) { raf = requestAnimationFrame(paso); return; }
-      setPos(destino);
-      setFrenado(true);
-      fin = window.setTimeout(() => avisar.current(), REMATE);
+      parar();
     };
     raf = requestAnimationFrame(paso);
-    return () => { cancelAnimationFrame(raf); window.clearTimeout(fin); };
+    /*
+     * Respaldo: con la pestaña en segundo plano el navegador no corre
+     * requestAnimationFrame, así que la bolilla no frenaba nunca y el partido
+     * quedaba trabado sin poder tocar Seguir. Si al tiempo esperado la tirada
+     * no terminó, se cierra igual.
+     */
+    const rescate = window.setTimeout(() => {
+      cancelAnimationFrame(raf);
+      parar();
+    }, DURACION + 250);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.clearTimeout(fin);
+      window.clearTimeout(rescate);
+    };
   }, []);
 
   const color = exito ? "#3fa76a" : "#c0392b";

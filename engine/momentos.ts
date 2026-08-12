@@ -1,6 +1,6 @@
 import { Rng } from "./rng.ts";
 import { nivelEfectivo } from "./motor.ts";
-import { LINEA_DE, type Alineacion, type ContextoPartido, type Jugador } from "./tipos.ts";
+import { LINEA_DE, type Actitud, type Alineacion, type ContextoPartido, type Jugador } from "./tipos.ts";
 
 /**
  * Momentos: el partido se detiene y hay que decidir con el reloj corriendo.
@@ -13,7 +13,9 @@ import { LINEA_DE, type Alineacion, type ContextoPartido, type Jugador } from ".
 
 export type TipoMomento =
   | "penal_favor" | "penal_contra" | "tiro_libre" | "jugador_caliente" | "mano_a_mano"
-  | "penal_ultima" | "rival_con_diez";
+  | "penal_ultima" | "rival_con_diez"
+  // los que aprovechan lo que hasta ahora pasaba solo en el relato
+  | "festejo" | "arquero_al_area" | "cerrar_o_seguir";
 
 export interface OpcionMomento {
   id: string;
@@ -58,6 +60,8 @@ export interface ResueltoMomento {
   rojaA?: string;
   amarillaA?: string;
   gastaCambio?: string;
+  /** Cambia cómo se para el equipo por lo que queda de partido. */
+  cambiaActitud?: Actitud;
 }
 
 const apellido = (j: Jugador) => j.apellido;
@@ -129,6 +133,16 @@ export function chanceDe(
       if (j.rasgos.includes("definicion_irregular")) p -= 0.04;
       return acotar(p, 0.15, 0.9);
     }
+    case "festejo": {
+      // acá no se juega el gol, que ya está: se juega zafar de la amarilla
+      if (opcionId === "banco") return null;
+      return opcionId === "tribuna" ? 0.82 : 0.62;
+    }
+    case "arquero_al_area": {
+      if (opcionId !== "arquero") return 0.09;
+      const aereos = a.once.filter((x) => x.rasgos.includes("juego_aereo")).length;
+      return acotar(0.15 + aereos * 0.02, 0.1, 0.3);
+    }
     case "jugador_caliente": {
       if (opcionId === "sacar") return null;      // no es una apuesta: es seguro
       if (opcionId === "hablar") return 0.58 + 0.42 * 0.65; // se calma, o zafa igual
@@ -152,6 +166,9 @@ export function riesgoDe(m: Momento, opcionId: string): RiesgoOpcion | null {
   }
   if (m.tipo === "tiro_libre" && opcionId === "centro") {
     return { contra: 0.14, texto: "si la rechazan, contra con todos arriba" };
+  }
+  if (m.tipo === "arquero_al_area" && opcionId === "arquero") {
+    return { contra: 0.3, texto: "el arco tuyo queda vacío" };
   }
   if (m.tipo === "penal_contra" && opcionId === "centro") {
     return { contra: 0.10, texto: "si se tira a un palo, queda el rebote" };
@@ -180,6 +197,8 @@ function pateadores(a: Alineacion, ctx: ContextoPartido): Jugador[] {
 export function generarMomento(
   tipo: TipoMomento, minuto: number, a: Alineacion, ctx: ContextoPartido,
   rng: Rng, jugadorId?: string,
+  /** Cómo va el partido, para los momentos que dependen del resultado. */
+  marcador?: [number, number],
 ): Momento | null {
   switch (tipo) {
     case "penal_favor": {
@@ -286,6 +305,68 @@ export function generarMomento(
             detalle: "Administrar sin regalar nada" },
         ],
         porDefecto: "sostener",
+      };
+    }
+
+    case "festejo": {
+      const j = a.once.find((x) => x.id === jugadorId);
+      if (!j) return null;
+      return {
+        tipo, minuto, segundos: 6,
+        titulo: "EL FESTEJO",
+        contexto: `Lo metió ${apellido(j)} y sale corriendo. ¿Adónde va?`,
+        opciones: [
+          { id: "tribuna", etiqueta: "A la tribuna",
+            detalle: "La gente se viene abajo (+10 hinchada), pero puede costarle la amarilla",
+            jugadorId: j.id },
+          { id: "provocar", etiqueta: "Callarle la boca al rival",
+            detalle: "Enorme si zafa (+16 hinchada). Se la están buscando",
+            jugadorId: j.id },
+          { id: "banco", etiqueta: "Correr al banco",
+            detalle: "Se lo dedica a los compañeros. Por esto no lo amonesta nadie",
+            jugadorId: j.id },
+        ],
+        porDefecto: "banco",
+      };
+    }
+
+    case "arquero_al_area": {
+      const arq = a.once.find((j) => (a.puestos.get(j.id) ?? j.posicion) === "ARQ");
+      if (!arq) return null;
+      return {
+        tipo, minuto, segundos: 7,
+        titulo: "ÚLTIMO CÓRNER",
+        contexto: "Se termina el partido y hay uno de esquina. Es la última pelota.",
+        opciones: [
+          { id: "arquero", etiqueta: `Que suba ${apellido(arq)}`,
+            detalle: "Un cuerpo más ahí adentro. Y tu arco, vacío" },
+          { id: "normal", etiqueta: "Centro y a rezar",
+            detalle: "Lo de siempre. Si la rechazan no pasa nada" },
+        ],
+        porDefecto: "normal",
+      };
+    }
+
+    case "cerrar_o_seguir": {
+      const arriba = (marcador?.[0] ?? 1) > (marcador?.[1] ?? 0);
+      return {
+        tipo, minuto, segundos: 8,
+        titulo: arriba ? "GANÁS POR UNO" : "PERDÉS POR UNO",
+        contexto: arriba
+          ? "Quedan veinte minutos con la mínima. Cómo te parés de acá al final " +
+            "vale para todo lo que viene."
+          : "Quedan veinte minutos y estás uno abajo. Hay tiempo, pero no tanto.",
+        opciones: [
+          { id: "cerrar", etiqueta: "Meterse atrás",
+            detalle: arriba
+              ? "Se aguanta: mucho menos peligro en contra, y casi no vas a atacar"
+              : "Salvar el punto y no perder por más. Casi no vas a llegar" },
+          { id: "seguir", etiqueta: "No cambiar nada",
+            detalle: "Se sigue jugando igual que hasta acá" },
+          { id: "matarlo", etiqueta: arriba ? "Ir por el segundo" : "Tirarse encima",
+            detalle: "Más peligro arriba, más expuesto atrás y más piernas gastadas" },
+        ],
+        porDefecto: "seguir",
       };
     }
 
@@ -442,6 +523,67 @@ export function resolverMomento(
         sostener: "Olimpia administra la ventaja sin apurarse.",
       };
       return { exito: true, texto: textos[opcionId] ?? textos.sostener };
+    }
+
+    case "festejo": {
+      const j = buscar(m.opciones[0].jugadorId);
+      if (!j) return { exito: true, texto: "Lo festejó el equipo entero." };
+      if (opcionId === "banco") {
+        return { exito: true, levantaHinchada: 4,
+          texto: `${apellido(j)} corrió al banco a abrazarse con los suplentes.` };
+      }
+      const zafa = rng.chance(opcionId === "tribuna" ? 0.82 : 0.62);
+      const premio = opcionId === "tribuna" ? 10 : 16;
+      if (zafa) {
+        return { exito: true, levantaHinchada: premio,
+          texto: opcionId === "tribuna"
+            ? `${apellido(j)} se fue a la popular y el Defensores se vino abajo.`
+            : `${apellido(j)} lo gritó de cara a la hinchada rival. Se pudrió todo, pero zafó.` };
+      }
+      return {
+        exito: false, amarillaA: j.id, levantaHinchada: Math.round(premio * 0.6),
+        texto: opcionId === "tribuna"
+          ? `${apellido(j)} se sacó la camiseta y vio la amarilla. Valió la pena igual.`
+          : `Amarilla a ${apellido(j)} por provocar. Ahora juega condicionado.`,
+      };
+    }
+
+    case "arquero_al_area": {
+      const arq = a.once.find((j) => (a.puestos.get(j.id) ?? j.posicion) === "ARQ")!;
+      if (opcionId === "arquero") {
+        const aereos = a.once.filter((x) => x.rasgos.includes("juego_aereo")).length;
+        if (rng.chance(Math.min(0.3, 0.15 + aereos * 0.02))) {
+          return { exito: true, golOlimpia: true, levantaHinchada: 20,
+            texto: `¡LA METIÓ ${apellido(arq).toUpperCase()}! El arquero, en la última pelota. ` +
+              "Esto no se olvida más." };
+        }
+        const r = riesgoDe(m, "arquero");
+        if (r && rng.chance(r.contra)) {
+          return { exito: false, golRival: true,
+            texto: `Rechazaron el córner y la mandaron al arco vacío. ${apellido(arq)} ` +
+              "todavía estaba volviendo." };
+        }
+        return { exito: false, texto: "Se despejó el córner y ahí nomás sonó el final." };
+      }
+      const mete = rng.chance(0.09);
+      return { exito: mete, golOlimpia: mete,
+        levantaHinchada: mete ? 12 : undefined,
+        texto: mete
+          ? "GOL EN LA ÚLTIMA. Centro, cabezazo y adentro. No lo puede creer nadie."
+          : "El centro se fue largo y ahí terminó todo." };
+    }
+
+    case "cerrar_o_seguir": {
+      if (opcionId === "cerrar") {
+        return { exito: true, cambiaActitud: "defensivo",
+          texto: "Olimpia se mete atrás a defender el resultado." };
+      }
+      if (opcionId === "matarlo") {
+        return { exito: true, cambiaActitud: "ofensivo",
+          texto: "Olimpia va a buscar el segundo para liquidarlo." };
+      }
+      return { exito: true, cambiaActitud: "equilibrado",
+        texto: "No se toca nada. Se sigue igual que hasta acá." };
     }
 
     case "mano_a_mano": {

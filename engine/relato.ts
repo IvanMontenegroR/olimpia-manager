@@ -221,6 +221,12 @@ export function relatarTramo(
       const banco = LINEA_DE[p] === "DEF" ? GOL_DEF : LINEA_DE[p] === "MED" ? GOL_MED
         : j.rasgos.includes("juego_aereo") && rng.chance(0.45) ? GOL_AEREO : GOL_DEL;
       push(m, "gol", "GOL. " + texto(rng, banco, j), { jugadorId: j.id });
+      // El gol ya pasaba y vos mirabas. Adónde va a festejar sí es tuyo, y no
+      // toca el resultado: mueve a la gente y puede costar una amarilla.
+      if (rng.chance(0.34)) {
+        const fest = generarMomento("festejo", m, a, ctx, rng, j.id);
+        if (fest) push(m, "momento", fest.titulo, { pausa: true, momento: fest, jugadorId: j.id });
+      }
     }});
 
   for (const m of minutos(rng.poisson(xgR)))
@@ -322,6 +328,32 @@ export function relatarTramo(
     if (!momento) continue;
     sucesos.push({ min: m, hacer: () =>
       push(m, "momento", momento.titulo, { pausa: true, momento }) });
+  }
+
+  /*
+   * Estos dos dependen del marcador y por eso se deciden cuando les toca el
+   * turno, no acá arriba: gO y gR todavía valen lo del principio del tramo, y
+   * lo que importa es cómo va el partido al minuto 70 o al 90.
+   */
+  if (desde < 70 && hasta > 70) {
+    const m = rng.entero(68, 74);
+    sucesos.push({ min: m, hacer: () => {
+      // sirve igual arriba que abajo por uno: en los dos casos hay que decidir
+      // cómo se juegan los últimos veinte
+      if (Math.abs(gO - gR) !== 1 || !rng.chance(0.5)) return;
+      const cerrar = generarMomento("cerrar_o_seguir", m, a, ctx, rng, undefined, [gO, gR]);
+      if (cerrar) push(m, "momento", cerrar.titulo, { pausa: true, momento: cerrar });
+    }});
+  }
+
+  // El último córner con el arquero subiendo. Solo cuando de verdad es la
+  // última pelota y estás uno abajo: si fuera siempre, dejaría de ser eso.
+  if (hasta >= 89) {
+    sucesos.push({ min: 90, hacer: () => {
+      if (gR - gO !== 1 || !rng.chance(0.5)) return;
+      const corner = generarMomento("arquero_al_area", 90, a, ctx, rng);
+      if (corner) push(90, "momento", corner.titulo, { pausa: true, momento: corner });
+    }});
   }
 
   // Penal sobre la hora, solo si el partido está para definirse. Es el momento
