@@ -158,7 +158,7 @@ export default function Escritorio({
     return (
       <Sub titulo={{
         plantel: "Plantel", tabla: "Tabla", fixture: "Fixture",
-        mercado: "Mercado", bitacora: "Bitácora", copa: "Sudamericana",
+        mercado: "Fichajes", bitacora: "Bitácora", copa: "Sudamericana",
         estrella: "Mercado",
       }[vista]} onVolver={() => setVista("escritorio")}>
         {vista === "plantel" && (
@@ -371,7 +371,7 @@ export default function Escritorio({
               numero={posicion} sufijo="°"
               pie={difLider === 0 ? "puntero" : `a ${difLider} del líder`} />
 
-            <Modulo titulo="Pases" color="#e0902a" icono="pases" onClick={() => setVista("mercado")}
+            <Modulo titulo="Fichajes" color="#e0902a" icono="pases" onClick={() => setVista("mercado")}
               numero={partida.fichajes.length} pie="disponibles"
               alerta={partida.ofertas.length ? `${partida.ofertas.length} oferta` : undefined} />
           </div>

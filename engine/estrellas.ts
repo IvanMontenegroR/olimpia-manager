@@ -1,6 +1,6 @@
 import estrellasJson from "@/data/estrellas.json";
 import { Rng } from "./rng.ts";
-import type { Jugador, Posicion } from "./tipos.ts";
+import type { Jugador, Posicion, Rasgo } from "./tipos.ts";
 
 /**
  * Los fichajes estrella: cracks en el ocaso que se pueden traer a Olimpia.
@@ -34,6 +34,8 @@ export interface Estrella {
   historia: string;
   riesgo: string;
   peso: number;
+  /** Lo que sabe hacer. Es lo que lo diferencia de otro del mismo nivel. */
+  rasgos?: Rasgo[];
 }
 
 export const ESTRELLAS = estrellasJson as Estrella[];
@@ -100,7 +102,18 @@ export function jugadorDeEstrella(e: Estrella, numero: number): Jugador {
     partidos_internacionales: 90,
     // El que llegó de arriba sabe jugar estos partidos, pero el cuerpo ya no
     // es el mismo: los de 36 para arriba se rompen más seguido.
-    rasgos: e.edad >= 36 ? ["veterano_de_copas", "fragil"] : ["veterano_de_copas"],
+    /*
+     * Los rasgos propios de cada uno, del JSON. Antes eran fijos para todos y
+     * eso rompía la premisa del fichaje: como el rasgo definidor vale nueve
+     * puntos de chance (lo mismo que quince de nivel) y ninguna estrella lo
+     * tenía, Messi pateaba los penales peor que un titular de 71 que sí es
+     * definidor.
+     */
+    rasgos: [
+      ...(e.rasgos ?? []),
+      "veterano_de_copas" as const,
+      ...(e.edad >= 36 ? ["fragil" as const] : []),
+    ],
     lesionado_hasta: null,
     tarjetas_amarillas: 0,
     suspendido: false,

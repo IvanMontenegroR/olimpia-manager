@@ -1,5 +1,6 @@
+import fichajesJson from "@/data/fichajes.json";
 import { Rng } from "./rng.ts";
-import type { Jugador, Posicion } from "./tipos.ts";
+import type { Jugador, Posicion, Rasgo } from "./tipos.ts";
 
 /**
  * Mercado de pases, versión mínima del documento: comprar, vender y nada de
@@ -13,18 +14,27 @@ const CLUBES_COMPRADORES = [
   "Independiente", "Peñarol", "Universidad Católica", "Bahia", "Estudiantes",
 ];
 
-const NOMBRES = [
-  ["Marcelo", "Aguilera"], ["Julio", "Enciso"], ["Diego", "Villalba"],
-  ["Óscar", "Ruiz Díaz"], ["Antonio", "Galeano"], ["Blas", "Cardozo"],
-  ["Néstor", "Bogado"], ["Ramón", "Ojeda"], ["Ever", "Cabral"],
-  ["Luis", "Amarilla"], ["Fabrizio", "Peralta"], ["Rodrigo", "Morínigo"],
-];
+/**
+ * A quién podés traer.
+ *
+ * Antes eran nombres inventados y daba lo mismo cualquiera: fichabas un número.
+ * Estos existen, se reconocen y cada uno trae lo suyo, que es lo que hace que
+ * la decisión tenga cara.
+ */
+interface FichajeDelCatalogo {
+  id: string;
+  nombre: string;
+  apellido: string;
+  posicion: Posicion;
+  edad: number;
+  nacionalidad: string;
+  nivel: number;
+  de: string;
+  rasgos: Rasgo[];
+  nota: string;
+}
 
-const EXTRANJEROS = [
-  ["Matías", "Cabrera", "URU"], ["Nicolás", "Ferreyra", "ARG"],
-  ["Camilo", "Restrepo", "COL"], ["Bruno", "Nascimento", "BRA"],
-  ["Cristóbal", "Muñoz", "CHI"],
-];
+export const CATALOGO = fichajesJson as FichajeDelCatalogo[];
 
 /** Precio de referencia, en la misma escala logarítmica del documento. */
 export const precioDe = (nivel: number, edad: number) => {
@@ -45,32 +55,42 @@ export interface FichajeGenerado {
   precioUsd: number;
   sueldoUsd: number;
   valorComercial: number;
+  /** Lo que sabe hacer, para que no sean todos el mismo número. */
+  rasgos: Rasgo[];
+  /** De dónde viene y por qué te suena. */
+  de: string;
+  nota: string;
 }
 
-export function generarMercado(semilla: string, cantidad = 6): FichajeGenerado[] {
+export function generarMercado(
+  semilla: string, cantidad = 6, yaEstan: string[] = [],
+): FichajeGenerado[] {
   const rng = new Rng(`mercado-${semilla}`);
-  const posiciones: Posicion[] =
-    ["ARQ", "LD", "DFC", "DFC", "LI", "MCD", "MC", "MCO", "ED", "EI", "DC", "DC"];
+  const dentro = new Set(yaEstan);
+  const libres = CATALOGO.filter((f) => !dentro.has(f.id));
   const lista: FichajeGenerado[] = [];
+  const usados = new Set<string>();
 
-  for (let i = 0; i < cantidad; i++) {
-    const extranjero = rng.chance(0.4);
-    const [nombre, apellido, nac] = extranjero
-      ? rng.elegir(EXTRANJEROS)
-      : [...rng.elegir(NOMBRES), "PAR"];
-    const edad = rng.entero(19, 34);
-    const nivel = clampNivel(rng.entero(56, 74) + (edad >= 30 ? -2 : 0));
+  while (lista.length < cantidad && usados.size < libres.length) {
+    const f = rng.elegir(libres);
+    if (usados.has(f.id)) continue;
+    usados.add(f.id);
+    const extranjero = f.nacionalidad !== "PAR";
     lista.push({
-      id: `f-${semilla}-${i}`,
-      nombre, apellido,
-      posicion: rng.elegir(posiciones),
-      edad,
-      nacionalidad: nac,
+      id: f.id,
+      nombre: f.nombre,
+      apellido: f.apellido,
+      posicion: f.posicion,
+      edad: f.edad,
+      nacionalidad: f.nacionalidad,
       extranjero,
-      nivel,
-      precioUsd: precioDe(nivel, edad),
-      sueldoUsd: Math.round((nivel - 40) * 900),
-      valorComercial: extranjero && edad <= 28 ? rng.entero(2, 4) : rng.entero(1, 3),
+      nivel: f.nivel,
+      precioUsd: precioDe(f.nivel, f.edad),
+      sueldoUsd: Math.round((f.nivel - 40) * 900),
+      valorComercial: extranjero && f.edad <= 28 ? 3 : f.edad <= 31 ? 2 : 1,
+      rasgos: f.rasgos,
+      de: f.de,
+      nota: f.nota,
     });
   }
   return lista;

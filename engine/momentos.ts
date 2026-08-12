@@ -64,6 +64,15 @@ export interface ResueltoMomento {
   cambiaActitud?: Actitud;
 }
 
+/*
+ * Cuánto pesa el que ejecuta.
+ *
+ * Las pendientes estaban tan planas que veinte puntos de nivel valían doce de
+ * chance, menos que el rasgo definidor: un 86 pateaba igual que un 71. Se
+ * duplicaron, y las bases se bajaron para que en el nivel medio del plantel
+ * (65) den lo mismo que antes. O sea: la media del juego no se mueve, lo que
+ * cambia es que ahora se nota a quién ponés.
+ */
 const apellido = (j: Jugador) => j.apellido;
 
 const acotar = (p: number, min: number, max: number) => Math.max(min, Math.min(max, p));
@@ -80,6 +89,24 @@ const acotar = (p: number, min: number, max: number) => Math.max(min, Math.min(m
  * número que ves no es exactamente el que se juega, y por eso el detalle
  * avisa que es impredecible.
  */
+/**
+ * El mejor de la cancha por arriba, y cuánto vale ese centro.
+ *
+ * Antes esto solo miraba si en el once había alguien con juego aéreo: un
+ * central de 78 que la baja de cabeza valía lo mismo que un lateral que la
+ * tiene marcada de casualidad. Ahora pesa quién es.
+ */
+function cabeceador(a: Alineacion, ctx: ContextoPartido) {
+  const nivel = (j: Jugador) => nivelEfectivo(j, a.puestos.get(j.id) ?? j.posicion, ctx);
+  const decampo = a.once.filter((j) => (a.puestos.get(j.id) ?? j.posicion) !== "ARQ");
+  const valor = (j: Jugador) => nivel(j) + (j.rasgos.includes("juego_aereo") ? 12 : 0);
+  const j = [...decampo].sort((x, y) => valor(y) - valor(x))[0];
+  if (!j) return null;
+  // el 65 es el nivel medio del once: ahí el centro vale lo que valía antes
+  const chance = acotar(0.16 + (valor(j) - 65) * 0.006, 0.08, 0.34);
+  return { j, chance };
+}
+
 export function chanceDe(
   m: Momento, opcionId: string, a: Alineacion, ctx: ContextoPartido,
 ): number | null {
@@ -90,7 +117,7 @@ export function chanceDe(
     case "penal_favor": {
       const j = buscar(opcionId);
       if (!j) return null;
-      let p = 0.58 + (nivel(j) - 55) * 0.006;
+      let p = 0.54 + (nivel(j) - 55) * 0.010;
       if (j.rasgos.includes("definidor")) p += 0.09;
       if (j.rasgos.includes("definicion_irregular")) p -= 0.03; // media del ruido
       if (j.condicion < 50) p -= 0.07;
@@ -99,7 +126,7 @@ export function chanceDe(
     case "penal_ultima": {
       const j = buscar(opcionId);
       if (!j) return null;
-      let p = 0.52 + (nivel(j) - 55) * 0.005;
+      let p = 0.48 + (nivel(j) - 55) * 0.009;
       p += Math.min(0.12, j.partidos_internacionales * 0.002);
       if (j.edad <= 21) p -= 0.09;
       if (j.rasgos.includes("definidor")) p += 0.08;
@@ -110,25 +137,25 @@ export function chanceDe(
       const arq = a.once.find((j) => (a.puestos.get(j.id) ?? j.posicion) === "ARQ");
       if (!arq) return null;
       // un tercio de acertar el palo, y si acertás depende del arquero
-      let siAcierta = 0.34 + (nivel(arq) - 60) * 0.008;
+      let siAcierta = 0.29 + (nivel(arq) - 60) * 0.013;
       if (opcionId === "centro") siAcierta += 0.08;
       return acotar((1 / 3) * acotar(siAcierta, 0.02, 0.7) + (2 / 3) * 0.05, 0.02, 0.7);
     }
     case "tiro_libre": {
       if (opcionId === "arco") {
         const j = buscar(m.opciones[0].jugadorId);
-        return j ? acotar(0.12 + (nivel(j) - 60) * 0.004, 0.05, 0.6) : null;
+        return j ? acotar(0.08 + (nivel(j) - 60) * 0.008, 0.05, 0.6) : null;
       }
-      return a.once.some((x) => x.rasgos.includes("juego_aereo")) ? 0.22 : 0.13;
+      return cabeceador(a, ctx)?.chance ?? 0.13;
     }
     case "mano_a_mano": {
       const j = buscar(m.opciones[0].jugadorId);
       if (!j) return null;
-      const base = (nivel(j) - 55) * 0.006;
+      const base = (nivel(j) - 55) * 0.010;
       // buscar al compañero es lo que más gol da, pero es lo que más expone
-      let p = opcionId === "cruzar" ? 0.52 + base
-        : opcionId === "picar" ? 0.38 + base
-        : 0.62 + base;
+      let p = opcionId === "cruzar" ? 0.48 + base
+        : opcionId === "picar" ? 0.34 + base
+        : 0.58 + base;
       if (j.rasgos.includes("definidor")) p += 0.08;
       if (j.rasgos.includes("definicion_irregular")) p -= 0.04;
       return acotar(p, 0.15, 0.9);
@@ -139,9 +166,10 @@ export function chanceDe(
       return opcionId === "tribuna" ? 0.82 : 0.62;
     }
     case "arquero_al_area": {
-      if (opcionId !== "arquero") return 0.09;
-      const aereos = a.once.filter((x) => x.rasgos.includes("juego_aereo")).length;
-      return acotar(0.15 + aereos * 0.02, 0.1, 0.3);
+      // el arquero suma un cuerpo, pero el que la va a cabecear sigue siendo
+      // el mejor que tengas por arriba
+      const c = cabeceador(a, ctx)?.chance ?? 0.13;
+      return opcionId === "arquero" ? acotar(c * 1.35, 0.1, 0.4) : acotar(c * 0.6, 0.04, 0.2);
     }
     case "jugador_caliente": {
       if (opcionId === "sacar") return null;      // no es una apuesta: es seguro
@@ -404,7 +432,7 @@ export function resolverMomento(
   switch (m.tipo) {
     case "penal_favor": {
       const j = buscar(opcionId) ?? buscar(m.porDefecto)!;
-      let p = 0.58 + (nivel(j) - 55) * 0.006;
+      let p = 0.54 + (nivel(j) - 55) * 0.010;
       if (j.rasgos.includes("definidor")) p += 0.09;
       if (j.rasgos.includes("definicion_irregular")) p += rng.entre(-0.16, 0.10);
       if (j.condicion < 50) p -= 0.07;
@@ -422,7 +450,7 @@ export function resolverMomento(
       const arq = a.once.find((j) => (a.puestos.get(j.id) ?? j.posicion) === "ARQ")!;
       const lado = rng.elegir(["izq", "centro", "der"]);
       const acerto = lado === opcionId;
-      let p = acerto ? 0.34 + (nivel(arq) - 60) * 0.008 : 0.05;
+      let p = acerto ? 0.29 + (nivel(arq) - 60) * 0.013 : 0.05;
       if (opcionId === "centro" && acerto) p += 0.08;
       const ataja = rng.chance(Math.max(0.02, Math.min(0.7, p)));
       // quedarse parado deja la pelota viva adelante: puede volver el rebote
@@ -447,7 +475,7 @@ export function resolverMomento(
     case "tiro_libre": {
       if (opcionId === "arco") {
         const j = buscar(m.opciones[0].jugadorId)!;
-        const mete = rng.chance(Math.max(0.05, 0.12 + (nivel(j) - 60) * 0.004));
+        const mete = rng.chance(Math.max(0.05, 0.08 + (nivel(j) - 60) * 0.008));
         return {
           exito: mete, golOlimpia: mete,
           levantaHinchada: mete ? 8 : undefined,
@@ -457,15 +485,11 @@ export function resolverMomento(
         };
       }
       {
-        const aereo = a.once.filter((x) => x.rasgos.includes("juego_aereo"));
-        const cabeceador = aereo.length
-          ? aereo.sort((x, y) => nivel(y) - nivel(x))[0]
-          : [...a.once].filter((x) => (a.puestos.get(x.id) ?? x.posicion) !== "ARQ")
-              .sort((x, y) => nivel(y) - nivel(x))[0];
-        const mete = rng.chance(aereo.length ? 0.22 : 0.13);
-        if (mete) {
+        const c = cabeceador(a, ctx);
+        const mete = rng.chance(c?.chance ?? 0.13);
+        if (mete && c) {
           return { exito: true, golOlimpia: true,
-            texto: `GOL. Centro al área y ${apellido(cabeceador)} le ganó a todos de cabeza.` };
+            texto: `GOL. Centro al área y ${apellido(c.j)} le ganó a todos de cabeza.` };
         }
         const r = riesgoDe(m, "centro");
         if (r && rng.chance(r.contra)) {
@@ -502,7 +526,7 @@ export function resolverMomento(
     case "penal_ultima": {
       const j = buscar(opcionId) ?? buscar(m.porDefecto)!;
       // sobre la hora pesa la experiencia, no solo el pie
-      let p = 0.52 + (nivel(j) - 55) * 0.005;
+      let p = 0.48 + (nivel(j) - 55) * 0.009;
       p += Math.min(0.12, j.partidos_internacionales * 0.002);
       if (j.edad <= 21) p -= 0.09;
       if (j.rasgos.includes("definidor")) p += 0.08;
@@ -550,9 +574,9 @@ export function resolverMomento(
 
     case "arquero_al_area": {
       const arq = a.once.find((j) => (a.puestos.get(j.id) ?? j.posicion) === "ARQ")!;
+      const c = cabeceador(a, ctx)?.chance ?? 0.13;
       if (opcionId === "arquero") {
-        const aereos = a.once.filter((x) => x.rasgos.includes("juego_aereo")).length;
-        if (rng.chance(Math.min(0.3, 0.15 + aereos * 0.02))) {
+        if (rng.chance(acotar(c * 1.35, 0.1, 0.4))) {
           return { exito: true, golOlimpia: true, levantaHinchada: 20,
             texto: `¡LA METIÓ ${apellido(arq).toUpperCase()}! El arquero, en la última pelota. ` +
               "Esto no se olvida más." };
@@ -565,7 +589,7 @@ export function resolverMomento(
         }
         return { exito: false, texto: "Se despejó el córner y ahí nomás sonó el final." };
       }
-      const mete = rng.chance(0.09);
+      const mete = rng.chance(acotar(c * 0.6, 0.04, 0.2));
       return { exito: mete, golOlimpia: mete,
         levantaHinchada: mete ? 12 : undefined,
         texto: mete
@@ -588,10 +612,10 @@ export function resolverMomento(
 
     case "mano_a_mano": {
       const j = buscar(m.opciones[0].jugadorId)!;
-      const base = (nivel(j) - 55) * 0.006;
-      let p = opcionId === "cruzar" ? 0.52 + base
-        : opcionId === "picar" ? 0.38 + base
-        : 0.62 + base;
+      const base = (nivel(j) - 55) * 0.010;
+      let p = opcionId === "cruzar" ? 0.48 + base
+        : opcionId === "picar" ? 0.34 + base
+        : 0.58 + base;
       if (j.rasgos.includes("definidor")) p += 0.08;
       if (j.rasgos.includes("definicion_irregular")) p += rng.entre(-0.18, 0.10);
       const mete = rng.chance(Math.max(0.15, Math.min(0.9, p)));

@@ -1,0 +1,428 @@
+[
+  {
+    "id": "melgarejo",
+    "nombre": "Lorenzo",
+    "apellido": "Melgarejo",
+    "posicion": "EI",
+    "edad": 36,
+    "nacionalidad": "PAR",
+    "nivel": 68,
+    "de": "Libertad",
+    "rasgos": [
+      "juego_aereo"
+    ],
+    "nota": "Jugó en Benfica y Spartak. Vuelve por la camiseta"
+  },
+  {
+    "id": "quintero",
+    "nombre": "Juan Fernando",
+    "apellido": "Quintero",
+    "posicion": "MCO",
+    "edad": 33,
+    "nacionalidad": "COL",
+    "nivel": 74,
+    "de": "Racing",
+    "rasgos": [
+      "definidor"
+    ],
+    "nota": "El de la final de Madrid. Zurda de otra categoría"
+  },
+  {
+    "id": "josefmartinez",
+    "nombre": "Josef",
+    "apellido": "Martínez",
+    "posicion": "DC",
+    "edad": 33,
+    "nacionalidad": "VEN",
+    "nivel": 71,
+    "de": "sin club",
+    "rasgos": [
+      "definidor"
+    ],
+    "nota": "Metió 27 en una temporada de la MLS. Está libre"
+  },
+  {
+    "id": "cueva",
+    "nombre": "Christian",
+    "apellido": "Cueva",
+    "posicion": "MCO",
+    "edad": 34,
+    "nacionalidad": "PER",
+    "nivel": 69,
+    "de": "Cienciano",
+    "rasgos": [
+      "definicion_irregular"
+    ],
+    "nota": "Un día te gana el partido solo, al otro no aparece"
+  },
+  {
+    "id": "soteldo",
+    "nombre": "Yeferson",
+    "apellido": "Soteldo",
+    "posicion": "EI",
+    "edad": 29,
+    "nacionalidad": "VEN",
+    "nivel": 73,
+    "de": "Fluminense",
+    "rasgos": [],
+    "nota": "Petiso, encarador, no la suelta nunca"
+  },
+  {
+    "id": "savarino",
+    "nombre": "Jefferson",
+    "apellido": "Savarino",
+    "posicion": "ED",
+    "edad": 30,
+    "nacionalidad": "VEN",
+    "nivel": 73,
+    "de": "Botafogo",
+    "rasgos": [
+      "definidor"
+    ],
+    "nota": "Campeón de la Libertadores. Sabe jugar estas noches"
+  },
+  {
+    "id": "pavon",
+    "nombre": "Cristian",
+    "apellido": "Pavón",
+    "posicion": "ED",
+    "edad": 30,
+    "nacionalidad": "ARG",
+    "nivel": 71,
+    "de": "Talleres",
+    "rasgos": [],
+    "nota": "Fue de lo mejor de Boca. Anda buscando revancha"
+  },
+  {
+    "id": "villa",
+    "nombre": "Sebastián",
+    "apellido": "Villa",
+    "posicion": "EI",
+    "edad": 30,
+    "nacionalidad": "COL",
+    "nivel": 72,
+    "de": "Independiente Rivadavia",
+    "rasgos": [],
+    "nota": "Desequilibra como pocos. Trae ruido de afuera"
+  },
+  {
+    "id": "iturbe",
+    "nombre": "Juan Manuel",
+    "apellido": "Iturbe",
+    "posicion": "ED",
+    "edad": 33,
+    "nacionalidad": "PAR",
+    "nivel": 67,
+    "de": "sin club",
+    "rasgos": [
+      "definicion_irregular"
+    ],
+    "nota": "Estuvo en la Roma. Nunca terminó de explotar"
+  },
+  {
+    "id": "santander",
+    "nombre": "Federico",
+    "apellido": "Santander",
+    "posicion": "DC",
+    "edad": 35,
+    "nacionalidad": "PAR",
+    "nivel": 68,
+    "de": "Cerro Porteño",
+    "rasgos": [
+      "juego_aereo"
+    ],
+    "nota": "El Ropero. Jugó en Bologna y en Copenhague"
+  },
+  {
+    "id": "cecilio",
+    "nombre": "Cecilio",
+    "apellido": "Domínguez",
+    "posicion": "EI",
+    "edad": 32,
+    "nacionalidad": "PAR",
+    "nivel": 70,
+    "de": "Austin FC",
+    "rasgos": [],
+    "nota": "Salió de Cerro. Vuelve al fútbol paraguayo"
+  },
+  {
+    "id": "kaku",
+    "nombre": "Alejandro",
+    "apellido": "Romero Gamarra",
+    "posicion": "MCO",
+    "edad": 31,
+    "nacionalidad": "PAR",
+    "nivel": 72,
+    "de": "Al-Taawoun",
+    "rasgos": [
+      "definidor"
+    ],
+    "nota": "El Kaku. Fue MVP de la MLS con New York"
+  },
+  {
+    "id": "bruno_valdez",
+    "nombre": "Bruno",
+    "apellido": "Valdez",
+    "posicion": "DFC",
+    "edad": 33,
+    "nacionalidad": "PAR",
+    "nivel": 71,
+    "de": "América",
+    "rasgos": [
+      "juego_aereo"
+    ],
+    "nota": "Diez años en el América de México. Manda atrás"
+  },
+  {
+    "id": "blas_riveros",
+    "nombre": "Blas",
+    "apellido": "Riveros",
+    "posicion": "LI",
+    "edad": 28,
+    "nacionalidad": "PAR",
+    "nivel": 70,
+    "de": "Cerro Porteño",
+    "rasgos": [],
+    "nota": "Pasó por Basilea y Boca. Todavía tiene todo por delante"
+  },
+  {
+    "id": "sergio_diaz",
+    "nombre": "Sergio",
+    "apellido": "Díaz",
+    "posicion": "DC",
+    "edad": 28,
+    "nacionalidad": "PAR",
+    "nivel": 69,
+    "de": "Cerro Porteño",
+    "rasgos": [
+      "definidor"
+    ],
+    "nota": "Lo compró el Real Madrid a los 18. Se lo sacás a Cerro"
+  },
+  {
+    "id": "robert_rojas",
+    "nombre": "Robert",
+    "apellido": "Rojas",
+    "posicion": "DFC",
+    "edad": 30,
+    "nacionalidad": "PAR",
+    "nivel": 72,
+    "de": "River Plate",
+    "rasgos": [
+      "juego_aereo"
+    ],
+    "nota": "Se rompió la rodilla en la Libertadores y volvió"
+  },
+  {
+    "id": "enner",
+    "nombre": "Enner",
+    "apellido": "Valencia",
+    "posicion": "DC",
+    "edad": 36,
+    "nacionalidad": "ECU",
+    "nivel": 70,
+    "de": "Internacional",
+    "rasgos": [
+      "definidor",
+      "juego_aereo"
+    ],
+    "nota": "Máximo goleador de la historia de Ecuador"
+  },
+  {
+    "id": "estrada",
+    "nombre": "Michael",
+    "apellido": "Estrada",
+    "posicion": "DC",
+    "edad": 30,
+    "nacionalidad": "ECU",
+    "nivel": 68,
+    "de": "Toluca",
+    "rasgos": [
+      "juego_aereo"
+    ],
+    "nota": "Grandote, incómodo, la baja para los demás"
+  },
+  {
+    "id": "cabecita",
+    "nombre": "Jonathan",
+    "apellido": "Rodríguez",
+    "posicion": "DC",
+    "edad": 33,
+    "nacionalidad": "URU",
+    "nivel": 71,
+    "de": "América",
+    "rasgos": [
+      "definidor"
+    ],
+    "nota": "Cabecita. Fue ídolo del Cruz Azul"
+  },
+  {
+    "id": "nicolas_lopez",
+    "nombre": "Nicolás",
+    "apellido": "López",
+    "posicion": "SD",
+    "edad": 33,
+    "nacionalidad": "URU",
+    "nivel": 69,
+    "de": "Internacional",
+    "rasgos": [
+      "definidor"
+    ],
+    "nota": "El Diente. Anduvo por Roma, Tigres e Inter de Porto Alegre"
+  },
+  {
+    "id": "pereiro",
+    "nombre": "Gastón",
+    "apellido": "Pereiro",
+    "posicion": "MCO",
+    "edad": 31,
+    "nacionalidad": "URU",
+    "nivel": 71,
+    "de": "Nacional",
+    "rasgos": [],
+    "nota": "Zurdo de PSV y Cagliari. Le pega de afuera"
+  },
+  {
+    "id": "otero",
+    "nombre": "Rómulo",
+    "apellido": "Otero",
+    "posicion": "MCO",
+    "edad": 34,
+    "nacionalidad": "VEN",
+    "nivel": 69,
+    "de": "Athletico Paranaense",
+    "rasgos": [
+      "definidor"
+    ],
+    "nota": "Especialista en tiros libres. Los mete de cualquier lado"
+  },
+  {
+    "id": "benedetto",
+    "nombre": "Darío",
+    "apellido": "Benedetto",
+    "posicion": "DC",
+    "edad": 36,
+    "nacionalidad": "ARG",
+    "nivel": 68,
+    "de": "Newell's",
+    "rasgos": [
+      "definidor"
+    ],
+    "nota": "El Pipa. Nueve de área de los de antes"
+  },
+  {
+    "id": "wanchope",
+    "nombre": "Ramón",
+    "apellido": "Ábila",
+    "posicion": "DC",
+    "edad": 37,
+    "nacionalidad": "ARG",
+    "nivel": 65,
+    "de": "Colón",
+    "rasgos": [
+      "juego_aereo"
+    ],
+    "nota": "Wanchope. Cabecea todo lo que pasa por el área"
+  },
+  {
+    "id": "gaitan",
+    "nombre": "Nicolás",
+    "apellido": "Gaitán",
+    "posicion": "EI",
+    "edad": 38,
+    "nacionalidad": "ARG",
+    "nivel": 66,
+    "de": "sin club",
+    "rasgos": [
+      "definidor"
+    ],
+    "nota": "Jugó en Benfica y Atlético de Madrid. Le queda la pausa"
+  },
+  {
+    "id": "valoyes",
+    "nombre": "Diego",
+    "apellido": "Valoyes",
+    "posicion": "ED",
+    "edad": 30,
+    "nacionalidad": "COL",
+    "nivel": 70,
+    "de": "Talleres",
+    "rasgos": [],
+    "nota": "Rompió en Córdoba durante cuatro temporadas seguidas"
+  },
+  {
+    "id": "bareiro",
+    "nombre": "Adam",
+    "apellido": "Bareiro",
+    "posicion": "DC",
+    "edad": 30,
+    "nacionalidad": "PAR",
+    "nivel": 72,
+    "de": "River Plate",
+    "rasgos": [
+      "definidor",
+      "juego_aereo"
+    ],
+    "nota": "Se hizo en San Lorenzo. Pelea todas"
+  },
+  {
+    "id": "benitez_walter",
+    "nombre": "Walter",
+    "apellido": "Benítez",
+    "posicion": "ARQ",
+    "edad": 33,
+    "nacionalidad": "ARG",
+    "nivel": 73,
+    "de": "PSV",
+    "rasgos": [],
+    "nota": "Diez años atajando en Europa. Ataja lo que no se puede"
+  },
+  {
+    "id": "rochet",
+    "nombre": "Sergio",
+    "apellido": "Rochet",
+    "posicion": "ARQ",
+    "edad": 33,
+    "nacionalidad": "URU",
+    "nivel": 74,
+    "de": "Internacional",
+    "rasgos": [],
+    "nota": "Arquero de la selección uruguaya en el Mundial"
+  },
+  {
+    "id": "torres_ivan",
+    "nombre": "Iván",
+    "apellido": "Torres",
+    "posicion": "LD",
+    "edad": 32,
+    "nacionalidad": "PAR",
+    "nivel": 68,
+    "de": "Sportivo Luqueño",
+    "rasgos": [],
+    "nota": "Sube y baja los noventa. Un fierro para el lateral"
+  },
+  {
+    "id": "morel",
+    "nombre": "Jorge",
+    "apellido": "Morel",
+    "posicion": "MCD",
+    "edad": 29,
+    "nacionalidad": "PAR",
+    "nivel": 69,
+    "de": "Guaraní",
+    "rasgos": [],
+    "nota": "Corta todo. De los mejores cinco del medio local"
+  },
+  {
+    "id": "espinola",
+    "nombre": "Alberto",
+    "apellido": "Espínola",
+    "posicion": "LI",
+    "edad": 34,
+    "nacionalidad": "PAR",
+    "nivel": 69,
+    "de": "Cerro Porteño",
+    "rasgos": [],
+    "nota": "Fue campeón con Boca. Le sobra oficio"
+  }
+]

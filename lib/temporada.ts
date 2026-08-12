@@ -1282,7 +1282,7 @@ export function fichar(p: Partida, fichajeId: string): Partida | null {
     condicion: 88,
     animo: 70,
     partidos_internacionales: f.extranjero ? 12 : 4,
-    rasgos: [],
+    rasgos: f.rasgos ?? [],
     lesionado_hasta: null,
     tarjetas_amarillas: 0,
     suspendido: false,
