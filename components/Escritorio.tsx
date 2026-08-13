@@ -366,55 +366,82 @@ export default function Escritorio({
               * card entera y no un renglón del encabezado.
               */}
             <button onClick={() => setAyuda("ovr")}
-              className="relieve-alto relative overflow-hidden rounded-lg px-3 py-2.5 text-left"
-              style={{
-                background: `linear-gradient(160deg,
-                  color-mix(in srgb, ${colorOvr} 26%, var(--carbon-alto)),
-                  color-mix(in srgb, ${colorOvr} 8%, var(--carbon)))`,
-                boxShadow: `inset 0 0 0 1px color-mix(in srgb, ${colorOvr} 40%, transparent)`,
-              }}>
-              <span className="text-[9px] uppercase tracking-[0.16em]" style={{ color: colorOvr }}>
-                OVR
-              </span>
-              {/*
-                * El total y el plantel, uno al lado del otro y separados por
-                * una línea. El chip "+2" no se entendía: no quedaba claro si el
-                * número grande ya lo incluía o había que sumarlo.
-                */}
-              <span className="mt-0.5 flex items-end gap-2.5">
-                <Numero valor={ovr.hoy} formato={(n) => String(Math.round(n))}
-                        className="num block leading-none"
-                        style={{ fontSize: 40, color: colorOvr,
-                                 textShadow: `0 0 30px color-mix(in srgb, ${colorOvr} 45%, transparent)` }} />
-                <span className="flex items-center gap-2 pb-1">
-                  <span style={{ width: 1, height: 22, background: "var(--linea)" }} />
-                  <span>
-                    <span className="num block text-[16px] leading-none" style={{ color: "var(--tenue)" }}>
-                      {Math.round(ovr.plantel)}
-                    </span>
-                    <span className="block text-[8px] uppercase tracking-[0.12em]"
-                          style={{ color: "var(--apagado)" }}>
-                      plantel
+              className="relieve-alto relative overflow-hidden rounded-lg px-3 pb-2 pt-2.5 text-left">
+              {/* fondo propio: negro hondo con el franjeado de la camiseta */}
+              <span className="absolute inset-0" style={{
+                background: `radial-gradient(120% 110% at 12% -10%,
+                  color-mix(in srgb, ${colorOvr} 42%, #0b1210), #070a09 76%)`,
+              }} />
+              {/* el franjeado de la camiseta, apagándose hacia el fondo */}
+              <span className="absolute inset-0" style={{
+                backgroundImage:
+                  "repeating-linear-gradient(90deg, rgba(255,255,255,0.05) 0 6px, transparent 6px 14px)",
+                maskImage: "linear-gradient(100deg, #000 0%, transparent 62%)",
+                WebkitMaskImage: "linear-gradient(100deg, #000 0%, transparent 62%)",
+              }} />
+              {/* el destello de arriba, que es lo que la separa de una card plana */}
+              <span className="absolute -left-6 -top-10 h-24 w-32 rounded-full" style={{
+                background: `radial-gradient(closest-side, color-mix(in srgb, ${colorOvr} 70%, transparent), transparent)`,
+                filter: "blur(14px)", opacity: 0.75,
+              }} />
+              <span className="absolute inset-0 rounded-lg" style={{
+                boxShadow: `inset 0 0 0 1px color-mix(in srgb, ${colorOvr} 55%, transparent),
+                            inset 0 1px 0 rgba(255,255,255,0.16)`,
+              }} />
+
+              <span className="relative block">
+                <span className="flex items-center gap-1.5">
+                  <span style={{ width: 3, height: 11, borderRadius: 2, background: colorOvr }} />
+                  <span className="text-[10px] font-extrabold uppercase tracking-[0.2em]"
+                        style={{ color: colorOvr }}>
+                    OVR
+                  </span>
+                </span>
+
+                <span className="mt-1 flex items-end gap-2.5">
+                  <Numero valor={ovr.hoy} formato={(n) => String(Math.round(n))}
+                          className="num block leading-[0.85]"
+                          style={{
+                            fontSize: 52, color: "var(--blanco)",
+                            textShadow: `0 0 22px color-mix(in srgb, ${colorOvr} 95%, transparent),
+                                         0 0 48px color-mix(in srgb, ${colorOvr} 55%, transparent),
+                                         0 2px 3px rgba(0,0,0,0.8)`,
+                          }} />
+                  <span className="flex items-center gap-2 pb-1">
+                    <span style={{ width: 1, height: 24, background: "rgba(255,255,255,0.16)" }} />
+                    <span>
+                      <span className="num block text-[16px] leading-none" style={{ color: "var(--tenue)" }}>
+                        {Math.round(ovr.plantel)}
+                      </span>
+                      <span className="block text-[8px] uppercase tracking-[0.12em]"
+                            style={{ color: "var(--apagado)" }}>
+                        plantel
+                      </span>
                     </span>
                   </span>
                 </span>
-              </span>
-              <span className="mt-0.5 block text-[10px]" style={{ color: "var(--tenue)" }}>
-                {partido ? (partido.ctx.esLocal ? "así llegás al partido" : `así llegás a ${partido.ciudad}`)
-                          : "así está el equipo"}
-              </span>
-              {bajas.length > 0 && (
-                <span className="mt-1 inline-block rounded px-1.5 py-[1px] text-[9px] font-extrabold uppercase"
-                      style={{ background: "var(--ladrillo)", color: "var(--blanco)" }}>
-                  {bajas.length} baja{bajas.length > 1 ? "s" : ""}
+
+                <span className="mt-1 block text-[10px]" style={{ color: "var(--tenue)" }}>
+                  {partido ? (partido.ctx.esLocal ? "así llegás al partido" : `así llegás a ${partido.ciudad}`)
+                            : "así está el equipo"}
                 </span>
-              )}
-              {!sub18.alcanza && (
-                <span className="mt-1 ml-1 inline-block rounded px-1.5 py-[1px] text-[9px] font-extrabold uppercase"
-                      style={{ background: "#e0902a", color: "#0a120d" }}>
-                  Sub-18: {sub18.faltan}'
-                </span>
-              )}
+                {(bajas.length > 0 || !sub18.alcanza) && (
+                  <span className="mt-1.5 flex flex-wrap gap-1">
+                    {bajas.length > 0 && (
+                      <span className="rounded px-1.5 py-[1px] text-[9px] font-extrabold uppercase"
+                            style={{ background: "var(--ladrillo)", color: "var(--blanco)" }}>
+                        {bajas.length} baja{bajas.length > 1 ? "s" : ""}
+                      </span>
+                    )}
+                    {!sub18.alcanza && (
+                      <span className="rounded px-1.5 py-[1px] text-[9px] font-extrabold uppercase"
+                            style={{ background: "#e0902a", color: "#0a120d" }}>
+                        Sub-18: {sub18.faltan}'
+                      </span>
+                    )}
+                  </span>
+                )}
+              </span>
             </button>
 
             <Modulo titulo="Sudamericana" color="#d9a832" icono="copa" onClick={() => setVista("copa")}
@@ -439,7 +466,8 @@ export default function Escritorio({
               ctx={partido?.ctx ?? ({} as never)}
               animoDe={(j) => Math.round(partida.plantel[j.id]?.animo ?? 70)}
               bajaDe={(j) => j.lesionado_hasta ? "lesionado" : j.suspendido ? "suspendido" : null}
-              onTocar={(j) => setFichaHome(j.id)} />
+              onTocar={(j) => setFichaHome(j.id)}
+              onModificar={() => setVista("plantel")} />
           </div>
         </div>
       )}
@@ -538,7 +566,7 @@ export default function Escritorio({
 
       {/* ---------- resto ---------- */}
       <div className="grid grid-cols-3 gap-1 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-1.5">
-        {([["fixture", "Fixture", "#d9a832"], ["plantel", "Plantel", "#3fa76a"],
+        {([["fixture", "Fixture", "#d9a832"], ["mercado", "Fichajes", "#e0902a"],
            ["bitacora", "Diario", "#8fa396"]] as const).map(([id, texto, color]) => (
           <button key={id} onClick={() => setVista(id)}
             className="rounded-md py-2 text-[9px] font-bold uppercase tracking-wider"

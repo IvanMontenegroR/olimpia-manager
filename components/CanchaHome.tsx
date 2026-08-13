@@ -44,7 +44,7 @@ function useMedida() {
 }
 
 export default function CanchaHome({
-  once, puestos, formacion, ctx, animoDe, bajaDe, onTocar,
+  once, puestos, formacion, ctx, animoDe, bajaDe, onTocar, onModificar,
 }: {
   once: Jugador[];
   puestos: Map<string, Posicion>;
@@ -54,6 +54,7 @@ export default function CanchaHome({
   /** Por qué no está disponible, si no lo está. */
   bajaDe: (j: Jugador) => "lesionado" | "suspendido" | null;
   onTocar: (j: Jugador) => void;
+  onModificar: () => void;
 }) {
   const [ref, caja] = useMedida();
   const { ubicados, escala } = repartirCancha(formacion, caja.ancho, caja.alto);
@@ -117,17 +118,13 @@ export default function CanchaHome({
       })}
 
       {/* Qué significa el aro, sin párrafo: los tres colores y listo. */}
-      {/* Arriba a la derecha, que abajo al medio está el arquero. */}
-      <span className="absolute right-2 top-1 flex items-center gap-1.5 text-[8px] uppercase tracking-[0.12em]"
-            style={{ color: "#ffffff66" }}>
-        ánimo
-        {[["#3fa76a", "bien"], ["#e0902a", "flojo"], ["#c0392b", "mal"]].map(([c, q]) => (
-          <span key={q} className="flex items-center gap-[3px]">
-            <span style={{ width: 6, height: 6, borderRadius: 999, background: c }} />
-            {q}
-          </span>
-        ))}
-      </span>
+      {/* Tocar a un jugador abre su ficha; para mover el equipo, este botón. */}
+      <button onClick={onModificar}
+        className="relieve absolute bottom-2 right-2 rounded-md px-2.5 py-1.5 text-[9px] font-bold uppercase tracking-[0.1em]"
+        style={{ background: "rgba(10,18,13,0.82)", color: "var(--tenue)",
+                 backdropFilter: "blur(3px)", boxShadow: "0 0 0 1px rgba(255,255,255,0.14)" }}>
+        Modificar plantel
+      </button>
     </div>
   );
 }
