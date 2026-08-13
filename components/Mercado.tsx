@@ -50,7 +50,7 @@ export default function Mercado({
               </span>
               <span className="min-w-0 flex-1">
                 <span className="apellido block truncate text-[13px]">
-                  {f.apellido} <span style={{ color: "var(--apagado)" }}>{f.nombre}</span>
+                  <span style={{ color: "var(--apagado)" }}>{f.nombre}</span> {f.apellido}
                 </span>
                 <span className="text-[9px]" style={{ color: "var(--apagado)" }}>
                   {f.edad} años {BANDERA[f.nacionalidad] ?? ""}

@@ -6,6 +6,7 @@ import IconoModulo, { type ClaveIcono } from "./IconoModulo.tsx";
 import Numero from "./Numero.tsx";
 import Dorsal from "./Dorsal.tsx";
 import Asuntos from "./Asuntos.tsx";
+import CanchaHome from "./CanchaHome.tsx";
 import Mercado from "./Mercado.tsx";
 import { colorDe } from "./Dorsal.tsx";
 import { colorCondicion, esSub18, nombreCorto, partidosDeOlimpia } from "@/lib/juego.ts";
@@ -112,6 +113,8 @@ export default function Escritorio({
   const [ayuda, setAyuda] = useState<Ayuda | null>(null);
   /** Borrar la partida es irreversible: se pregunta antes. */
   const [reiniciar, setReiniciar] = useState(false);
+  /** El jugador que tocaste en la cancha de la pantalla principal. */
+  const [fichaHome, setFichaHome] = useState<string | null>(null);
   const tabla = useMemo(() => tablaDe(partida), [partida]);
   const plantel = useMemo(() => plantelDe(partida), [partida]);
   const posicion = useMemo(() => posicionDe(partida), [partida]);
@@ -416,37 +419,21 @@ export default function Escritorio({
                 ? partida.copa.rivalId : undefined} />
           </div>
 
-          {/* último movimiento */}
-          <div key={partida.bitacora.length}
-               className="scroll-y relieve mt-1.5 min-h-0 flex-1 rounded-lg p-2.5"
-               style={{ background: "var(--carbon)" }}>
-            <div className="mb-1 flex items-center justify-between">
-              <span className="text-[9px] uppercase tracking-[0.14em]" style={{ color: "var(--apagado)" }}>
-                Últimos días
-              </span>
-              <button onClick={() => setVista("bitacora")} className="text-[9px]"
-                      style={{ color: "var(--apagado)" }}>ver todo</button>
-            </div>
-            <div className="escalona">
-            {[...partida.bitacora].reverse().slice(0, 12).map((b, i) => {
-              const m = b.marca ? MARCA[b.marca] : null;
-              return (
-                <div key={i} className="mb-1 flex items-center gap-2 text-[11px]">
-                  {m ? (
-                    <span className="num shrink-0 rounded px-1 text-[10px] font-extrabold leading-tight"
-                          style={{ background: m.color, color: "#0a120d", minWidth: 30, textAlign: "center" }}>
-                      {b.cifra ?? m.icono}
-                    </span>
-                  ) : (
-                    <span className="num shrink-0" style={{ color: "var(--apagado)", minWidth: 30 }}>
-                      {b.dia.slice(8, 10)}/{b.dia.slice(5, 7)}
-                    </span>
-                  )}
-                  <span style={{ color: m ? "var(--blanco)" : "var(--tenue)" }}>{b.texto}</span>
-                </div>
-              );
-            })}
-            </div>
+          {/*
+            * El once que va a salir, con el ánimo de cada uno. Acá estaba el
+            * diario, que era texto para leer y nada para hacer; el ánimo, en
+            * cambio, es lo que mueve el OVR y no se veía en ninguna parte
+            * salvo entrando a la ficha de a uno. El diario sigue completo en
+            * su propio botón.
+            */}
+          <div className="mt-1.5 flex min-h-0 flex-1 flex-col">
+            <CanchaHome
+              once={ovr.once}
+              puestos={ovr.puestos}
+              formacion={ovr.formacion}
+              animoDe={(j) => Math.round(partida.plantel[j.id]?.animo ?? 70)}
+              bajaDe={(j) => j.lesionado_hasta ? "lesionado" : j.suspendido ? "suspendido" : null}
+              onTocar={(j) => setFichaHome(j.id)} />
           </div>
         </div>
       )}
@@ -554,6 +541,16 @@ export default function Escritorio({
           </button>
         ))}
       </div>
+
+      {fichaHome && (() => {
+        const j = plantel.find((x) => x.id === fichaHome);
+        if (!j) return null;
+        return (
+          <FichaJugador jugador={j} estado={partida.plantel[j.id]}
+                        ctx={partido?.ctx ?? ({} as never)}
+                        onCerrar={() => setFichaHome(null)} />
+        );
+      })()}
 
       {reiniciar && (
         <div className="fixed inset-0 z-40 flex flex-col justify-end"

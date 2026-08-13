@@ -359,6 +359,8 @@ export function salidaAutomatica(
 
   return {
     once,
+    // la formación se devuelve para poder dibujar el once en la cancha
+    formacion,
     suplentes: bancoSugerido(aptos, once, ctx),
     actitud: (ctx.esLocal ? "ofensivo" : "equilibrado") as Actitud,
     puestos,

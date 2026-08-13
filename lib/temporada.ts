@@ -21,7 +21,7 @@ import {
 import {
   DIAS_DE_VENTANA, ESTRELLAS, impactoDe, jugadorDeEstrella, sortearEstrella,
 } from "@/engine/estrellas.ts";
-import type { ContextoPartido, Jugador } from "@/engine/tipos.ts";
+import type { ContextoPartido, Jugador, Posicion } from "@/engine/tipos.ts";
 
 const EQUIPOS = equiposJson as any[];
 const FIXTURE = fixtureJson as any[];
@@ -604,6 +604,10 @@ export interface OvrDelClub {
   rival: number | null;
   /** De dónde sale el número de hoy, para poder abrirlo en pantalla. */
   partes: DesgloseOvr | null;
+  /** El once del que sale, para poder dibujarlo sin calcularlo dos veces. */
+  once: Jugador[];
+  puestos: Map<string, Posicion>;
+  formacion: string;
 }
 
 export function ovrDe(p: Partida): OvrDelClub {
@@ -619,7 +623,10 @@ export function ovrDe(p: Partida): OvrDelClub {
    * cancha propia como referencia.
    */
   const partido = partidoDe(p) ?? partidoDe({ ...p, fechaActual: 1, copa: { ...p.copa, ronda: "eliminado" } });
-  if (!partido) return { hoy: plantel, plantel, rival: null, partes: null };
+  if (!partido) {
+    return { hoy: plantel, plantel, rival: null, partes: null,
+             once: [], puestos: new Map(), formacion: "4-3-3" };
+  }
   const ctx: ContextoPartido = partidoDe(p) ? partido.ctx
     : { ...partido.ctx, esLocal: true, alturaM: 43, viajeKm: 0 };
   const salida = salidaAutomatica({ ...partido, ctx }, jugadores, estadoSub18Para(p));
@@ -640,7 +647,8 @@ export function ovrDe(p: Partida): OvrDelClub {
         ? 0
         : ctx.competencia === "sudamericana" ? P.localiaCopaRival : P.localiaLiga)
     : null;
-  return { hoy, plantel, rival, partes };
+  return { hoy, plantel, rival, partes,
+           once: salida.once, puestos: salida.puestos, formacion: salida.formacion };
 }
 
 /** El estado Sub-18 con la forma que espera `salidaAutomatica`. */
