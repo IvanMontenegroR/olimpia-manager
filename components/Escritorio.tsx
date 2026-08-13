@@ -285,22 +285,6 @@ export default function Escritorio({
           </button>
         )}
 
-        {/* Las barras de vestuario y hinchada se fueron: las dos están en la
-            card del OVR, con su barra y con lo que aportan. */}
-        <div className="mt-2 flex justify-end gap-2">
-          {/* El mercado, a mano y sin ocupar una card entera. */}
-          <button onClick={() => setVista("mercado")}
-            className="relieve relative flex h-[30px] w-[38px] shrink-0 items-center justify-center rounded-md"
-            style={{ background: "var(--carbon)" }} aria-label="Fichajes">
-            <IconoModulo clave="pases" color="#e0902a" tam={17} />
-            {partida.fichajes.length > 0 && (
-              <span className="num absolute -right-1 -top-1 rounded-full px-1 text-[8px] font-extrabold"
-                    style={{ background: "#e0902a", color: "#0a120d" }}>
-                {partida.fichajes.length}
-              </span>
-            )}
-          </button>
-        </div>
       </header>
 
       {partida.estrella && (() => {
@@ -400,41 +384,33 @@ export default function Escritorio({
               * que son números que se pueden mover.
               */}
             <button onClick={() => setAyuda("ovr")}
-              className="relieve-alto relative overflow-hidden rounded-lg px-3 py-2.5 text-left"
+              className="relieve-alto relative overflow-hidden rounded-lg px-2.5 py-2.5 text-left"
               style={{ background: "linear-gradient(160deg, #16201b, #0c120f 70%)" }}>
-              <span className="absolute -left-8 -top-10 h-24 w-28 rounded-full" style={{
-                background: `radial-gradient(closest-side, color-mix(in srgb, ${colorOvr} 32%, transparent), transparent)`,
-                filter: "blur(16px)",
-              }} />
-              <span className="absolute inset-0 rounded-lg"
-                    style={{ boxShadow: `inset 0 0 0 1px color-mix(in srgb, ${colorOvr} 32%, transparent)` }} />
-
-              <span className="relative flex items-start gap-2.5">
-                <span className="shrink-0">
-                  <Numero valor={ovr.hoy} formato={(n) => String(Math.round(n))}
-                          className="apellido block leading-[0.8]"
-                          style={{ fontSize: 50, color: colorOvr,
-                                   textShadow: `0 0 26px color-mix(in srgb, ${colorOvr} 55%, transparent)` }} />
-                  <span className="mt-1.5 flex items-baseline gap-1">
-                    <span className="num text-[13px]" style={{ color: "var(--tenue)" }}>
-                      {aportes.base}
-                    </span>
-                    <span className="text-[8px] uppercase tracking-[0.12em]"
-                          style={{ color: "var(--apagado)" }}>
-                      plantel
-                    </span>
+              <span className="flex items-baseline gap-2">
+                <Numero valor={ovr.hoy} formato={(n) => String(Math.round(n))}
+                        className="apellido block leading-[0.8]"
+                        style={{ fontSize: 46, color: colorOvr,
+                                 textShadow: `0 0 26px color-mix(in srgb, ${colorOvr} 50%, transparent)` }} />
+                <span className="flex items-baseline gap-1">
+                  <span className="num text-[13px]" style={{ color: "var(--tenue)" }}>
+                    {aportes.base}
                   </span>
-                </span>
-
-                <span className="min-w-0 flex-1">
-                  {aportes.lista.slice(0, 4).map((a) => (
-                    <Aporte key={a.etiqueta} etiqueta={a.etiqueta} valor={a.valor} lleno={a.lleno} />
-                  ))}
+                  <span className="text-[8px] uppercase tracking-[0.12em]"
+                        style={{ color: "var(--apagado)" }}>
+                    plantel
+                  </span>
                 </span>
               </span>
 
+              {/* cada cosa que lo mueve, en su propia fichita del color que le toca */}
+              <span className="mt-2 flex gap-1">
+                {aportes.lista.slice(0, 3).map((a) => (
+                  <Aporte key={a.etiqueta} etiqueta={a.etiqueta} valor={a.valor} />
+                ))}
+              </span>
+
               {(bajas.length > 0 || !sub18.alcanza) && (
-                <span className="relative mt-1.5 flex flex-wrap gap-1">
+                <span className="mt-1.5 flex flex-wrap gap-1">
                   {bajas.length > 0 && (
                     <span className="rounded px-1.5 py-[1px] text-[9px] font-extrabold uppercase"
                           style={{ background: "var(--ladrillo)", color: "var(--blanco)" }}>
@@ -576,9 +552,16 @@ export default function Escritorio({
         {([["fixture", "Fixture", "#d9a832"], ["mercado", "Fichajes", "#e0902a"],
            ["bitacora", "Diario", "#8fa396"]] as const).map(([id, texto, color]) => (
           <button key={id} onClick={() => setVista(id)}
-            className="rounded-md py-2 text-[9px] font-bold uppercase tracking-wider"
+            className="relative rounded-md py-2 text-[9px] font-bold uppercase tracking-wider"
             style={{ background: `color-mix(in srgb, ${color} 14%, var(--carbon))`, color }}>
             {texto}
+            {/* cuántos hay para mirar, sin tener que entrar */}
+            {id === "mercado" && partida.fichajes.length > 0 && (
+              <span className="num absolute right-1.5 top-1 rounded-full px-[5px] text-[8px] font-extrabold"
+                    style={{ background: color, color: "#0a120d" }}>
+                {partida.fichajes.length}
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -678,33 +661,26 @@ export default function Escritorio({
 
 /** Un aporte al OVR, en el costado de la card: etiqueta a la izquierda, cifra a la derecha. */
 /**
- * Un aporte al OVR: cuánto tenés lleno y cuánto te rinde.
+ * Una de las cosas que mueven el OVR, en su propia fichita.
  *
- * La barra es el valor crudo (la confianza sobre cien, el estadio sobre lleno)
- * y se pinta según cómo esté; el número de la derecha es lo que le pone al
- * OVR. Sin la barra, un "+2" no dice cuánto falta para más.
+ * El color de la ficha es el signo: verde si suma, roja si resta, apagada si
+ * no mueve nada. Así se ve de un golpe qué está tirando para arriba y qué
+ * para abajo, sin tener que leer cada número.
  */
-function Aporte({ etiqueta, valor, lleno }: {
-  etiqueta: string; valor: number; lleno?: number;
-}) {
+function Aporte({ etiqueta, valor }: { etiqueta: string; valor: number }) {
   const n = Math.round(valor);
-  const color = n > 0 ? "#5fd08c" : n < 0 ? "#e8695c" : "var(--apagado)";
-  const p = Math.max(0, Math.min(1, lleno ?? 0));
+  const color = n > 0 ? "#5fd08c" : n < 0 ? "#e8695c" : "#8a9a92";
   return (
-    <span className="flex items-center gap-1.5 leading-[1.7]">
-      <span className="w-[46px] shrink-0 truncate text-[9px]" style={{ color: "var(--apagado)" }}>
+    <span className="min-w-0 flex-1 rounded-md px-1 py-1 text-center"
+          style={{
+            background: `color-mix(in srgb, ${color} 15%, transparent)`,
+            boxShadow: `inset 0 0 0 1px color-mix(in srgb, ${color} 35%, transparent)`,
+          }}>
+      <span className="block truncate text-[8px] uppercase tracking-[0.06em]"
+            style={{ color: "var(--apagado)" }}>
         {etiqueta}
       </span>
-      {lleno !== undefined && (
-        <span className="relative block h-[5px] min-w-0 flex-1 overflow-hidden rounded-full"
-              style={{ background: "rgba(255,255,255,0.08)" }}>
-          <span className="block h-full rounded-full"
-                style={{ width: `${p * 100}%`, background: color,
-                         boxShadow: `0 0 5px color-mix(in srgb, ${color} 60%, transparent)`,
-                         transition: "width 450ms ease-out, background 300ms" }} />
-        </span>
-      )}
-      <span className="num w-[19px] shrink-0 text-right text-[11px] font-bold" style={{ color }}>
+      <span className="num block text-[14px] font-extrabold leading-tight" style={{ color }}>
         {n === 0 ? "0" : `${n > 0 ? "+" : "−"}${Math.abs(n)}`}
       </span>
     </span>

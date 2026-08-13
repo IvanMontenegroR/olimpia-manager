@@ -61,7 +61,7 @@ export default function Efectos({ e }: { e: EfectoVisible }) {
     const d = e.moralDe.delta / ONCE;
     const conf = d > 0 ? Math.max(1, Math.round(d)) : Math.min(-1, Math.round(d));
     chips.push({
-      texto: `${signo(conf)} vestuario${e.moralTexto ? ` por ${e.moralTexto}` : ""}`,
+      texto: `${signo(conf)} vestuario`,
       bueno: conf > 0,
     });
   }
