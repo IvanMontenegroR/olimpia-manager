@@ -24,7 +24,7 @@ import { comoLlega, estadoRival } from "@/lib/rivales.ts";
 import { TEXTO_ANIMO, animoDe } from "@/engine/tipos.ts";
 import { mejorMolde, MOLDE_DE, repartirEnMolde } from "@/lib/juego.ts";
 
-type Vista = "escritorio" | "plantel" | "tabla" | "fixture" | "mercado" | "bitacora"
+type Vista = "escritorio" | "plantel" | "fixture" | "mercado" | "bitacora"
   | "copa" | "estrella";
 type Ayuda = "ovr" | "estadio" | "vestuario" | "hinchada" | "dirigencia";
 
@@ -172,7 +172,7 @@ export default function Escritorio({
   if (vista !== "escritorio") {
     return (
       <Sub titulo={{
-        plantel: "Plantel", tabla: "Tabla", fixture: "Fixture",
+        plantel: "Plantel", fixture: "Fixture",
         mercado: "Fichajes", bitacora: "Bitácora", copa: "Sudamericana",
         estrella: "Mercado",
       }[vista]} onVolver={() => setVista("escritorio")}>
@@ -180,8 +180,7 @@ export default function Escritorio({
           <VistaPlantel plantel={plantel} partida={partida} onGuardarEquipos={onGuardarEquipos}
                         onMoverReserva={onMoverReserva} />
         )}
-        {vista === "tabla" && <VistaTabla tabla={tabla} />}
-        {vista === "fixture" && <VistaFixture partida={partida} />}
+        {vista === "fixture" && <VistaFixture partida={partida} tabla={tabla} />}
         {vista === "mercado" && <Mercado partida={partida} onFichar={onFichar} />}
         {vista === "bitacora" && <VistaBitacora partida={partida} />}
         {vista === "copa" && <VistaCopa partida={partida} />}
@@ -237,67 +236,6 @@ export default function Escritorio({
           </button>
         </div>
 
-        {/*
-          * El OVR manda. Es el mismo número que decide los partidos ahí abajo,
-          * puesto en pantalla: se mueve con el nivel del plantel, el ánimo, las
-          * piernas, el puesto y adónde se viaja. Antes había una barra de
-          * prestigio acá, que era un número que no se podía tocar con nada.
-          */}
-        <button onClick={() => setAyuda("ovr")} className="mt-2.5 flex w-full items-end gap-3 text-left">
-          <span className="shrink-0">
-            <span className="block text-[9px] uppercase tracking-[0.18em]"
-                  style={{ color: "var(--apagado)" }}>
-              {partido ? (partido.ctx.esLocal ? "Así llegás al domingo" : `Así llegás a ${partido.ciudad}`)
-                        : "Así está el equipo"}
-            </span>
-            <span className="flex items-end gap-1.5">
-              <Numero valor={ovr.hoy} formato={(n) => String(Math.round(n))}
-                      className="num block leading-none"
-                      style={{ fontSize: 44, color: colorOvr }} />
-              {/* Lo que le pone el momento por encima del plantel: sin esto el
-                  número aparecía sin explicación. */}
-              {Math.round(ovr.hoy) !== Math.round(ovr.plantel) && (
-                <span className="num pb-1 text-[13px] font-extrabold"
-                      style={{ color: ovr.hoy >= ovr.plantel ? "var(--cesped)" : "var(--ladrillo)" }}>
-                  {ovr.hoy >= ovr.plantel ? "+" : "−"}
-                  {Math.abs(Math.round(ovr.hoy) - Math.round(ovr.plantel))}
-                </span>
-              )}
-            </span>
-          </span>
-
-          <span className="min-w-0 flex-1 pb-1">
-            {/* dónde cae contra el plantel que tenés y contra el del domingo */}
-            <span className="relative block h-1.5 overflow-hidden rounded-full"
-                  style={{ background: "var(--linea)" }}>
-              <span className="block h-full rounded-full"
-                    style={{ width: `${escalaOvr(ovr.hoy)}%`,
-                             background: `linear-gradient(90deg, color-mix(in srgb, ${colorOvr} 45%, transparent), ${colorOvr})`,
-                             transition: "width 500ms ease-out" }} />
-              {ovr.rival !== null && (
-                <span className="absolute inset-y-0"
-                      style={{ left: `${escalaOvr(ovr.rival)}%`, width: 2,
-                               background: "var(--blanco)", opacity: 0.8 }} />
-              )}
-            </span>
-            <span className="mt-1 flex items-baseline justify-between text-[9px]">
-              <span style={{ color: "var(--apagado)" }}>
-                plantel <span className="num" style={{ color: "var(--tenue)" }}>
-                  {Math.round(ovr.plantel)}
-                </span>
-              </span>
-              {ovr.rival !== null && (
-                <span style={{ color: "var(--apagado)" }}>
-                  {nombreCorto(partido!.rivalId, partido!.rivalNombre)}{" "}
-                  <span className="num" style={{ color: "var(--tenue)" }}>
-                    {Math.round(ovr.rival)}
-                  </span>
-                </span>
-              )}
-            </span>
-          </span>
-        </button>
-
         {/* La dirigencia solo habla cuando hay algo que decir. */}
         {partida.paciencia < 40 && (
           <button onClick={() => setAyuda("dirigencia")}
@@ -319,26 +257,18 @@ export default function Escritorio({
                    onClick={() => setAyuda("vestuario")} />
           <Medidor etiqueta="Hinchada" valor={partida.hinchada} color="#d9a832"
                    onClick={() => setAyuda("hinchada")} />
-          {/* La ocupación es del próximo partido de local: de visitante no
-              significa nada, así que no ocupa lugar. */}
-          {partido?.ctx.esLocal && (
-          <button className="w-[64px] shrink-0 text-left" onClick={() => setAyuda("estadio")}>
-            <div className="mb-1 flex items-baseline justify-between">
-              <span className="mr-1 text-[8px] uppercase tracking-[0.14em]"
-                    style={{ color: "var(--apagado)" }}>
-                Estadio
+          {/* El mercado, a mano y sin ocupar una card entera. */}
+          <button onClick={() => setVista("mercado")}
+            className="relieve relative flex h-[30px] w-[38px] shrink-0 items-center justify-center rounded-md"
+            style={{ background: "var(--carbon)" }} aria-label="Fichajes">
+            <IconoModulo clave="pases" color="#e0902a" tam={17} />
+            {partida.fichajes.length > 0 && (
+              <span className="num absolute -right-1 -top-1 rounded-full px-1 text-[8px] font-extrabold"
+                    style={{ background: "#e0902a", color: "#0a120d" }}>
+                {partida.fichajes.length}
               </span>
-              <Numero valor={ocupacion * 100} formato={(n) => `${Math.round(n)}%`}
-                      className="num text-[10px]"
-                      style={{ color: ocupacion > 0.8 ? "var(--cesped)" : "var(--tenue)" }} />
-            </div>
-            <div className="h-1.5 overflow-hidden rounded-full relieve" style={{ background: "var(--linea)" }}>
-              <div className="barra-llena h-full rounded-full"
-                   style={{ width: `${ocupacion * 100}%`,
-                            background: "linear-gradient(90deg, #7a5a1e, var(--oro))" }} />
-            </div>
+            )}
           </button>
-          )}
         </div>
       </header>
 
@@ -427,30 +357,63 @@ export default function Escritorio({
         <div className="flex min-h-0 flex-1 flex-col px-3">
           {/* tablero del club */}
           <div className="escalona grid shrink-0 grid-cols-2 gap-1.5">
-            {/* La condición media vivía acá, pero con el plantel volviendo
-                entero cada semana marcaba 99% siempre. Lo que ahora importa es
-                con cuántos contás. */}
-            <Modulo titulo="Plantel" color="#3fa76a" icono="plantel" onClick={() => setVista("plantel")}
-              numero={plantel.filter((j) => !j.reserva && !j.suspendido && !j.lesionado_hasta).length}
-              pie="disponibles en primera"
-              alerta={
-                !sub18.alcanza ? `Sub-18: faltan ${sub18.faltan}'`
-                : bajas.length ? `${bajas.length} baja${bajas.length > 1 ? "s" : ""}`
-                : undefined} />
+            {/*
+              * El OVR, en el lugar donde estaba la condición media del plantel.
+              * Es el número más importante de la pantalla, así que ocupa una
+              * card entera y no un renglón del encabezado.
+              */}
+            <button onClick={() => setAyuda("ovr")}
+              className="relieve-alto relative overflow-hidden rounded-lg px-3 py-2.5 text-left"
+              style={{
+                background: `linear-gradient(160deg,
+                  color-mix(in srgb, ${colorOvr} 26%, var(--carbon-alto)),
+                  color-mix(in srgb, ${colorOvr} 8%, var(--carbon)))`,
+                boxShadow: `inset 0 0 0 1px color-mix(in srgb, ${colorOvr} 40%, transparent)`,
+              }}>
+              <span className="flex items-baseline justify-between">
+                <span className="text-[9px] uppercase tracking-[0.16em]" style={{ color: colorOvr }}>
+                  OVR
+                </span>
+                {Math.round(ovr.hoy) !== Math.round(ovr.plantel) && (
+                  <span className="num rounded px-1 py-[1px] text-[9px] font-extrabold"
+                        style={{
+                          background: ovr.hoy >= ovr.plantel
+                            ? "color-mix(in srgb, var(--cesped) 26%, transparent)"
+                            : "color-mix(in srgb, var(--ladrillo) 26%, transparent)",
+                          color: ovr.hoy >= ovr.plantel ? "var(--cesped)" : "var(--ladrillo)",
+                        }}>
+                    {ovr.hoy >= ovr.plantel ? "+" : "−"}
+                    {Math.abs(Math.round(ovr.hoy) - Math.round(ovr.plantel))}
+                  </span>
+                )}
+              </span>
+              <Numero valor={ovr.hoy} formato={(n) => String(Math.round(n))}
+                      className="num mt-0.5 block leading-none"
+                      style={{ fontSize: 40, color: colorOvr,
+                               textShadow: `0 0 30px color-mix(in srgb, ${colorOvr} 45%, transparent)` }} />
+              <span className="mt-0.5 block text-[10px]" style={{ color: "var(--tenue)" }}>
+                {partido ? (partido.ctx.esLocal ? "así llegás al partido" : `así llegás a ${partido.ciudad}`)
+                          : "así está el equipo"}
+              </span>
+              {bajas.length > 0 && (
+                <span className="mt-1 inline-block rounded px-1.5 py-[1px] text-[9px] font-extrabold uppercase"
+                      style={{ background: "var(--ladrillo)", color: "var(--blanco)" }}>
+                  {bajas.length} baja{bajas.length > 1 ? "s" : ""}
+                </span>
+              )}
+              {!sub18.alcanza && (
+                <span className="mt-1 ml-1 inline-block rounded px-1.5 py-[1px] text-[9px] font-extrabold uppercase"
+                      style={{ background: "#e0902a", color: "#0a120d" }}>
+                  Sub-18: {sub18.faltan}'
+                </span>
+              )}
+            </button>
 
             <Modulo titulo="Sudamericana" color="#d9a832" icono="copa" onClick={() => setVista("copa")}
               principal={NOMBRE_RONDA[partida.copa.ronda]}
               pie={rivalCopa ? `vs ${rivalCopa.nombre}` : "sin rival"}
               escudo={partida.copa.ronda !== "eliminado" && partida.copa.ronda !== "campeon"
                 ? partida.copa.rivalId : undefined} />
-
-            <Modulo titulo="Tabla" color="#4a7fb5" icono="tabla" onClick={() => setVista("tabla")}
-              numero={posicion} sufijo="°"
-              pie={difLider === 0 ? "puntero" : `a ${difLider} del líder`} />
-
-            <Modulo titulo="Fichajes" color="#e0902a" icono="pases" onClick={() => setVista("mercado")}
-              numero={partida.fichajes.length} pie="disponibles"
-              alerta={partida.ofertas.length ? `${partida.ofertas.length} oferta` : undefined} />
           </div>
 
           {/* último movimiento */}
@@ -550,6 +513,18 @@ export default function Escritorio({
                   {nombreCorto(partido.rivalId, partido.rivalNombre)} en {faltan} día{faltan === 1 ? "" : "s"}
                 </span>
               </span>
+              {/* Contra cuánto vas: es lo único del rival que hace falta saber
+                  antes de que llegue el día. */}
+              {ovr.rival !== null && (
+                <span className="shrink-0 text-right">
+                  <span className="block text-[8px] uppercase tracking-[0.14em]"
+                        style={{ color: "var(--apagado)" }}>ovr</span>
+                  <span className="num block text-[17px] leading-none"
+                        style={{ color: ovr.hoy >= ovr.rival ? "var(--cesped)" : "var(--ladrillo)" }}>
+                    {Math.round(ovr.rival)}
+                  </span>
+                </span>
+              )}
               <Escudo id={partido.rivalId} nombre={partido.rivalNombre} tam={24} />
             </button>
           ) : (
@@ -971,8 +946,12 @@ function VistaTabla({ tabla }: { tabla: ReturnType<typeof tablaDe> }) {
  * El fixture con las dos competencias: el Clausura fecha a fecha y el camino
  * de la Sudamericana, que antes solo se veía entrando a la copa.
  */
-function VistaFixture({ partida }: { partida: Partida }) {
-  const [comp, setComp] = useState<"todo" | "clausura" | "copa">("todo");
+function VistaFixture({ partida, tabla }: {
+  partida: Partida; tabla: ReturnType<typeof tablaDe>;
+}) {
+  /* La tabla vivía en una card propia del tablero. Está mejor acá: el que
+     mira el fixture es el que quiere saber cómo va el torneo. */
+  const [comp, setComp] = useState<"todo" | "clausura" | "copa" | "tabla">("todo");
 
   const liga = partidosDeOlimpia().map((p, i) => ({
     clave: `liga-${i}`,
@@ -1033,7 +1012,7 @@ function VistaFixture({ partida }: { partida: Partida }) {
   return (
     <>
       <div className="mb-2 flex gap-1">
-        {([["todo", "Todo"], ["clausura", "Clausura"], ["copa", "Sudamericana"]] as const)
+        {([["todo", "Todo"], ["clausura", "Clausura"], ["copa", "Copa"], ["tabla", "Tabla"]] as const)
           .map(([id, texto]) => (
             <button key={id} onClick={() => setComp(id)}
               className="flex-1 rounded-md py-1.5 text-[10px] font-bold uppercase tracking-wider"
@@ -1046,14 +1025,16 @@ function VistaFixture({ partida }: { partida: Partida }) {
           ))}
       </div>
 
-      {comp !== "clausura" && eliminado && (
+      {comp === "tabla" && <VistaTabla tabla={tabla} />}
+
+      {comp !== "tabla" && comp !== "clausura" && eliminado && (
         <div className="mb-2 rounded-md px-2.5 py-2 text-[11px]"
              style={{ background: "var(--carbon)", color: "var(--tenue)" }}>
           Olimpia quedó afuera de la Sudamericana.
         </div>
       )}
 
-      {items.map((p) => {
+      {comp !== "tabla" && items.map((p) => {
         const r = p.resultado;
         const color = r
           ? r.golesOlimpia > r.golesRival ? "#3fa76a"
