@@ -216,8 +216,20 @@ export default function Escritorio({
   })();
   /** El once nunca baja de 45 ni pasa de 85: ahí se estira la barra. */
   const escalaOvr = (n: number) => Math.max(0, Math.min(100, ((n - 45) / 40) * 100));
-  const colorOvr = ovr.rival === null || ovr.hoy >= ovr.rival + 2 ? "var(--cesped)"
-    : ovr.hoy >= ovr.rival - 2 ? "var(--oro)" : "var(--ladrillo)";
+  const METALES = {
+    oro:    { fondo: "linear-gradient(150deg, #3a2c0d, #1a1305 62%, #120d04)",
+              borde: "#c9a227", brillo: "rgba(255,226,150,0.16)",
+              tinta: "#f0d98a", rotulo: "#c9a227", dato: "#e8dcb8", tenue: "#9b8a5e" },
+    plata:  { fondo: "linear-gradient(150deg, #2c3336, #14191b 62%, #0e1214)",
+              borde: "#aab6ba", brillo: "rgba(226,240,244,0.15)",
+              tinta: "#e6eef1", rotulo: "#aab6ba", dato: "#dbe4e7", tenue: "#7d8a8f" },
+    bronce: { fondo: "linear-gradient(150deg, #3a2114, #1c1008 62%, #140b05)",
+              borde: "#c4783a", brillo: "rgba(255,196,142,0.14)",
+              tinta: "#f0c096", rotulo: "#c4783a", dato: "#e6cdb6", tenue: "#9c7454" },
+  };
+  const metal = ovr.rival === null || ovr.hoy >= ovr.rival + 2 ? METALES.oro
+    : ovr.hoy >= ovr.rival - 2 ? METALES.plata : METALES.bronce;
+  const colorOvr = metal.borde;
 
   const bajas = plantel.filter((j) => j.suspendido || j.lesionado_hasta);
   const lider = tabla[0];
@@ -388,59 +400,69 @@ export default function Escritorio({
               * card entera y no un renglón del encabezado.
               */}
             {/*
-              * La camiseta de Olimpia hecha card: blanca con la banda negra
-              * cruzada y el número en rojo. En una pantalla que es toda verde
-              * oscura, una card blanca no necesita nada más para ser lo
-              * primero que se mira.
+              * La card del OVR es una placa de metal, y el metal dice cómo
+              * estás parado: oro si valés más que el rival, plata si están
+              * parejos, bronce si valés menos. Un futbolero lee eso sin que
+              * nadie se lo explique, y de paso deja de ser una card verde más
+              * en una pantalla donde todo es verde.
               */}
             <button onClick={() => setAyuda("ovr")}
-              className="relieve-alto relative flex flex-col overflow-hidden rounded-lg text-left"
-              style={{ background: "#f2ede2",
-                       boxShadow: `0 0 0 2px ${colorOvr}, 0 6px 18px rgba(0,0,0,0.5)` }}>
-              {/* la costura del cuello */}
-              <span className="flex items-center justify-between px-2.5 pt-1.5">
-                <span className="text-[10px] font-extrabold uppercase tracking-[0.2em]"
-                      style={{ color: "#0d0d0d" }}>
-                  OVR
-                </span>
-                {(bajas.length > 0 || !sub18.alcanza) && (
-                  <span className="flex gap-1">
-                    {bajas.length > 0 && (
-                      <span className="rounded px-1 py-[1px] text-[8px] font-extrabold uppercase"
-                            style={{ background: "#c0392b", color: "#f2ede2" }}>
-                        {bajas.length} baja{bajas.length > 1 ? "s" : ""}
-                      </span>
-                    )}
-                    {!sub18.alcanza && (
-                      <span className="rounded px-1 py-[1px] text-[8px] font-extrabold uppercase"
-                            style={{ background: "#b07a12", color: "#f2ede2" }}>
-                        S18
-                      </span>
-                    )}
+              className="relieve-alto relative overflow-hidden rounded-lg px-3 pb-2 pt-2 text-left"
+              style={{ background: metal.fondo }}>
+              {/* las vetas del metal */}
+              <span className="absolute inset-0" style={{
+                backgroundImage: `repeating-linear-gradient(115deg,
+                  rgba(255,255,255,0.055) 0 1px, transparent 1px 4px)`,
+              }} />
+              {/* el destello que cruza, que es lo que lo hace parecer metal */}
+              <span className="absolute inset-0" style={{
+                background: `linear-gradient(118deg, transparent 22%,
+                  ${metal.brillo} 44%, transparent 62%)`,
+              }} />
+              <span className="absolute inset-0 rounded-lg" style={{
+                boxShadow: `inset 0 0 0 1px ${metal.borde},
+                            inset 0 1px 0 ${metal.brillo},
+                            inset 0 -14px 22px rgba(0,0,0,0.45)`,
+              }} />
+
+              <span className="relative flex gap-2.5">
+                <span className="shrink-0">
+                  <Numero valor={ovr.hoy} formato={(n) => String(Math.round(n))}
+                          className="apellido block leading-[0.82]"
+                          style={{ fontSize: 46, color: metal.tinta,
+                                   textShadow: `0 1px 0 rgba(255,255,255,0.28), 0 3px 8px rgba(0,0,0,0.6)` }} />
+                  <span className="mt-0.5 block text-[9px] font-extrabold uppercase tracking-[0.22em]"
+                        style={{ color: metal.rotulo }}>
+                    OVR
                   </span>
-                )}
-              </span>
-
-              {/* la banda negra cruzada, con el número */}
-              <span className="relative mt-1 flex items-center px-2.5"
-                    style={{ background: "#0d0d0d", height: 46 }}>
-                <span className="dorsal-numero" style={{ fontSize: 38, lineHeight: 1 }}>
-                  {Math.round(ovr.hoy)}
+                  <span className="mt-1 block" style={{ height: 2, width: 26, background: metal.borde }} />
                 </span>
-                <span className="ml-auto text-[9px] uppercase tracking-[0.14em]"
-                      style={{ color: "#7e7e7e" }}>
-                  {partido?.ctx.esLocal === false ? "afuera" : ""}
+
+                <span className="min-w-0 flex-1 pt-0.5">
+                  <ParteChica etiqueta="plantel" valor={aportes.base} base metal={metal} />
+                  {aportes.lista.slice(0, 3).map((a) => (
+                    <ParteChica key={a.etiqueta} etiqueta={a.etiqueta} valor={a.valor}
+                                siempre={a.etiqueta === "ánimo"} metal={metal} />
+                  ))}
                 </span>
               </span>
 
-              {/* de dónde sale, sobre la tela */}
-              <span className="grid grid-cols-2 gap-x-2.5 px-2.5 pb-1.5 pt-1">
-                <ParteChica etiqueta="plantel" valor={aportes.base} base />
-                {aportes.lista.slice(0, 3).map((a) => (
-                  <ParteChica key={a.etiqueta} etiqueta={a.etiqueta} valor={a.valor}
-                              siempre={a.etiqueta === "ánimo"} />
-                ))}
-              </span>
+              {(bajas.length > 0 || !sub18.alcanza) && (
+                <span className="relative mt-1.5 flex flex-wrap gap-1">
+                  {bajas.length > 0 && (
+                    <span className="rounded px-1.5 py-[1px] text-[9px] font-extrabold uppercase"
+                          style={{ background: "#c0392b", color: "#f2ede2" }}>
+                      {bajas.length} baja{bajas.length > 1 ? "s" : ""}
+                    </span>
+                  )}
+                  {!sub18.alcanza && (
+                    <span className="rounded px-1.5 py-[1px] text-[9px] font-extrabold uppercase"
+                          style={{ background: "#e0902a", color: "#0a120d" }}>
+                      Sub-18: {sub18.faltan}'
+                    </span>
+                  )}
+                </span>
+              )}
             </button>
 
             <Modulo titulo="Sudamericana" color="#d9a832" icono="copa" onClick={() => setVista("copa")}
@@ -669,20 +691,18 @@ export default function Escritorio({
 // ---------------------------------------------------------------- piezas
 
 /** Un aporte al OVR, en el costado de la card: etiqueta a la izquierda, cifra a la derecha. */
-function ParteChica({ etiqueta, valor, base, siempre, sobreOscuro }: {
-  etiqueta: string; valor: number; base?: boolean; siempre?: boolean; sobreOscuro?: boolean;
+function ParteChica({ etiqueta, valor, base, siempre, metal }: {
+  etiqueta: string; valor: number; base?: boolean; siempre?: boolean;
+  metal: { dato: string; tenue: string };
 }) {
   const n = Math.round(valor);
   if (!base && !siempre && n === 0) return null;
-  const gris = sobreOscuro ? "#8a8a8a" : "#6b6b6b";
-  const verde = sobreOscuro ? "#4fc07e" : "#1a7a44";
-  const rojo = sobreOscuro ? "#e8695c" : "#b8322a";
   return (
-    <span className="flex items-baseline justify-between gap-1 leading-[1.3]">
-      <span className="truncate text-[9px]" style={{ color: gris }}>{etiqueta}</span>
+    <span className="flex items-baseline justify-between gap-1 leading-[1.32]">
+      <span className="truncate text-[9px]" style={{ color: metal.tenue }}>{etiqueta}</span>
       <span className="num shrink-0 text-[11px] font-bold"
-            style={{ color: base ? (sobreOscuro ? "#e9e4d8" : "#0d0d0d")
-              : n > 0 ? verde : n < 0 ? rojo : gris }}>
+            style={{ color: base ? metal.dato
+              : n > 0 ? "#5fd08c" : n < 0 ? "#e8695c" : metal.tenue }}>
         {base ? n : n === 0 ? "0" : `${n > 0 ? "+" : "−"}${Math.abs(n)}`}
       </span>
     </span>
