@@ -6,6 +6,7 @@ import {
   nivelEf, repartirEnMolde,
 } from "@/lib/juego.ts";
 import { type Punta, useArrastre } from "@/lib/arrastre.ts";
+import { factorPosicion } from "@/engine/motor.ts";
 import { LINEA_DE, type ContextoPartido, type Jugador, type Linea, type Posicion } from "@/engine/tipos.ts";
 import CanchaArmado, { type Casillero } from "./CanchaArmado.tsx";
 import Dorsal from "./Dorsal.tsx";
@@ -115,15 +116,15 @@ export default function Alineador({
         : alineado[arrastrando.slot] ? porId.get(alineado[arrastrando.slot]!) : null)
     : null;
 
-  const adaptados = once.filter((j) => {
-    const p = casilleros.find((c) => c.jugador?.id === j.id)!.puesto;
-    return p !== j.posicion && j.posiciones_secundarias.includes(p);
-  });
-  const fueraDePuesto = once.filter((j) => {
-    const p = casilleros.find((c) => c.jugador?.id === j.id)!.puesto;
-    return p !== j.posicion && !j.posiciones_secundarias.includes(p);
-  });
   const puestoDe = (j: Jugador) => casilleros.find((c) => c.jugador?.id === j.id)!.puesto;
+  /*
+   * Quién está corrido y cuánto le cuesta, preguntado al motor. Antes esto se
+   * calculaba acá con dos números escritos a mano, así que seguía avisando de
+   * castigos que el partido ya no aplicaba.
+   */
+  const corridos = once
+    .map((j) => ({ j, puesto: puestoDe(j), factor: factorPosicion(j, puestoDe(j)) }))
+    .filter((x) => x.factor < 0.995);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col" {...handlers}>
@@ -137,16 +138,14 @@ export default function Alineador({
           onTocar={(slot) => tocar({ tipo: "cancha", slot })} />
       </div>
 
-      {(adaptados.length > 0 || fueraDePuesto.length > 0) && (
+      {corridos.length > 0 && (
         <div className="scroll-x flex gap-2 px-4 pb-1 text-[10px]" style={{ color: "var(--tenue)" }}>
-          {adaptados.map((j) => (
+          {corridos.map(({ j, puesto, factor }) => (
             <span key={j.id} className="shrink-0">
-              {j.apellido} de {puestoDe(j)} <span style={{ color: "var(--medio)" }}>×0.90</span>
-            </span>
-          ))}
-          {fueraDePuesto.map((j) => (
-            <span key={j.id} className="shrink-0">
-              {j.apellido} de {puestoDe(j)} <span style={{ color: "var(--critico)" }}>×0.75</span>
+              {j.apellido} de {puesto}{" "}
+              <span style={{ color: factor >= 0.85 ? "var(--medio)" : "var(--critico)" }}>
+                ×{factor.toFixed(2)}
+              </span>
             </span>
           ))}
         </div>

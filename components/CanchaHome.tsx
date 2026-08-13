@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { repartirCancha } from "@/lib/formacion.ts";
 import Dorsal from "./Dorsal.tsx";
 import { nivelEf } from "@/lib/juego.ts";
+import { factorPosicion } from "@/engine/motor.ts";
 import type { ContextoPartido, Jugador, Posicion } from "@/engine/tipos.ts";
 
 /**
@@ -81,7 +82,8 @@ export default function CanchaHome({
         const j = once[slot];
         if (!j) return null;
         const puesto = puestos.get(j.id) ?? j.posicion;
-        const adaptado = puesto !== j.posicion;
+        // solo se avisa si le cuesta: entre mediocampistas no le cuesta nada
+        const adaptado = factorPosicion(j, puesto) < 0.995;
         const animo = animoDe(j);
         const baja = bajaDe(j);
         const color = baja ? "#c0392b" : colorAnimo(animo);

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { colorCondicion, esSub18, nivelEf } from "@/lib/juego.ts";
 import { repartirCancha } from "@/lib/formacion.ts";
+import { factorPosicion } from "@/engine/motor.ts";
 import Dorsal from "./Dorsal.tsx";
 import type { ContextoPartido, Jugador, Posicion } from "@/engine/tipos.ts";
 
@@ -68,7 +69,8 @@ export default function CanchaArmado({
         const j = c.jugador;
         const elegido = !!j && seleccionado === j.id;
         const esDestino = destino === c.slot;
-        const adaptado = !!j && c.puesto !== j.posicion;
+        // corrido solo si le cuesta: un mediocampista de mediocampista no lo está
+        const adaptado = !!j && factorPosicion(j, c.puesto) < 0.995;
         return (
           <button key={c.slot} data-slot={c.slot} onClick={() => onTocar(c.slot)}
             className="absolute flex -translate-x-1/2 -translate-y-1/2 touch-none flex-col items-center"

@@ -1,8 +1,8 @@
 "use client";
 
 import {
-  CUPO_EXTRANJEROS, MOLDE_DE, PLANTEL, esSub18, partidosDeOlimpia, repartirEnMolde,
-  salidaAutomatica, type PartidoUI,
+  CUPO_EXTRANJEROS, MOLDE_DE, PLANTEL, bancoSugerido, esSub18, partidosDeOlimpia,
+  repartirEnMolde, salidaAutomatica, type PartidoUI,
 } from "./juego.ts";
 import {
   P, clamp, desgloseOvr, factorCondicion, recuperar, type DesgloseOvr,
@@ -21,7 +21,7 @@ import {
 import {
   DIAS_DE_VENTANA, ESTRELLAS, impactoDe, jugadorDeEstrella, sortearEstrella,
 } from "@/engine/estrellas.ts";
-import type { ContextoPartido, Jugador, Posicion } from "@/engine/tipos.ts";
+import type { Actitud, ContextoPartido, Jugador, Posicion } from "@/engine/tipos.ts";
 
 const EQUIPOS = equiposJson as any[];
 const FIXTURE = fixtureJson as any[];
@@ -629,7 +629,7 @@ export function ovrDe(p: Partida): OvrDelClub {
   }
   const ctx: ContextoPartido = partidoDe(p) ? partido.ctx
     : { ...partido.ctx, esLocal: true, alturaM: 43, viajeKm: 0 };
-  const salida = salidaAutomatica({ ...partido, ctx }, jugadores, estadoSub18Para(p));
+  const salida = onceTitular(p, { ...partido, ctx }, jugadores);
   const alineacion = {
     once: salida.once, suplentes: salida.suplentes,
     actitud: "equilibrado" as const, puestos: salida.puestos,
@@ -649,6 +649,50 @@ export function ovrDe(p: Partida): OvrDelClub {
     : null;
   return { hoy, plantel, rival, partes,
            once: salida.once, puestos: salida.puestos, formacion: salida.formacion };
+}
+
+/**
+ * El once que va a salir: el equipo titular que armó el DT.
+ *
+ * La pantalla principal mostraba el once automático, así que el equipo que uno
+ * se tomaba el trabajo de armar no aparecía en ninguna parte hasta el día del
+ * partido. Ahora se muestra ese, y solo los puestos que quedan libres por una
+ * lesión o una suspensión se completan solos.
+ */
+export function onceTitular(p: Partida, partido: PartidoUI, jugadores: Jugador[]) {
+  const auto = () => salidaAutomatica(partido, jugadores, estadoSub18Para(p));
+  const eq = p.equipos?.[0];
+  if (!eq) return auto();
+
+  const disponible = (j: Jugador) => !j.suspendido && !j.lesionado_hasta && !j.reserva;
+  const porId = new Map(jugadores.filter(disponible).map((j) => [j.id, j]));
+  const slots = MOLDE_DE(eq.formacion);
+  const once = eq.jugadores.slice(0, slots.length).map((id) => porId.get(id) ?? null);
+  if (once.length < slots.length) return auto();
+
+  // los huecos que dejó una baja se llenan con el mejor que quede
+  if (once.some((j) => !j)) {
+    const dentro = new Set(once.filter(Boolean).map((j) => j!.id));
+    const libres = [...porId.values()].filter((j) => !dentro.has(j.id));
+    const huecos = once.map((j, i) => (j ? -1 : i)).filter((i) => i >= 0);
+    const relleno = repartirEnMolde(libres, huecos.map((i) => slots[i]), partido.ctx);
+    huecos.forEach((slot, k) => {
+      const id = relleno[k];
+      if (id) once[slot] = porId.get(id) ?? null;
+    });
+  }
+  const completo = once.filter(Boolean) as Jugador[];
+  if (completo.length < slots.length) return auto();
+
+  const puestos = new Map<string, Posicion>();
+  completo.forEach((j, i) => puestos.set(j.id, slots[i]));
+  return {
+    once: completo,
+    formacion: eq.formacion,
+    suplentes: bancoSugerido([...porId.values()], completo, partido.ctx),
+    actitud: (partido.ctx.esLocal ? "ofensivo" : "equilibrado") as Actitud,
+    puestos,
+  };
 }
 
 /** El estado Sub-18 con la forma que espera `salidaAutomatica`. */

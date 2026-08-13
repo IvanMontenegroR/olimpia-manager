@@ -458,7 +458,7 @@ export default function Escritorio({
               animoDe={(j) => Math.round(partida.plantel[j.id]?.animo ?? 70)}
               bajaDe={(j) => j.lesionado_hasta ? "lesionado" : j.suspendido ? "suspendido" : null}
               onTocar={(j) => setFichaHome(j.id)}
-              onModificar={() => setVista("plantel")} />
+              onModificar={onDirigir} />
           </div>
         </div>
       )}
