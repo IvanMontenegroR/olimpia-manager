@@ -117,7 +117,7 @@ export default function FichaJugador({
           <Caja etiqueta="Condición" valor={`${j.condicion}%`} color={colorCondicion(j.condicion)} />
           {/* El número, no solo "En racha": si no se puede medir, no se puede
               querer subir. */}
-          <Caja etiqueta={`Confianza · ${TEXTO_ANIMO[animoDe(j.animo)].toLowerCase()}`}
+          <Caja etiqueta={`Ánimo · ${TEXTO_ANIMO[animoDe(j.animo)].toLowerCase()}`}
                 valor={`${Math.round(j.animo)}`}
                 color={j.animo >= 78 ? "var(--ok)"
                   : j.animo >= 60 ? "var(--blanco)"

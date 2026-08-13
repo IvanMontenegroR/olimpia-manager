@@ -38,7 +38,7 @@ export default function Efectos({ e }: { e: EfectoVisible }) {
    */
   if (e.ambiente) {
     const conf = Math.round(e.ambiente * AMBIENTE_EN_CONFIANZA);
-    if (conf !== 0) chips.push({ texto: `${signo(conf)} confianza`, bueno: conf > 0 });
+    if (conf !== 0) chips.push({ texto: `${signo(conf)} vestuario`, bueno: conf > 0 });
   }
   if (e.hinchada) chips.push({ texto: `${signo(e.hinchada)} hinchada`, bueno: e.hinchada > 0 });
   if (e.paciencia) chips.push({ texto: `${signo(e.paciencia)} dirigencia`, bueno: e.paciencia > 0 });
@@ -50,7 +50,7 @@ export default function Efectos({ e }: { e: EfectoVisible }) {
   }
   if (e.moralDe) {
     chips.push({
-      texto: `${signo(e.moralDe.delta)} confianza${e.moralTexto ? ` de ${e.moralTexto}` : ""}`,
+      texto: `${signo(e.moralDe.delta)} ánimo${e.moralTexto ? ` de ${e.moralTexto}` : ""}`,
       bueno: e.moralDe.delta > 0,
     });
   }

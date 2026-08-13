@@ -202,18 +202,19 @@ export default function Escritorio({
     const p = ovr.partes;
     if (!p) {
       return { base: Math.round(ovr.plantel),
-               lista: [] as { etiqueta: string; valor: number; lleno?: number }[] };
+               lista: [] as { etiqueta: string; valor: number; lleno?: number; fijo?: boolean }[] };
     }
-    const crudos: { etiqueta: string; valor: number; lleno?: number }[] = [
-      { etiqueta: "confianza", valor: p.animo, lleno: p.animoMedio / 100 },
-      { etiqueta: "piernas", valor: p.piernas, lleno: p.condicionMedia / 100 },
+    const crudos: { etiqueta: string; valor: number; lleno?: number; fijo?: boolean }[] = [
+      { etiqueta: "vestuario", valor: p.animo, lleno: p.animoMedio / 100, fijo: true },
+      { etiqueta: "hinchada", valor: p.aliento, lleno: partida.hinchada / 100, fijo: true },
+      { etiqueta: "físico", valor: p.piernas, lleno: p.condicionMedia / 100 },
       { etiqueta: "puesto", valor: p.puestos, lleno: (11 - p.fueraDePuesto) / 11 },
-      { etiqueta: "localía", valor: p.cancha, lleno: ocupacion },
+      { etiqueta: "localía", valor: p.localiaBase, lleno: ocupacion },
       { etiqueta: "viaje", valor: p.viaje },
     ];
     const lista = crudos
       .map((a) => ({ ...a, valor: Math.round(a.valor) }))
-      .filter((a) => a.valor !== 0 || a.etiqueta === "confianza");
+      .filter((a) => a.valor !== 0 || a.fijo);
     const suma = lista.reduce((n, a) => n + a.valor, 0);
     return { base: Math.round(p.total) - suma, lista };
   })();
@@ -285,9 +286,10 @@ export default function Escritorio({
           </button>
         )}
 
+        {/* El vestuario salía acá y también en la card como confianza, que es
+            lo mismo con otra escala. Queda la hinchada, que además de llenar
+            la cancha decide cuánta plata entra. */}
         <div className="mt-2 flex gap-2">
-          <Medidor etiqueta="Vestuario" valor={partida.ambiente} color="#3fa76a"
-                   onClick={() => setAyuda("vestuario")} />
           <Medidor etiqueta="Hinchada" valor={partida.hinchada} color="#d9a832"
                    onClick={() => setAyuda("hinchada")} />
           {/* El mercado, a mano y sin ocupar una card entera. */}
@@ -644,14 +646,16 @@ export default function Escritorio({
               <div className="mt-3 rounded-lg p-2.5" style={{ background: "var(--carbon)" }}>
                 <ParteOvr etiqueta="El plantel que sale a jugar"
                           valor={Math.round(ovr.partes.base)} base />
-                <ParteOvr etiqueta={`Confianza: cómo se sienten (${Math.round(ovr.partes.animoMedio)} de 100)`}
+                <ParteOvr etiqueta={`Vestuario: cómo se sienten (${Math.round(ovr.partes.animoMedio)} de 100)`}
                           valor={ovr.partes.animo} siempre />
-                <ParteOvr etiqueta="Piernas: cómo llegan de físico" valor={ovr.partes.piernas} />
+                <ParteOvr etiqueta={`Hinchada: el aliento (${Math.round(partida.hinchada)} de 100)`}
+                          valor={ovr.partes.aliento} siempre />
+                <ParteOvr etiqueta="Físico: cómo llegan de piernas" valor={ovr.partes.piernas} />
                 <ParteOvr etiqueta="Puesto: los que juegan fuera del suyo" valor={ovr.partes.puestos} />
                 <ParteOvr etiqueta={partido?.ctx.esLocal
-                            ? `Localía: el Defensores, ${Math.round(ocupacion * 100)}% lleno`
+                            ? `Localía: jugar en el Defensores, ${Math.round(ocupacion * 100)}% lleno`
                             : "Localía: se juega afuera"}
-                          valor={ovr.partes.cancha} />
+                          valor={ovr.partes.localiaBase} />
                 <ParteOvr etiqueta={partido?.ctx.esLocal ? "El viaje" : `Jugar en ${partido?.ciudad ?? "la de ellos"}`}
                           valor={ovr.partes.viaje} />
                 <div className="my-1.5 h-px" style={{ background: "var(--linea)" }} />
