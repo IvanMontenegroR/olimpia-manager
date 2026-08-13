@@ -106,7 +106,7 @@ export const P = {
   ajusteRival: -2,
 
   localiaLiga: 3.0,
-  localiaCopa: 13.0,     // Olimpia de local en copa: eliminó de local a Flamengo, Fluminense y Atlético Nacional
+  localiaCopa: 9.0,      // el Defensores de noche en Conmebol sigue pesando el triple que un domingo
   localiaCopaRival: 6.0, // el rival de local en copa: pesa, pero no como el Defensores     // el Defensores de noche en Conmebol no es el Defensores de un domingo
   alturaUmbralM: 1500,
   // La altura es EL problema del fútbol sudamericano. Ir a La Paz o a Cusco
@@ -351,9 +351,16 @@ export function simularPartido(
   // El rival también viene de jugar: si tuvo copa entre semana o encadenó
   // partidos, llega gastado igual que vos. Su fuerza ya está en la escala de
   // nivel efectivo, así que se le aplica la misma curva de condición.
+  /*
+   * El ajuste calibra la escala del torneo local, donde las fuerzas del JSON
+   * no están en la misma vara que el plantel de Olimpia. Los rivales de copa
+   * traen su nivel real, así que ahí no se toca: si se les aplicara, subir el
+   * tope de ventaja para que el rival importe hundía la copa al 3%.
+   */
   const rival =
     ctx.rivalFuerza * factorCondicion(ctx.rivalCondicion ?? 100) +
-    (ctx.esLocal || ctx.neutral ? 0 : localiaRival) + P.ajusteRival;
+    (ctx.esLocal || ctx.neutral ? 0 : localiaRival) +
+    (ctx.competencia === "sudamericana" ? 0 : P.ajusteRival);
 
   // la ventaja se topea: ser muy superior no puede significar cuatro goles
   const ventaja = (d: number) => clamp(d, -P.ventajaMaxima, P.ventajaMaxima);
