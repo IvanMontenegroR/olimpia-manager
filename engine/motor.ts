@@ -302,10 +302,6 @@ export interface DesgloseOvr {
   puestos: number;
   /** El Defensores, con la gente que haya. */
   cancha: number;
-  /** De ese bonus, lo que pone la cancha con gente indiferente. */
-  localiaBase: number;
-  /** Y lo que le suma o le resta el aliento que tengas. */
-  aliento: number;
   /** El viaje: la altura y jugar afuera. */
   viaje: number;
   total: number;
@@ -330,15 +326,9 @@ export function desgloseOvr(a: Alineacion, ctx: ContextoPartido): DesgloseOvr {
   const conPiernas = media((j) => j.nivel * factorCondicion(j.condicion));
   const conPuestos = media((j, p) => j.nivel * factorPosicion(j, p));
   const conViaje = media((j) => j.nivel * factorAmbienteHostil(j, ctx) * factorAltura(ctx));
+  // jugar en casa con tu gente es una sola cosa: la cancha sin aliento no es
+  // el Defensores, y el aliento sin cancha no existe
   const cancha = bonoLocalia(ctx);
-  /*
-   * El bonus de local se parte en dos para poder mostrarlos por separado: lo
-   * que da la cancha con una tribuna tibia, y lo que le suma o le resta el
-   * aliento que te ganaste. Si no, la hinchada no aparece en ninguna cuenta
-   * aunque sea de las cosas que más se trabajan.
-   */
-  const localiaBase = bonoLocalia({ ...ctx, hinchada: 50, ocupacion: 0.5 });
-  const aliento = cancha - localiaBase;
   const total = ovrDelOnce(a, ctx);
 
   const animo = conAnimo - base;
@@ -346,7 +336,7 @@ export function desgloseOvr(a: Alineacion, ctx: ContextoPartido): DesgloseOvr {
   const puestos = conPuestos - base;
   const viaje = conViaje - base;
   return {
-    base, animo, piernas, puestos, cancha, localiaBase, aliento, viaje, total,
+    base, animo, piernas, puestos, cancha, viaje, total,
     animoMedio: media((j) => j.animo),
     condicionMedia: media((j) => j.condicion),
     fueraDePuesto: a.once.filter((j) => (a.puestos.get(j.id) ?? j.posicion) !== j.posicion).length,

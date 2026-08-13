@@ -6,6 +6,9 @@ import { P } from "@/engine/motor.ts";
 /** Lo mismo que aplica resolverAsunto, para prometer exactamente lo que pasa. */
 const AMBIENTE_EN_CONFIANZA = P.ambienteEnAnimo;
 
+/** El vestuario que se muestra es el promedio del once. */
+const ONCE = 11;
+
 export interface EfectoVisible {
   ambiente?: number;
   hinchada?: number;
@@ -48,10 +51,18 @@ export default function Efectos({ e }: { e: EfectoVisible }) {
       bueno: e.condicionTodos > 0,
     });
   }
+  /*
+   * Levantarle el ánimo a uno solo mueve el promedio del once una fracción de
+   * lo que se le aplica a él. Se muestra esa fracción, que es lo que se va a
+   * ver en la card, y no el número grande que le toca a él y que después no
+   * aparece en ninguna parte.
+   */
   if (e.moralDe) {
+    const d = e.moralDe.delta / ONCE;
+    const conf = d > 0 ? Math.max(1, Math.round(d)) : Math.min(-1, Math.round(d));
     chips.push({
-      texto: `${signo(e.moralDe.delta)} ánimo${e.moralTexto ? ` de ${e.moralTexto}` : ""}`,
-      bueno: e.moralDe.delta > 0,
+      texto: `${signo(conf)} vestuario${e.moralTexto ? ` por ${e.moralTexto}` : ""}`,
+      bueno: conf > 0,
     });
   }
   if (!chips.length) return null;

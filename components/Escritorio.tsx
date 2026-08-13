@@ -206,10 +206,9 @@ export default function Escritorio({
     }
     const crudos: { etiqueta: string; valor: number; lleno?: number; fijo?: boolean }[] = [
       { etiqueta: "vestuario", valor: p.animo, lleno: p.animoMedio / 100, fijo: true },
-      { etiqueta: "hinchada", valor: p.aliento, lleno: partida.hinchada / 100, fijo: true },
+      { etiqueta: "hinchada", valor: p.cancha, lleno: partida.hinchada / 100, fijo: true },
       { etiqueta: "físico", valor: p.piernas, lleno: p.condicionMedia / 100 },
       { etiqueta: "puesto", valor: p.puestos, lleno: (11 - p.fueraDePuesto) / 11 },
-      { etiqueta: "localía", valor: p.localiaBase, lleno: ocupacion },
       { etiqueta: "viaje", valor: p.viaje },
     ];
     const lista = crudos
@@ -286,12 +285,9 @@ export default function Escritorio({
           </button>
         )}
 
-        {/* El vestuario salía acá y también en la card como confianza, que es
-            lo mismo con otra escala. Queda la hinchada, que además de llenar
-            la cancha decide cuánta plata entra. */}
-        <div className="mt-2 flex gap-2">
-          <Medidor etiqueta="Hinchada" valor={partida.hinchada} color="#d9a832"
-                   onClick={() => setAyuda("hinchada")} />
+        {/* Las barras de vestuario y hinchada se fueron: las dos están en la
+            card del OVR, con su barra y con lo que aportan. */}
+        <div className="mt-2 flex justify-end gap-2">
           {/* El mercado, a mano y sin ocupar una card entera. */}
           <button onClick={() => setVista("mercado")}
             className="relieve relative flex h-[30px] w-[38px] shrink-0 items-center justify-center rounded-md"
@@ -648,14 +644,12 @@ export default function Escritorio({
                           valor={Math.round(ovr.partes.base)} base />
                 <ParteOvr etiqueta={`Vestuario: cómo se sienten (${Math.round(ovr.partes.animoMedio)} de 100)`}
                           valor={ovr.partes.animo} siempre />
-                <ParteOvr etiqueta={`Hinchada: el aliento (${Math.round(partida.hinchada)} de 100)`}
-                          valor={ovr.partes.aliento} siempre />
+                <ParteOvr etiqueta={partido?.ctx.esLocal
+                            ? `Hinchada: el Defensores al ${Math.round(ocupacion * 100)}%, con la gente en ${Math.round(partida.hinchada)}`
+                            : "Hinchada: no te sirve jugando afuera"}
+                          valor={ovr.partes.cancha} siempre />
                 <ParteOvr etiqueta="Físico: cómo llegan de piernas" valor={ovr.partes.piernas} />
                 <ParteOvr etiqueta="Puesto: los que juegan fuera del suyo" valor={ovr.partes.puestos} />
-                <ParteOvr etiqueta={partido?.ctx.esLocal
-                            ? `Localía: jugar en el Defensores, ${Math.round(ocupacion * 100)}% lleno`
-                            : "Localía: se juega afuera"}
-                          valor={ovr.partes.localiaBase} />
                 <ParteOvr etiqueta={partido?.ctx.esLocal ? "El viaje" : `Jugar en ${partido?.ciudad ?? "la de ellos"}`}
                           valor={ovr.partes.viaje} />
                 <div className="my-1.5 h-px" style={{ background: "var(--linea)" }} />
