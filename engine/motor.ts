@@ -202,6 +202,13 @@ export function factorPosicion(j: Jugador, puesto: Posicion): number {
   // el arco es otro deporte
   if (j.posicion === "ARQ" || puesto === "ARQ") return P.posArqueroDeCampo;
 
+  /*
+   * Un mediocampista es un mediocampista. Adelantar a un cinco o atrasar a un
+   * enganche unos metros es cosa de todos los partidos y no lo convierte en
+   * otro jugador; la distancia en la cancha castigaba eso como si lo fuera.
+   */
+  if (LINEA_DE[j.posicion] === "MED" && LINEA_DE[puesto] === "MED") return 1;
+
   const d = distanciaPuestos(j.posicion, puesto);
   let f = 1 - d * P.posCaidaPorDistancia;
   if (j.posiciones_secundarias.includes(puesto)) f += P.posBonoSecundaria;
