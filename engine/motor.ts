@@ -107,7 +107,7 @@ export const P = {
 
   localiaLiga: 3.0,
   localiaCopa: 9.0,      // el Defensores de noche en Conmebol sigue pesando el triple que un domingo
-  localiaCopaRival: 6.0, // el rival de local en copa: pesa, pero no como el Defensores     // el Defensores de noche en Conmebol no es el Defensores de un domingo
+  localiaCopaRival: 4.0, // el rival de local en copa: pesa, pero no como el Defensores     // el Defensores de noche en Conmebol no es el Defensores de un domingo
   alturaUmbralM: 1500,
   // La altura es EL problema del fútbol sudamericano. Ir a La Paz o a Cusco
   // sin preparar el viaje tiene que doler.
@@ -116,6 +116,8 @@ export const P = {
   alturaAclimataMax: 0.6,
   /** Y cuánto del desgaste del viaje se ahorra por lo mismo. */
   viajeAclimataMax: 0.5,
+  /** Cuánto del ambiente hostil recorta llegar con tiempo. */
+  aclimatacionHostil: 0.5,
   hostilMax: 0.10,      // pibe sin partidos internacionales
   hostilMin: 0.03,      // veterano curtido
   clasicoRuido: 0.05,
@@ -211,7 +213,14 @@ export function factorAmbienteHostil(j: Jugador, ctx: ContextoPartido): number {
   const experiencia = clamp(j.partidos_internacionales / 60, 0, 1);
   const madurez = clamp((j.edad - 19) / 15, 0, 1);
   const curtido = 0.65 * experiencia + 0.35 * madurez;
-  const pen = P.hostilMax - (P.hostilMax - P.hostilMin) * curtido;
+  let pen = P.hostilMax - (P.hostilMax - P.hostilMin) * curtido;
+  /*
+   * Llegar antes también sirve donde no hay altura: el plantel se acostumbra
+   * al calor, a la comida y al quilombo de afuera. Antes la aclimatación solo
+   * entraba en el factor de altura, así que pagar la concentración para ir a
+   * Brasil no hacía absolutamente nada.
+   */
+  pen *= 1 - P.aclimatacionHostil * clamp(ctx.aclimatacion ?? 0, 0, 1);
   return 1 - (j.rasgos.includes("veterano_de_copas") ? pen * 0.5 : pen);
 }
 
@@ -268,7 +277,16 @@ export function ovrDelOnce(a: Alineacion, ctx: ContextoPartido): number {
   if (!a.once.length) return 0;
   const suma = a.once.reduce(
     (n, j) => n + nivelEfectivo(j, a.puestos.get(j.id) ?? j.posicion, ctx), 0);
-  return suma / a.once.length;
+  // el empujón de jugar en casa es el factor más grande del juego: sin esto el
+  // número marcaba lo mismo en el Defensores que en Brasil
+  return suma / a.once.length + bonoLocalia(ctx);
+}
+
+/** Lo que suma jugar en tu cancha, con la gente que tengas y como esté. */
+export function bonoLocalia(ctx: ContextoPartido): number {
+  if (!ctx.esLocal || ctx.neutral) return 0;
+  const base = ctx.competencia === "sudamericana" ? P.localiaCopa : P.localiaLiga;
+  return base * factorAliento(ctx.hinchada ?? 70, ctx.ocupacion ?? 0.7);
 }
 
 export function fuerzas(a: Alineacion, ctx: ContextoPartido) {
@@ -283,13 +301,9 @@ export function fuerzas(a: Alineacion, ctx: ContextoPartido) {
     ataque += P.presionAtaque + P.presionContraCansado * gastado;
     defensa += P.presionDefensa;
   }
-  if (ctx.esLocal && !ctx.neutral) {
-    const base = ctx.competencia === "sudamericana" ? P.localiaCopa : P.localiaLiga;
-    // el aliento es lo que convierte el bonus de local en algo que se siente
-    const bono = base * factorAliento(ctx.hinchada ?? 70, ctx.ocupacion ?? 0.7);
-    ataque += bono;
-    defensa += bono;
-  }
+  const bono = bonoLocalia(ctx);
+  ataque += bono;
+  defensa += bono;
   return { ataque, defensa };
 }
 

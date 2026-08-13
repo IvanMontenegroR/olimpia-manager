@@ -49,12 +49,18 @@ function tasa(a: Alineacion, ctx: ContextoPartido) {
 }
 
 /** La serie de ida y vuelta, como se juega la copa de verdad. */
-function serie(a: Alineacion, rival: number, extra: Partial<ContextoPartido> = {}) {
+/**
+ * La serie de ida y vuelta. `visita` y `local` van por separado porque la copa
+ * se juega así: se aguanta afuera y se define en casa.
+ */
+function serie(a: Alineacion, rival: number,
+               extra: Partial<ContextoPartido> = {},
+               deLocal: Alineacion = a, extraLocal: Partial<ContextoPartido> = extra) {
   let pasa = 0;
   for (let i = 0; i < N; i++) {
     const v = simularPartido(a, ctxDe({ rivalFuerza: rival, esLocal: false, ...extra }),
                              new Rng(`s-v-${i}-${rival}`));
-    const l = simularPartido(a, ctxDe({ rivalFuerza: rival, esLocal: true, ...extra }),
+    const l = simularPartido(deLocal, ctxDe({ rivalFuerza: rival, esLocal: true, ...extraLocal }),
                              new Rng(`s-l-${i}-${rival}`));
     const mios = v.golesOlimpia + l.golesOlimpia;
     const suyos = v.golesRival + l.golesRival;
@@ -87,7 +93,14 @@ for (const rival of [66, 70, 74, 78, 82]) {
    * Todo a favor: el plantel encendido, el Defensores lleno y a precio
    * popular, y aguantar de visitante para ir a definir a casa.
    */
-  const conTodo = serie(ali(once(92, 100), "defensivo"), rival, { hinchada: 95, ocupacion: 1 });
+  /*
+   * Con todo a favor y jugada como se juega una copa: afuera se aguanta con el
+   * plantel concentrado allá, y en casa se sale a definir con el Defensores
+   * lleno.
+   */
+  const conTodo = serie(
+    ali(once(92, 100), "defensivo"), rival, { aclimatacion: 1 },
+    ali(once(92, 100), "equilibrado"), { hinchada: 95, ocupacion: 1 });
   console.log(`     ${String(rival).padEnd(6)}   ${pct(pelado)}         ${pct(conTodo)}` +
     `            +${((conTodo - pelado) * 100).toFixed(0)} puntos`);
 }

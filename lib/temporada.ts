@@ -612,7 +612,17 @@ export function ovrDe(p: Partida): { hoy: number; plantel: number; rival: number
                    actitud: "equilibrado", puestos: salida.puestos }, ctx)
     : plantel;
 
-  return { hoy, plantel, rival: partidoDe(p) ? partido.ctx.rivalFuerza : null };
+  /*
+   * El rival también cuenta con su cancha cuando se juega allá. Sin esto la
+   * comparación mentía de un lado: el tuyo bajaba por el viaje y el suyo se
+   * quedaba quieto.
+   */
+  const rival = partidoDe(p)
+    ? partido.ctx.rivalFuerza + (ctx.esLocal || ctx.neutral
+        ? 0
+        : ctx.competencia === "sudamericana" ? P.localiaCopaRival : P.localiaLiga)
+    : null;
+  return { hoy, plantel, rival };
 }
 
 /** El estado Sub-18 con la forma que espera `salidaAutomatica`. */
