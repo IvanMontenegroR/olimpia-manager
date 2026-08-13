@@ -282,6 +282,55 @@ export function ovrDelOnce(a: Alineacion, ctx: ContextoPartido): number {
   return suma / a.once.length + bonoLocalia(ctx);
 }
 
+/**
+ * De dónde sale el OVR, parte por parte.
+ *
+ * El número solo no alcanza: si dice 70 y tu plantel vale 68, hace falta saber
+ * qué son esos dos puntos. Acá se separa lo que ponen los jugadores de lo que
+ * pone el momento, y así el ánimo del plantel deja de ser un dato invisible.
+ */
+export interface DesgloseOvr {
+  /** Lo que valen en ficha los once que van a jugar. */
+  base: number;
+  /** Cuánto suma o resta cómo está el plantel de cabeza. */
+  animo: number;
+  /** Las piernas. */
+  piernas: number;
+  /** Jugar a alguien fuera de su puesto. */
+  puestos: number;
+  /** El Defensores, con la gente que haya. */
+  cancha: number;
+  /** El viaje: la altura y jugar afuera. */
+  viaje: number;
+  total: number;
+  /** El ánimo medio del once, para poder nombrarlo. */
+  animoMedio: number;
+}
+
+export function desgloseOvr(a: Alineacion, ctx: ContextoPartido): DesgloseOvr {
+  const n = Math.max(1, a.once.length);
+  const media = (f: (j: Jugador, puesto: Posicion) => number) =>
+    a.once.reduce((s, j) => s + f(j, a.puestos.get(j.id) ?? j.posicion), 0) / n;
+
+  const base = media((j) => j.nivel);
+  // cada factor se mide solo, sobre la base, para que las partes sumen el todo
+  const conAnimo = media((j) => j.nivel * factorAnimo(j.animo));
+  const conPiernas = media((j) => j.nivel * factorCondicion(j.condicion));
+  const conPuestos = media((j, p) => j.nivel * factorPosicion(j, p));
+  const conViaje = media((j) => j.nivel * factorAmbienteHostil(j, ctx) * factorAltura(ctx));
+  const cancha = bonoLocalia(ctx);
+  const total = ovrDelOnce(a, ctx);
+
+  const animo = conAnimo - base;
+  const piernas = conPiernas - base;
+  const puestos = conPuestos - base;
+  const viaje = conViaje - base;
+  return {
+    base, animo, piernas, puestos, cancha, viaje, total,
+    animoMedio: media((j) => j.animo),
+  };
+}
+
 /** Lo que suma jugar en tu cancha, con la gente que tengas y como esté. */
 export function bonoLocalia(ctx: ContextoPartido): number {
   if (!ctx.esLocal || ctx.neutral) return 0;

@@ -4,7 +4,9 @@ import {
   CUPO_EXTRANJEROS, MOLDE_DE, PLANTEL, esSub18, partidosDeOlimpia, repartirEnMolde,
   salidaAutomatica, type PartidoUI,
 } from "./juego.ts";
-import { P, clamp, factorCondicion, ovrDelOnce, recuperar } from "@/engine/motor.ts";
+import {
+  P, clamp, desgloseOvr, factorCondicion, recuperar, type DesgloseOvr,
+} from "@/engine/motor.ts";
 import { Rng } from "@/engine/rng.ts";
 import equiposJson from "@/data/equipos_2026.json";
 import fixtureJson from "@/data/fixture_clausura2026_final.json";
@@ -423,20 +425,26 @@ export function partidoCopaDe(p: Partida): PartidoUI | null {
   if (dia < p.dia) return null;
   const r = (RIVALES as any[]).find((x) => x.id === c.rivalId);
   if (!r) return null;
-  const esLocal = !esFinal && c.jugadosEnRonda === 1;
+  /*
+   * La final se juega en el Defensores. En la Conmebol de verdad la sede se
+   * sortea con años de anticipación, pero la fantasía del juego es esa noche
+   * en Asunción, y además es lo que le da sentido a haber trabajado la
+   * hinchada toda la temporada.
+   */
+  const esLocal = esFinal || c.jugadosEnRonda === 1;
   const nombreRonda = { octavos: "Octavos", cuartos: "Cuartos", semis: "Semifinal",
                         final: "FINAL" }[c.ronda as "octavos"];
   return {
     rivalId: c.rivalId,
     rivalNombre: r.nombre,
-    estadio: esFinal ? "Metropolitano Roberto Meléndez" : esLocal ? "Defensores del Chaco" : r.estadio,
-    ciudad: esFinal ? "Barranquilla" : esLocal ? "Asunción" : r.ciudad,
+    estadio: esLocal ? "Defensores del Chaco" : r.estadio,
+    ciudad: esLocal ? "Asunción" : r.ciudad,
     etiqueta: `Sudamericana · ${nombreRonda}${esFinal ? "" : c.jugadosEnRonda === 0 ? " ida" : " vuelta"}`,
     ctx: {
       fecha: dia,
       competencia: "sudamericana",
       esLocal,
-      neutral: esFinal,
+      neutral: false,
       rivalFuerza: r.fuerza,
       rivalNombre: r.nombre,
       viajeKm: esLocal ? 0 : r.km_desde_asuncion,
@@ -590,7 +598,15 @@ function pagarBonus(n: Partida, que: string) {
  * La distancia entre los dos es la historia de tu ciclo: un plantel de 68
  * rindiendo a 60 es un vestuario roto; rindiendo a 71, un equipo volando.
  */
-export function ovrDe(p: Partida): { hoy: number; plantel: number; rival: number | null } {
+export interface OvrDelClub {
+  hoy: number;
+  plantel: number;
+  rival: number | null;
+  /** De dónde sale el número de hoy, para poder abrirlo en pantalla. */
+  partes: DesgloseOvr | null;
+}
+
+export function ovrDe(p: Partida): OvrDelClub {
   const jugadores = plantelDe(p);
   const primeros = jugadores.filter((j) => !j.reserva);
   const mejores = [...primeros].sort((a, b) => b.nivel - a.nivel).slice(0, 11);
@@ -603,14 +619,16 @@ export function ovrDe(p: Partida): { hoy: number; plantel: number; rival: number
    * cancha propia como referencia.
    */
   const partido = partidoDe(p) ?? partidoDe({ ...p, fechaActual: 1, copa: { ...p.copa, ronda: "eliminado" } });
-  if (!partido) return { hoy: plantel, plantel, rival: null };
+  if (!partido) return { hoy: plantel, plantel, rival: null, partes: null };
   const ctx: ContextoPartido = partidoDe(p) ? partido.ctx
     : { ...partido.ctx, esLocal: true, alturaM: 43, viajeKm: 0 };
   const salida = salidaAutomatica({ ...partido, ctx }, jugadores, estadoSub18Para(p));
-  const hoy = salida.once.length
-    ? ovrDelOnce({ once: salida.once, suplentes: salida.suplentes,
-                   actitud: "equilibrado", puestos: salida.puestos }, ctx)
-    : plantel;
+  const alineacion = {
+    once: salida.once, suplentes: salida.suplentes,
+    actitud: "equilibrado" as const, puestos: salida.puestos,
+  };
+  const partes = salida.once.length ? desgloseOvr(alineacion, ctx) : null;
+  const hoy = partes ? partes.total : plantel;
 
   /*
    * El rival también cuenta con su cancha cuando se juega allá. Sin esto la
@@ -622,7 +640,7 @@ export function ovrDe(p: Partida): { hoy: number; plantel: number; rival: number
         ? 0
         : ctx.competencia === "sudamericana" ? P.localiaCopaRival : P.localiaLiga)
     : null;
-  return { hoy, plantel, rival };
+  return { hoy, plantel, rival, partes };
 }
 
 /** El estado Sub-18 con la forma que espera `salidaAutomatica`. */
@@ -903,7 +921,7 @@ function avanzarLlave(n: Partida, c: CierrePartido, partido: PartidoUI) {
     n.hito = {
       tipo: "campeon_copa",
       titulo: "Campeón de América",
-      detalle: `Olimpia le ganó la final a ${partido.rivalNombre} en Barranquilla.`,
+      detalle: `Olimpia le ganó la final a ${partido.rivalNombre} en el Defensores del Chaco.`,
       cifra: `${c.golesOlimpia} - ${c.golesRival}`,
       pie: "la final",
     };

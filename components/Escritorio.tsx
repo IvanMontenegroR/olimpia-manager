@@ -250,9 +250,20 @@ export default function Escritorio({
               {partido ? (partido.ctx.esLocal ? "Así llegás al domingo" : `Así llegás a ${partido.ciudad}`)
                         : "Así está el equipo"}
             </span>
-            <Numero valor={ovr.hoy} formato={(n) => String(Math.round(n))}
-                    className="num block leading-none"
-                    style={{ fontSize: 44, color: colorOvr }} />
+            <span className="flex items-end gap-1.5">
+              <Numero valor={ovr.hoy} formato={(n) => String(Math.round(n))}
+                      className="num block leading-none"
+                      style={{ fontSize: 44, color: colorOvr }} />
+              {/* Lo que le pone el momento por encima del plantel: sin esto el
+                  número aparecía sin explicación. */}
+              {Math.round(ovr.hoy) !== Math.round(ovr.plantel) && (
+                <span className="num pb-1 text-[13px] font-extrabold"
+                      style={{ color: ovr.hoy >= ovr.plantel ? "var(--cesped)" : "var(--ladrillo)" }}>
+                  {ovr.hoy >= ovr.plantel ? "+" : "−"}
+                  {Math.abs(Math.round(ovr.hoy) - Math.round(ovr.plantel))}
+                </span>
+              )}
+            </span>
           </span>
 
           <span className="min-w-0 flex-1 pb-1">
@@ -611,6 +622,27 @@ export default function Escritorio({
             <p className="text-[12px] leading-relaxed" style={{ color: "var(--tenue)" }}>
               {AYUDAS[ayuda].texto}
             </p>
+
+            {/* De dónde sale el número, sumando. Acá es donde se ve el ánimo
+                del plantel, que no aparecía en ninguna otra parte. */}
+            {ayuda === "ovr" && ovr.partes && (
+              <div className="mt-3 rounded-lg p-2.5" style={{ background: "var(--carbon)" }}>
+                <ParteOvr etiqueta="El plantel que sale a jugar"
+                          valor={Math.round(ovr.partes.base)} base />
+                <ParteOvr etiqueta={`Cómo está de cabeza · ánimo ${Math.round(ovr.partes.animoMedio)}`}
+                          valor={ovr.partes.animo} siempre />
+                <ParteOvr etiqueta="Las piernas" valor={ovr.partes.piernas} />
+                <ParteOvr etiqueta="Jugar fuera de puesto" valor={ovr.partes.puestos} />
+                <ParteOvr etiqueta={partido?.ctx.esLocal
+                            ? `El Defensores, ${Math.round(ocupacion * 100)}% lleno`
+                            : "Sin tu cancha"}
+                          valor={ovr.partes.cancha} />
+                <ParteOvr etiqueta={partido?.ctx.esLocal ? "El viaje" : `Jugar en ${partido?.ciudad ?? "la de ellos"}`}
+                          valor={ovr.partes.viaje} />
+                <div className="my-1.5 h-px" style={{ background: "var(--linea)" }} />
+                <ParteOvr etiqueta="Así llegás" valor={Math.round(ovr.partes.total)} base fuerte />
+              </div>
+            )}
             <div className="mt-3 text-[9px] uppercase tracking-[0.16em]" style={{ color: "var(--apagado)" }}>
               Qué la mueve
             </div>
@@ -630,6 +662,28 @@ export default function Escritorio({
 }
 
 // ---------------------------------------------------------------- piezas
+
+/** Un renglón del desglose del OVR: el que suma, en verde; el que resta, rojo. */
+function ParteOvr({ etiqueta, valor, base, fuerte, siempre }: {
+  etiqueta: string; valor: number; base?: boolean; fuerte?: boolean; siempre?: boolean;
+}) {
+  const redondo = Math.round(valor * 10) / 10;
+  // el ánimo se muestra aunque no mueva nada: saber que está en 70 es el dato
+  if (!base && !siempre && Math.abs(redondo) < 0.05) return null;
+  return (
+    <div className="flex items-baseline justify-between py-[3px]">
+      <span className="text-[11px]" style={{ color: fuerte ? "var(--blanco)" : "var(--tenue)" }}>
+        {etiqueta}
+      </span>
+      <span className="num text-[13px]"
+            style={{ color: base ? "var(--blanco)"
+              : redondo > 0 ? "var(--cesped)" : "var(--ladrillo)",
+              fontWeight: fuerte ? 800 : 400 }}>
+        {base ? redondo : `${redondo > 0 ? "+" : "−"}${Math.abs(redondo).toFixed(1)}`}
+      </span>
+    </div>
+  );
+}
 
 function Punto({ color }: { color: string }) {
   return <span className="block h-2 w-2 rounded-full" style={{ background: color }} />;

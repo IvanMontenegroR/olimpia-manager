@@ -78,13 +78,13 @@ function construirEventos(rng: Rng): Evento[] {
   llave("semis", cal.semifinales.ida, cal.semifinales.vuelta,
         rng.elegir(["boca_juniors", "sao_paulo", "boca_juniors", "bolivar", "recoleta"]));
 
-  // final: contra la mitad derecha del cuadro
+  // final: contra la mitad derecha del cuadro, en el Defensores
   const finalista = rng.elegir(["atletico_mineiro", "botafogo", "santos", "bragantino", "lanus"]);
   const rf = inter[finalista];
   ev.push({ fecha: cal.final.fecha, competencia: "sudamericana", ronda: "final",
     rivalId: finalista, rivalNombre: rf.nombre, rivalFuerza: rf.fuerza,
-    esLocal: false, neutral: true, viajeKm: copa.final.km_desde_asuncion,
-    alturaM: copa.final.altura_m, esClasico: false, aclimatacion: ACLIMATACION });
+    esLocal: true, neutral: false, viajeKm: 0,
+    alturaM: 43, esClasico: false, aclimatacion: ACLIMATACION });
 
   ev.sort((a, b) => a.fecha.localeCompare(b.fecha));
   return ev;
