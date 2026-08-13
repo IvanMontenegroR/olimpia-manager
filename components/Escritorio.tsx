@@ -32,14 +32,14 @@ type Ayuda = "ovr" | "estadio" | "vestuario" | "hinchada" | "dirigencia";
 /** Qué mide cada barra del encabezado y qué la mueve. */
 const AYUDAS: Record<Ayuda, { titulo: string; texto: string; mueve: string[] }> = {
   ovr: {
-    titulo: "Tu OVR",
-    texto: "Cuánto vale tu equipo el domingo. Es el número que se compara con " +
-      "el del rival para saber quién gana.",
+    titulo: "El nivel de tu equipo",
+    texto: "Qué tan fuerte sale Olimpia el domingo. Antes de cada partido se " +
+      "compara con el del rival: el que tiene más nivel gana más seguido.",
     mueve: [
-      "Fichar mejores jugadores sube el plantel",
-      "Ganar y cuidar el vestuario sube la confianza",
-      "Llenar el Defensores suma cuando jugás de local",
-      "Jugar dos veces en la semana baja el físico",
+      "Traer mejores jugadores",
+      "Ganar, y que el vestuario esté contento",
+      "Llenar la cancha, que se llena bajando el precio de la entrada",
+      "No hacer jugar a los mismos dos veces en la semana",
     ],
   },
   estadio: {
@@ -386,10 +386,15 @@ export default function Escritorio({
               style={{ background: "linear-gradient(160deg, #16201b, #0c120f 70%)",
                        boxShadow: `inset 0 0 0 1.5px color-mix(in srgb, ${colorOvr} 55%, transparent),
                                    0 0 20px color-mix(in srgb, ${colorOvr} 16%, transparent)` }}>
+              {/* el rótulo arriba, para que el número no quede sin nombre */}
+              <span className="mb-0.5 block text-[9px] uppercase tracking-[0.2em]"
+                    style={{ color: colorOvr }}>
+                nivel
+              </span>
               <span className="flex items-baseline gap-2">
                 <Numero valor={ovr.hoy} formato={(n) => String(Math.round(n))}
                         className="apellido block leading-[0.8]"
-                        style={{ fontSize: 46, color: colorOvr,
+                        style={{ fontSize: 42, color: colorOvr,
                                  textShadow: `0 0 26px color-mix(in srgb, ${colorOvr} 50%, transparent)` }} />
                 <span className="flex items-baseline gap-1">
                   {/* el plantel se pinta con la misma vara que el OVR: así se ve
@@ -525,7 +530,7 @@ export default function Escritorio({
               {ovr.rival !== null && (
                 <span className="shrink-0 text-right">
                   <span className="block text-[8px] uppercase tracking-[0.14em]"
-                        style={{ color: "var(--apagado)" }}>ovr</span>
+                        style={{ color: "var(--apagado)" }}>nivel</span>
                   <span className="num block text-[17px] leading-none"
                         style={{ color: ovr.hoy >= ovr.rival ? "var(--cesped)" : "var(--ladrillo)" }}>
                     {Math.round(ovr.rival)}
@@ -626,22 +631,22 @@ export default function Escritorio({
                 del plantel, que no aparecía en ninguna otra parte. */}
             {ayuda === "ovr" && ovr.partes && (
               <div className="mt-3 rounded-lg p-2.5" style={{ background: "var(--carbon)" }}>
-                <ParteOvr etiqueta="El once que sale a jugar"
+                <ParteOvr etiqueta="Los once que ponés"
                           valor={Math.round(ovr.partes.base)} base />
-                <ParteOvr etiqueta={`Vestuario, en ${Math.round(ovr.partes.animoMedio)} de 100`}
+                <ParteOvr etiqueta="Cómo está el vestuario"
                           valor={ovr.partes.animo} siempre />
                 <ParteOvr etiqueta={partido?.ctx.esLocal
-                            ? `Hinchada, con el Defensores al ${Math.round(ocupacion * 100)}%`
-                            : "Hinchada, que afuera no cuenta"}
+                            ? "La gente en la cancha"
+                            : "Se juega afuera, sin tu gente"}
                           valor={ovr.partes.cancha} siempre />
-                <ParteOvr etiqueta={`Físico, en ${Math.round(ovr.partes.condicionMedia)} de 100`}
-                          valor={ovr.partes.piernas} />
-                <ParteOvr etiqueta={`${ovr.partes.fueraDePuesto} fuera de su puesto`}
+                <ParteOvr etiqueta="Cómo llegan de físico" valor={ovr.partes.piernas} />
+                <ParteOvr etiqueta="Los que juegan fuera de su puesto"
                           valor={ovr.partes.puestos} />
-                <ParteOvr etiqueta={`Viajar a ${partido?.ciudad ?? "afuera"}`}
+                <ParteOvr etiqueta={`El viaje a ${partido?.ciudad ?? "afuera"}`}
                           valor={ovr.partes.viaje} />
                 <div className="my-1.5 h-px" style={{ background: "var(--linea)" }} />
-                <ParteOvr etiqueta="Tu OVR el domingo" valor={Math.round(ovr.partes.total)} base fuerte />
+                <ParteOvr etiqueta="Con lo que salís a jugar"
+                          valor={Math.round(ovr.partes.total)} base fuerte />
               </div>
             )}
             <div className="mt-3 text-[9px] uppercase tracking-[0.16em]" style={{ color: "var(--apagado)" }}>
