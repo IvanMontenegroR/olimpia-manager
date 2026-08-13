@@ -21,8 +21,10 @@ export interface Efecto {
   siSaleMal?: Omit<Efecto, "siSaleMal">;
   /** Deja al jugador afuera del próximo partido (expulsión, lesión). */
   suspendeA?: string;
-  /** Suma al plantel un juvenil de nivel desconocido, del pueblo que diga. */
-  traerPibeDe?: string;
+  /** Suma al plantel un juvenil del pueblo que diga, con el nivel ya sorteado. */
+  traerPibe?: { pueblo: string; nivel: number };
+  /** Le abre la puerta del mercado a un brasileño del catálogo. */
+  ofreceBrasileno?: boolean;
   /** Lo saca de la reserva de verdad, no solo en el texto. */
   subirDeReserva?: string;
 }
@@ -42,6 +44,12 @@ export interface OpcionSituacion {
     bien: string;
     mal: string;
   };
+  /**
+   * Cuando lo que se sortea no es sí o no sino cuánto: el nivel del pibe que
+   * traés a ciegas. El número ya está decidido acá; la pantalla solo lo muestra
+   * cayendo.
+   */
+  rango?: { min: number; max: number; valor: number; unidad: string };
 }
 
 export interface Situacion {
@@ -725,6 +733,9 @@ const PLANTILLAS: Plantilla[] = [
     cuando: () => true,
     armar: (c, rng) => {
       const pueblo = rng.elegir(["Concepción", "Encarnación", "Pedro Juan", "Villarrica", "Coronel Oviedo"]);
+      // el nivel se sortea acá, cuando aparece la situación, y no cuando el
+      // pibe entra: así la pantalla puede mostrarlo cayendo en la barra
+      const nivel = rng.entero(54, 74);
       return {
         s: {
           id: "pibe_del_interior",
@@ -733,17 +744,15 @@ const PLANTILLAS: Plantilla[] = [
           contexto: `Un veedor habla de un chico de 18 que hace cosas raras en la liga de ${pueblo}. ` +
             "Nadie más lo vio jugar. Piden 90 mil y hay que decidir hoy.",
           opciones: [
-            // No es una apuesta con dos resultados: es una incógnita que se
-            // despeja cuando el pibe debuta, así que el rango va en el detalle.
             { id: "traer", etiqueta: "Traerlo a probarse",
-              detalle: "Puede salir cualquier cosa entre 54 y 74 de nivel. " +
-                "No lo vas a saber hasta que juegue" },
+              detalle: "Nadie sabe lo que es hasta que lo ve. Puede salir cualquier cosa",
+              rango: { min: 54, max: 74, valor: nivel, unidad: "NIVEL" } },
             { id: "pasar", etiqueta: "Dejarlo pasar",
               detalle: "No se gasta, y si aparece en otro lado te vas a acordar" },
           ],
         },
         efectos: {
-          traer: { dineroUsd: -90_000, hinchada: 2, traerPibeDe: pueblo,
+          traer: { dineroUsd: -90_000, hinchada: 2, traerPibe: { pueblo, nivel },
             texto: `Llegó el pibe de ${pueblo} a probarse en el predio.` },
           pasar: { texto: `Se dejó pasar al chico de ${pueblo}.` },
         },
@@ -762,14 +771,21 @@ const PLANTILLAS: Plantilla[] = [
           "Pide comisión por adelantado para seguir la charla.",
         opciones: [
           { id: "pagar", etiqueta: "Pagar la comisión",
-            detalle: "Se abre la negociación, y el video puede ser humo" },
+            detalle: "Cuatro minutos editados pueden ser un jugador o pueden ser humo",
+            apuesta: { exito: 0.5,
+              bien: "El brasileño existe y queda disponible en el mercado",
+              mal: "El representante desapareció con la plata" } },
           { id: "cortar", etiqueta: "Cortar la charla",
             detalle: "No se gasta un peso y se cierra una puerta" },
         ],
       },
       efectos: {
-        pagar: { dineroUsd: -70_000,
-          texto: "Se pagó la comisión. El representante prometió traer al jugador la semana que viene." },
+        pagar: {
+          dineroUsd: -70_000, ofreceBrasileno: true,
+          texto: "El brasileño existe. Ya está sobre la mesa en el mercado.",
+          siSaleMal: { dineroUsd: -70_000, ambiente: -2,
+            texto: "El representante no atendió más el teléfono. Era humo." },
+        },
         cortar: { texto: "Se cortó la charla con el representante." },
       },
     }),

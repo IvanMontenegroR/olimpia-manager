@@ -34,7 +34,8 @@ function valorDe(e?: Efecto): number {
     + (e.moralDe?.delta ?? 0) * PESO.moral
     + (e.dineroUsd ?? 0) * PESO.dinero
     + (e.suspendeA ? PESO.suspende : 0)
-    + (e.traerPibeDe ? PESO.pibe : 0)
+    + (e.traerPibe ? PESO.pibe : 0)
+    + (e.ofreceBrasileno ? PESO.pibe : 0)
     + (e.subirDeReserva ? PESO.subir : 0);
 }
 

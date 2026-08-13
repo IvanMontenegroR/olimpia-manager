@@ -13,7 +13,9 @@ import { condicionRival, fuerzaBaseAjustada } from "./rivales.ts";
 import {
   TOTAL_SITUACIONES, sortearSituacion, type Efecto, type Situacion,
 } from "@/engine/situaciones.ts";
-import { generarMercado, sortearOferta, type FichajeGenerado } from "@/engine/mercado.ts";
+import {
+  CATALOGO, generarMercado, sortearOferta, type FichajeGenerado,
+} from "@/engine/mercado.ts";
 import {
   DIAS_DE_VENTANA, ESTRELLAS, impactoDe, jugadorDeEstrella, sortearEstrella,
 } from "@/engine/estrellas.ts";
@@ -1137,7 +1139,25 @@ export function rechazarEstrella(p: Partida): Partida {
  * hasta que juegue. Es la única incógnita del juego que se despeja jugando, y
  * por eso bancarlo aunque hoy no rinda tiene sentido.
  */
-function sumarPibe(n: Partida, pueblo: string): void {
+/**
+ * Suma al mercado un brasileño del catálogo que no esté ya ofrecido ni en el
+ * plantel. Es el premio de haberle creído al representante.
+ */
+function ofrecerBrasileno(n: Partida): void {
+  const dentro = new Set([...plantelDe(n).map((j) => j.id), ...n.fichajes.map((f) => f.id)]);
+  const libres = CATALOGO.filter((f) => f.nacionalidad === "BRA" && !dentro.has(f.id));
+  if (!libres.length) return;
+  const f = libres[new Rng(`brasileno-${n.dia}`).entero(0, libres.length - 1)];
+  const [nuevo] = generarMercado(`carpeta-${n.dia}`, 1, [
+    ...CATALOGO.filter((x) => x.id !== f.id).map((x) => x.id),
+  ]);
+  if (!nuevo) return;
+  n.fichajes = [nuevo, ...n.fichajes];
+  n.bitacora.push({ dia: n.dia, marca: "plata",
+    texto: `${nuevo.apellido} quedó disponible en el mercado por ${miles(nuevo.precioUsd)}.` });
+}
+
+function sumarPibe(n: Partida, pueblo: string, nivel: number): void {
   const rng = new Rng(`pibe-${pueblo}-${n.dia}`);
   const NOMBRES = [["Aldo", "Ayala"], ["Blas", "Cristaldo"], ["Rodrigo", "Ferreira"],
                    ["Juan", "Ozuna"], ["Marcelo", "Bogado"], ["Diego", "Villalba"]];
@@ -1147,8 +1167,9 @@ function sumarPibe(n: Partida, pueblo: string): void {
   let numero = 34;
   while (usados.has(numero)) numero++;
 
-  // El azar está acá y en ningún otro lado: puede salir crack o del montón.
-  const real = rng.entero(54, 74);
+  // El nivel viene sorteado desde la situación, para que la pantalla lo pueda
+  // mostrar cayendo en la barra antes de que el pibe entre.
+  const real = nivel;
   const j: Jugador = {
     id: `pibe-${pueblo}-${n.dia}`,
     numero, nombre, apellido,
@@ -1291,7 +1312,9 @@ export function resolverAsunto(p: Partida, asuntoId: string, opcionId: string): 
     if (efecto.suspendeA && n.plantel[efecto.suspendeA]) {
       n.plantel[efecto.suspendeA].suspendidoFechas = 1;
     }
-    if (efecto.traerPibeDe) sumarPibe(n, efecto.traerPibeDe);
+    if (efecto.traerPibe) sumarPibe(n, efecto.traerPibe.pueblo, efecto.traerPibe.nivel);
+    // el brasileño de la carpeta, cuando el video no era humo
+    if (efecto.ofreceBrasileno) ofrecerBrasileno(n);
     // el texto decía que subía al plantel principal y no lo sacaba de la reserva
     if (efecto.subirDeReserva) {
       n.enReserva = n.enReserva.filter((id) => id !== efecto.subirDeReserva);

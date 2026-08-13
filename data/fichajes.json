@@ -424,5 +424,73 @@
     "de": "Cerro Porteño",
     "rasgos": [],
     "nota": "Fue campeón con Boca. Le sobra oficio"
+  },
+  {
+    "id": "deyverson",
+    "nombre": "Deyverson",
+    "apellido": "Deyverson",
+    "posicion": "DC",
+    "edad": 35,
+    "nacionalidad": "BRA",
+    "nivel": 68,
+    "de": "Cuiabá",
+    "rasgos": [
+      "definidor"
+    ],
+    "nota": "Le hizo el gol a Flamengo en la final de la Libertadores"
+  },
+  {
+    "id": "dudu",
+    "nombre": "Eduardo",
+    "apellido": "Dudu",
+    "posicion": "ED",
+    "edad": 34,
+    "nacionalidad": "BRA",
+    "nivel": 71,
+    "de": "Cruzeiro",
+    "rasgos": [],
+    "nota": "Bicampeón de América con Palmeiras"
+  },
+  {
+    "id": "everton_ribeiro",
+    "nombre": "Éverton",
+    "apellido": "Ribeiro",
+    "posicion": "MCO",
+    "edad": 37,
+    "nacionalidad": "BRA",
+    "nivel": 70,
+    "de": "Bahia",
+    "rasgos": [
+      "definidor"
+    ],
+    "nota": "Capitán del Flamengo campeón. Toca y toca"
+  },
+  {
+    "id": "gabigol",
+    "nombre": "Gabriel",
+    "apellido": "Barbosa",
+    "posicion": "DC",
+    "edad": 30,
+    "nacionalidad": "BRA",
+    "nivel": 73,
+    "de": "Cruzeiro",
+    "rasgos": [
+      "definidor"
+    ],
+    "nota": "Gabigol. Los dos goles de la final del Maracanã"
+  },
+  {
+    "id": "bruno_henrique",
+    "nombre": "Bruno",
+    "apellido": "Henrique",
+    "posicion": "EI",
+    "edad": 35,
+    "nacionalidad": "BRA",
+    "nivel": 70,
+    "de": "Flamengo",
+    "rasgos": [
+      "definidor"
+    ],
+    "nota": "Se le va en velocidad a cualquiera, todavía"
   }
 ]

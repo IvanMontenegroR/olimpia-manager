@@ -52,8 +52,9 @@ export default function Asuntos({
 
   const tocar = (id: string) => {
     if (tirando) return;
-    // sin apuesta no hay nada que sortear: se resuelve y listo
-    if (!opciones.find((o) => o.id === id)?.apuesta) return onResolver(asunto.id, id);
+    const o = opciones.find((x) => x.id === id);
+    // sin nada que sortear se resuelve y listo
+    if (!o?.apuesta && !o?.rango) return onResolver(asunto.id, id);
     setTirando(id);
   };
 
@@ -109,25 +110,40 @@ export default function Asuntos({
                     }}>
                 {esta && listo && apuesta
                   ? (salioBien ? apuesta.bien : apuesta.mal)
-                  : o.detalle}
+                  : esta && listo && o.rango
+                    ? `Salió ${o.rango.valor} de nivel.`
+                    : o.detalle}
               </span>
 
               {/* Antes de elegir, la apuesta. Después, la misma barra con la
-                  bolilla cayendo adentro. */}
-              {o.apuesta && (
+                  bolilla cayendo adentro. El rango es la variante en la que no
+                  se sortea sí o no sino cuánto. */}
+              {(o.apuesta || o.rango) && (
                 esta ? (
                   <Sorteo
-                    chance={o.apuesta.exito}
+                    chance={o.apuesta?.exito ?? 0.5}
                     riesgo={null}
                     exito={salioBien}
                     bien="SALE BIEN" mal="SALE MAL"
+                    rango={o.rango}
                     semilla={asunto.id.length * 7 + o.id.length}
                     onTermina={() => setListo(true)} />
+                ) : o.rango ? (
+                  <span className="mt-1.5 block">
+                    <span className="block h-1.5 overflow-hidden rounded-full"
+                          style={{ background: "linear-gradient(90deg, var(--ladrillo), #d9a832 52%, var(--cesped))" }} />
+                    <span className="num mt-0.5 flex justify-between text-[9px] font-bold"
+                          style={{ color: "var(--apagado)" }}>
+                      <span>{o.rango.min}</span>
+                      <span>puede caer en cualquier lado</span>
+                      <span>{o.rango.max}</span>
+                    </span>
+                  </span>
                 ) : (
                   <span className="mt-1.5 flex h-1.5 overflow-hidden rounded-full"
                         style={{ background: "var(--linea)" }}>
-                    <span style={{ width: `${o.apuesta.exito * 100}%`, background: "var(--cesped)" }} />
-                    <span style={{ width: `${(1 - o.apuesta.exito) * 100}%`, background: "var(--ladrillo)" }} />
+                    <span style={{ width: `${o.apuesta!.exito * 100}%`, background: "var(--cesped)" }} />
+                    <span style={{ width: `${(1 - o.apuesta!.exito) * 100}%`, background: "var(--ladrillo)" }} />
                   </span>
                 )
               )}
@@ -154,8 +170,10 @@ export default function Asuntos({
           className="relative mt-3 w-full rounded-lg py-3 text-[12px] font-extrabold uppercase tracking-[0.14em]"
           style={{
             opacity: listo ? 1 : 0,
-            background: salioBien ? "var(--cesped)" : "var(--ladrillo)",
-            color: salioBien ? "#0a120d" : "var(--blanco)",
+            background: enTirada?.rango ? "var(--blanco)"
+              : salioBien ? "var(--cesped)" : "var(--ladrillo)",
+            color: enTirada?.rango ? "var(--negro)"
+              : salioBien ? "#0a120d" : "var(--blanco)",
             transition: "opacity 280ms ease-out",
           }}>
           Seguir
@@ -168,6 +186,7 @@ export default function Asuntos({
 function opcionesDe(a: Asunto, p: Partida): {
   id: string; etiqueta: string; detalle: string; efecto?: EfectoVisible;
   apuesta?: { exito: number; bien: string; mal: string };
+  rango?: { min: number; max: number; valor: number; unidad: string };
 }[] {
   if (a.tipo === "marketing") {
     return [

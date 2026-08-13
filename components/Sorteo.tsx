@@ -20,7 +20,23 @@ const DURACION = 1750;
 /** Lo que espera con el resultado a la vista antes de dejar seguir. */
 const REMATE = 620;
 
-export default function Sorteo({ chance, riesgo, exito, bien, mal, semilla, onTermina }: {
+/**
+ * Lo que se sortea cuando no es sí o no sino cuánto: el nivel del pibe que
+ * traés a ciegas. La barra deja de tener dos tramos y pasa a ser la escala
+ * entera, y la bolilla frena en el número que salió.
+ */
+export interface RangoSorteo {
+  min: number;
+  max: number;
+  /** Lo que salió de verdad. */
+  valor: number;
+  /** Qué es lo que se está midiendo: "nivel". */
+  unidad: string;
+}
+
+export default function Sorteo({
+  chance, riesgo, exito, bien, mal, semilla, rango, onTermina,
+}: {
   /** Lo que decía la barra antes de elegir, 0 a 1. */
   chance: number;
   /** La franja de gol en contra, si esta opción la tenía. */
@@ -31,6 +47,8 @@ export default function Sorteo({ chance, riesgo, exito, bien, mal, semilla, onTe
   mal: string;
   /** Cualquier número estable: mueve el punto exacto donde frena. */
   semilla: number;
+  /** Si viene, la barra es una escala y no dos tramos. */
+  rango?: RangoSorteo;
   onTermina: () => void;
 }) {
   const [pos, setPos] = useState(0);
@@ -42,11 +60,14 @@ export default function Sorteo({ chance, riesgo, exito, bien, mal, semilla, onTe
 
   const pct = Math.max(2, Math.min(98, chance * 100));
 
-  /** Dónde frena: adentro del tramo que salió, nunca pegado a la división. */
+  /** Dónde frena: en la escala, el número exacto; si no, adentro del tramo. */
   const destino = useRef(
-    exito
-      ? 2 + ((semilla * 37) % 100) / 100 * Math.max(2, pct - 5)
-      : pct + 3 + ((semilla * 37) % 100) / 100 * Math.max(2, 100 - pct - 5),
+    rango
+      ? Math.max(2, Math.min(98,
+          ((rango.valor - rango.min) / Math.max(1, rango.max - rango.min)) * 100))
+      : exito
+        ? 2 + ((semilla * 37) % 100) / 100 * Math.max(2, pct - 5)
+        : pct + 3 + ((semilla * 37) % 100) / 100 * Math.max(2, 100 - pct - 5),
   ).current;
 
   useEffect(() => {
@@ -97,7 +118,13 @@ export default function Sorteo({ chance, riesgo, exito, bien, mal, semilla, onTe
     };
   }, []);
 
-  const color = exito ? "#3fa76a" : "#c0392b";
+  /*
+   * En la escala no hay ganar ni perder: hay un número más alto o más bajo, y
+   * el color sale de dónde cayó. En los dos tramos, del tramo que tocó.
+   */
+  const color = rango
+    ? `color-mix(in srgb, #3fa76a ${Math.round(destino)}%, #c0392b)`
+    : exito ? "#3fa76a" : "#c0392b";
   const rotulo = Math.max(13, Math.min(87, frenado ? destino : pos));
 
   return (
@@ -109,9 +136,14 @@ export default function Sorteo({ chance, riesgo, exito, bien, mal, semilla, onTe
               boxShadow: frenado ? `0 0 22px ${color}66` : "none",
               transition: "box-shadow 200ms ease-out",
             }}>
-        {/* lo que tenías a favor */}
-        <span className="absolute inset-y-0 left-0"
-              style={{ width: `${pct}%`, background: "#3fa76a" }} />
+        {/* con rango la barra es la escala entera; si no, lo que tenías a favor */}
+        {rango ? (
+          <span className="absolute inset-0"
+                style={{ background: "linear-gradient(90deg, #c0392b, #d9a832 52%, #3fa76a)" }} />
+        ) : (
+          <span className="absolute inset-y-0 left-0"
+                style={{ width: `${pct}%`, background: "#3fa76a" }} />
+        )}
         {/* de lo que falla, esta parte además termina en gol del rival */}
         {riesgo !== null && (
           <span className="absolute inset-y-0"
@@ -121,9 +153,11 @@ export default function Sorteo({ chance, riesgo, exito, bien, mal, semilla, onTe
         <span className="absolute inset-0" style={{
           backgroundImage: "repeating-linear-gradient(90deg, transparent 0 8px, rgba(0,0,0,0.16) 8px 9px)",
         }} />
-        {/* la división entre ganar y perder */}
-        <span className="absolute inset-y-0"
-              style={{ left: `${pct}%`, width: 1, background: "#0a120daa" }} />
+        {/* la división entre ganar y perder; en la escala no hay ninguna */}
+        {!rango && (
+          <span className="absolute inset-y-0"
+                style={{ left: `${pct}%`, width: 1, background: "#0a120daa" }} />
+        )}
 
         {/* la bolilla */}
         <span className="absolute inset-y-0"
@@ -139,6 +173,14 @@ export default function Sorteo({ chance, riesgo, exito, bien, mal, semilla, onTe
 
       {/* qué tramo tocó, debajo de donde frenó */}
       <span className="relative block h-[19px]">
+        {rango && (
+          <>
+            <span className="num absolute text-[9px] font-bold"
+                  style={{ left: 0, top: 6, color: "#ffffff55" }}>{rango.min}</span>
+            <span className="num absolute text-[9px] font-bold"
+                  style={{ right: 0, top: 6, color: "#ffffff55" }}>{rango.max}</span>
+          </>
+        )}
         <span className="num absolute whitespace-nowrap rounded px-1.5 py-[1px] text-[10px] font-extrabold"
               style={{
                 left: `${rotulo}%`,
@@ -148,7 +190,7 @@ export default function Sorteo({ chance, riesgo, exito, bien, mal, semilla, onTe
                 color: frenado ? "#0a120d" : "transparent",
                 transition: "background 160ms ease-out, color 160ms ease-out",
               }}>
-          {exito ? bien : mal}
+          {rango ? `${rango.unidad} ${rango.valor}` : exito ? bien : mal}
         </span>
       </span>
     </span>
