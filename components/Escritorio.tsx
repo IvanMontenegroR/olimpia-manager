@@ -32,18 +32,14 @@ type Ayuda = "ovr" | "estadio" | "vestuario" | "hinchada" | "dirigencia";
 /** Qué mide cada barra del encabezado y qué la mueve. */
 const AYUDAS: Record<Ayuda, { titulo: string; texto: string; mueve: string[] }> = {
   ovr: {
-    titulo: "El OVR del equipo",
-    texto: "Lo que rinde tu once tal como llega al próximo partido. No es el " +
-      "promedio de las fichas: es el número que de verdad se compara con el del " +
-      "rival cuando se juega. Por eso el mismo plantel puede valer 60 un domingo " +
-      "y 71 el otro.",
+    titulo: "Tu OVR",
+    texto: "Cuánto vale tu equipo el domingo. Es el número que se compara con " +
+      "el del rival para saber quién gana.",
     mueve: [
-      "El nivel de los jugadores que ponés: fichar sube el piso",
-      "La confianza del plantel, que mueven las decisiones de la semana",
-      "Cómo llegan de piernas después de jugar",
-      "Jugar fuera de puesto: un lateral de central rinde menos",
-      "Adónde se juega: la altura y el viaje descuentan; el Defensores lleno suma",
-      "La línea blanca de la barra es el rival del domingo",
+      "Fichar mejores jugadores sube el plantel",
+      "Ganar y cuidar el vestuario sube la confianza",
+      "Llenar el Defensores suma cuando jugás de local",
+      "Jugar dos veces en la semana baja el físico",
     ],
   },
   estadio: {
@@ -225,7 +221,9 @@ export default function Escritorio({
    * subir y no una comparación que cambia sola cada fecha. Contra el rival ya
    * se compara en el botón de avanzar el día.
    */
-  const colorOvr = ovr.hoy >= 74 ? "#4fc07e" : ovr.hoy >= 66 ? "#e8c25a" : "#e0705f";
+  /** La misma vara para todo lo que se mida en nivel: rojo, amarillo, verde. */
+  const colorEscala = (n: number) => (n >= 74 ? "#4fc07e" : n >= 66 ? "#e8c25a" : "#e0705f");
+  const colorOvr = colorEscala(ovr.hoy);
 
   const bajas = plantel.filter((j) => j.suspendido || j.lesionado_hasta);
   const lider = tabla[0];
@@ -385,14 +383,18 @@ export default function Escritorio({
               */}
             <button onClick={() => setAyuda("ovr")}
               className="relieve-alto relative overflow-hidden rounded-lg px-2.5 py-2.5 text-left"
-              style={{ background: "linear-gradient(160deg, #16201b, #0c120f 70%)" }}>
+              style={{ background: "linear-gradient(160deg, #16201b, #0c120f 70%)",
+                       boxShadow: `inset 0 0 0 1.5px color-mix(in srgb, ${colorOvr} 55%, transparent),
+                                   0 0 20px color-mix(in srgb, ${colorOvr} 16%, transparent)` }}>
               <span className="flex items-baseline gap-2">
                 <Numero valor={ovr.hoy} formato={(n) => String(Math.round(n))}
                         className="apellido block leading-[0.8]"
                         style={{ fontSize: 46, color: colorOvr,
                                  textShadow: `0 0 26px color-mix(in srgb, ${colorOvr} 50%, transparent)` }} />
                 <span className="flex items-baseline gap-1">
-                  <span className="num text-[13px]" style={{ color: "var(--tenue)" }}>
+                  {/* el plantel se pinta con la misma vara que el OVR: así se ve
+                      si el problema son los jugadores o cómo llegan */}
+                  <span className="num text-[13px]" style={{ color: colorEscala(aportes.base) }}>
                     {aportes.base}
                   </span>
                   <span className="text-[8px] uppercase tracking-[0.12em]"
@@ -427,11 +429,12 @@ export default function Escritorio({
               )}
             </button>
 
-            <Modulo titulo="Sudamericana" color="#d9a832" icono="copa" onClick={() => setVista("copa")}
-              principal={NOMBRE_RONDA[partida.copa.ronda]}
-              pie={rivalCopa ? `vs ${rivalCopa.nombre}` : "sin rival"}
+            <CardCopa copa="sudamericana"
+              ronda={NOMBRE_RONDA[partida.copa.ronda]}
+              rival={rivalCopa ? rivalCopa.nombre : null}
               escudo={partida.copa.ronda !== "eliminado" && partida.copa.ronda !== "campeon"
-                ? partida.copa.rivalId : undefined} />
+                ? partida.copa.rivalId : undefined}
+              onClick={() => setVista("copa")} />
           </div>
 
           {/*
@@ -552,8 +555,8 @@ export default function Escritorio({
         {([["fixture", "Fixture", "#d9a832"], ["mercado", "Fichajes", "#e0902a"],
            ["bitacora", "Diario", "#8fa396"]] as const).map(([id, texto, color]) => (
           <button key={id} onClick={() => setVista(id)}
-            className="relative rounded-md py-2 text-[9px] font-bold uppercase tracking-wider"
-            style={{ background: `color-mix(in srgb, ${color} 14%, var(--carbon))`, color }}>
+            className="relieve relative rounded-md py-2.5 text-[10px] font-bold uppercase tracking-[0.14em]"
+            style={{ background: "var(--carbon)", color: "var(--tenue)" }}>
             {texto}
             {/* cuántos hay para mirar, sin tener que entrar */}
             {id === "mercado" && partida.fichajes.length > 0 && (
@@ -623,24 +626,26 @@ export default function Escritorio({
                 del plantel, que no aparecía en ninguna otra parte. */}
             {ayuda === "ovr" && ovr.partes && (
               <div className="mt-3 rounded-lg p-2.5" style={{ background: "var(--carbon)" }}>
-                <ParteOvr etiqueta="El plantel que sale a jugar"
+                <ParteOvr etiqueta="El once que sale a jugar"
                           valor={Math.round(ovr.partes.base)} base />
-                <ParteOvr etiqueta={`Vestuario: cómo se sienten (${Math.round(ovr.partes.animoMedio)} de 100)`}
+                <ParteOvr etiqueta={`Vestuario, en ${Math.round(ovr.partes.animoMedio)} de 100`}
                           valor={ovr.partes.animo} siempre />
                 <ParteOvr etiqueta={partido?.ctx.esLocal
-                            ? `Hinchada: el Defensores al ${Math.round(ocupacion * 100)}%, con la gente en ${Math.round(partida.hinchada)}`
-                            : "Hinchada: no te sirve jugando afuera"}
+                            ? `Hinchada, con el Defensores al ${Math.round(ocupacion * 100)}%`
+                            : "Hinchada, que afuera no cuenta"}
                           valor={ovr.partes.cancha} siempre />
-                <ParteOvr etiqueta="Físico: cómo llegan de piernas" valor={ovr.partes.piernas} />
-                <ParteOvr etiqueta="Puesto: los que juegan fuera del suyo" valor={ovr.partes.puestos} />
-                <ParteOvr etiqueta={partido?.ctx.esLocal ? "El viaje" : `Jugar en ${partido?.ciudad ?? "la de ellos"}`}
+                <ParteOvr etiqueta={`Físico, en ${Math.round(ovr.partes.condicionMedia)} de 100`}
+                          valor={ovr.partes.piernas} />
+                <ParteOvr etiqueta={`${ovr.partes.fueraDePuesto} fuera de su puesto`}
+                          valor={ovr.partes.puestos} />
+                <ParteOvr etiqueta={`Viajar a ${partido?.ciudad ?? "afuera"}`}
                           valor={ovr.partes.viaje} />
                 <div className="my-1.5 h-px" style={{ background: "var(--linea)" }} />
-                <ParteOvr etiqueta="Así llegás" valor={Math.round(ovr.partes.total)} base fuerte />
+                <ParteOvr etiqueta="Tu OVR el domingo" valor={Math.round(ovr.partes.total)} base fuerte />
               </div>
             )}
             <div className="mt-3 text-[9px] uppercase tracking-[0.16em]" style={{ color: "var(--apagado)" }}>
-              Qué la mueve
+              {ayuda === "ovr" ? "Cómo se sube" : "Qué la mueve"}
             </div>
             <ul className="mt-1.5">
               {AYUDAS[ayuda].mueve.map((m, i) => (
@@ -714,6 +719,57 @@ function Punto({ color }: { color: string }) {
 }
 
 /** Tarjeta del tablero: un dato grande, un pie y, si hace falta, una alerta. */
+/**
+ * Cada copa tiene su color, como en la tele: la Sudamericana es azul y la
+ * Libertadores es negra y dorada. Una card genérica para las dos haría que
+ * llegar a la Libertadores no se sintiera distinto.
+ */
+const COPAS = {
+  sudamericana: {
+    nombre: "Sudamericana",
+    acento: "#5fb0e8",
+    fondo: "linear-gradient(155deg, #1b3f63, #10233a 58%, #0a1523)",
+    halo: "rgba(120,190,255,0.30)",
+  },
+  libertadores: {
+    nombre: "Libertadores",
+    acento: "#e8c25a",
+    fondo: "linear-gradient(155deg, #2c2412, #14110a 58%, #0b0906)",
+    halo: "rgba(240,210,130,0.30)",
+  },
+} as const;
+
+function CardCopa({ copa, ronda, rival, escudo, onClick }: {
+  copa: keyof typeof COPAS;
+  ronda: string; rival: string | null; escudo?: string; onClick: () => void;
+}) {
+  const c = COPAS[copa];
+  return (
+    <button onClick={onClick}
+      className="relieve relative flex items-center gap-2 overflow-hidden rounded-lg p-2.5 text-left"
+      style={{ background: c.fondo, boxShadow: `inset 0 0 0 1px ${c.halo}` }}>
+      <span className="absolute -left-8 -top-10 h-24 w-28 rounded-full"
+            style={{ background: `radial-gradient(closest-side, ${c.halo}, transparent)`,
+                     filter: "blur(14px)" }} />
+      <span className="relative min-w-0 flex-1">
+        <span className="block text-[9px] uppercase tracking-[0.14em]" style={{ color: c.acento }}>
+          {c.nombre}
+        </span>
+        <span className="apellido mt-1 block truncate text-[19px] leading-none">{ronda}</span>
+        <span className="mt-0.5 block truncate text-[10px]" style={{ color: "var(--tenue)" }}>
+          {rival ? `vs ${rival}` : "sin rival"}
+        </span>
+      </span>
+      {/* el escudo del rival, grande y al medio: es la cara del cruce */}
+      {escudo && (
+        <span className="relative shrink-0">
+          <Escudo id={escudo} nombre={rival ?? ""} tam={52} />
+        </span>
+      )}
+    </button>
+  );
+}
+
 function Modulo({ titulo, color, icono, principal, numero, sufijo, pie, alerta, escudo, onClick }: {
   titulo: string; color: string; icono: ClaveIcono; principal?: string;
   numero?: number; sufijo?: string;
