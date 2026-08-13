@@ -39,7 +39,7 @@ const AYUDAS: Record<Ayuda, { titulo: string; texto: string; mueve: string[] }> 
       "y 71 el otro.",
     mueve: [
       "El nivel de los jugadores que ponés: fichar sube el piso",
-      "El ánimo del plantel, que mueven las decisiones de la semana",
+      "La confianza del plantel, que mueven las decisiones de la semana",
       "Cómo llegan de piernas después de jugar",
       "Jugar fuera de puesto: un lateral de central rinde menos",
       "Adónde se juega: la altura y el viaje descuentan; el Defensores lleno suma",
@@ -202,34 +202,27 @@ export default function Escritorio({
     const p = ovr.partes;
     if (!p) return { base: Math.round(ovr.plantel), lista: [] as { etiqueta: string; valor: number }[] };
     const crudos: { etiqueta: string; valor: number }[] = [
-      { etiqueta: "ánimo", valor: p.animo },
+      { etiqueta: "confianza", valor: p.animo },
       { etiqueta: "piernas", valor: p.piernas },
       { etiqueta: "puesto", valor: p.puestos },
-      { etiqueta: "cancha", valor: p.cancha },
+      { etiqueta: "localía", valor: p.cancha },
       { etiqueta: "viaje", valor: p.viaje },
     ];
     const lista = crudos
       .map((a) => ({ ...a, valor: Math.round(a.valor) }))
-      .filter((a) => a.valor !== 0 || a.etiqueta === "ánimo");
+      .filter((a) => a.valor !== 0 || a.etiqueta === "confianza");
     const suma = lista.reduce((n, a) => n + a.valor, 0);
     return { base: Math.round(p.total) - suma, lista };
   })();
   /** El once nunca baja de 45 ni pasa de 85: ahí se estira la barra. */
   const escalaOvr = (n: number) => Math.max(0, Math.min(100, ((n - 45) / 40) * 100));
-  const METALES = {
-    oro:    { fondo: "linear-gradient(150deg, #3a2c0d, #1a1305 62%, #120d04)",
-              borde: "#c9a227", brillo: "rgba(255,226,150,0.16)",
-              tinta: "#f0d98a", rotulo: "#c9a227", dato: "#e8dcb8", tenue: "#9b8a5e" },
-    plata:  { fondo: "linear-gradient(150deg, #2c3336, #14191b 62%, #0e1214)",
-              borde: "#aab6ba", brillo: "rgba(226,240,244,0.15)",
-              tinta: "#e6eef1", rotulo: "#aab6ba", dato: "#dbe4e7", tenue: "#7d8a8f" },
-    bronce: { fondo: "linear-gradient(150deg, #3a2114, #1c1008 62%, #140b05)",
-              borde: "#c4783a", brillo: "rgba(255,196,142,0.14)",
-              tinta: "#f0c096", rotulo: "#c4783a", dato: "#e6cdb6", tenue: "#9c7454" },
-  };
-  const metal = ovr.rival === null || ovr.hoy >= ovr.rival + 2 ? METALES.oro
-    : ovr.hoy >= ovr.rival - 2 ? METALES.plata : METALES.bronce;
-  const colorOvr = metal.borde;
+  /*
+   * El color del número sale de cuánto vale el equipo en términos absolutos,
+   * no de contra quién juega el domingo. Así el número es algo que se quiere
+   * subir y no una comparación que cambia sola cada fecha. Contra el rival ya
+   * se compara en el botón de avanzar el día.
+   */
+  const colorOvr = ovr.hoy >= 74 ? "#4fc07e" : ovr.hoy >= 66 ? "#e8c25a" : "#e0705f";
 
   const bajas = plantel.filter((j) => j.suspendido || j.lesionado_hasta);
   const lider = tabla[0];
@@ -400,49 +393,41 @@ export default function Escritorio({
               * card entera y no un renglón del encabezado.
               */}
             {/*
-              * La card del OVR es una placa de metal, y el metal dice cómo
-              * estás parado: oro si valés más que el rival, plata si están
-              * parejos, bronce si valés menos. Un futbolero lee eso sin que
-              * nadie se lo explique, y de paso deja de ser una card verde más
-              * en una pantalla donde todo es verde.
+              * El OVR. El número manda y es el que lleva el color; el fondo se
+              * queda quieto y oscuro para no competir. A la derecha, cada cosa
+              * que lo sube o lo baja con su barrita, que es lo que hace ver
+              * que son números que se pueden mover.
               */}
             <button onClick={() => setAyuda("ovr")}
-              className="relieve-alto relative overflow-hidden rounded-lg px-3 pb-2 pt-2 text-left"
-              style={{ background: metal.fondo }}>
-              {/* las vetas del metal */}
-              <span className="absolute inset-0" style={{
-                backgroundImage: `repeating-linear-gradient(115deg,
-                  rgba(255,255,255,0.055) 0 1px, transparent 1px 4px)`,
+              className="relieve-alto relative overflow-hidden rounded-lg px-3 py-2.5 text-left"
+              style={{ background: "linear-gradient(160deg, #16201b, #0c120f 70%)" }}>
+              <span className="absolute -left-8 -top-10 h-24 w-28 rounded-full" style={{
+                background: `radial-gradient(closest-side, color-mix(in srgb, ${colorOvr} 32%, transparent), transparent)`,
+                filter: "blur(16px)",
               }} />
-              {/* el destello que cruza, que es lo que lo hace parecer metal */}
-              <span className="absolute inset-0" style={{
-                background: `linear-gradient(118deg, transparent 22%,
-                  ${metal.brillo} 44%, transparent 62%)`,
-              }} />
-              <span className="absolute inset-0 rounded-lg" style={{
-                boxShadow: `inset 0 0 0 1px ${metal.borde},
-                            inset 0 1px 0 ${metal.brillo},
-                            inset 0 -14px 22px rgba(0,0,0,0.45)`,
-              }} />
+              <span className="absolute inset-0 rounded-lg"
+                    style={{ boxShadow: `inset 0 0 0 1px color-mix(in srgb, ${colorOvr} 32%, transparent)` }} />
 
-              <span className="relative flex gap-2.5">
+              <span className="relative flex items-start gap-2.5">
                 <span className="shrink-0">
                   <Numero valor={ovr.hoy} formato={(n) => String(Math.round(n))}
-                          className="apellido block leading-[0.82]"
-                          style={{ fontSize: 46, color: metal.tinta,
-                                   textShadow: `0 1px 0 rgba(255,255,255,0.28), 0 3px 8px rgba(0,0,0,0.6)` }} />
-                  <span className="mt-0.5 block text-[9px] font-extrabold uppercase tracking-[0.22em]"
-                        style={{ color: metal.rotulo }}>
-                    OVR
+                          className="apellido block leading-[0.8]"
+                          style={{ fontSize: 50, color: colorOvr,
+                                   textShadow: `0 0 26px color-mix(in srgb, ${colorOvr} 55%, transparent)` }} />
+                  <span className="mt-1.5 flex items-baseline gap-1">
+                    <span className="num text-[13px]" style={{ color: "var(--tenue)" }}>
+                      {aportes.base}
+                    </span>
+                    <span className="text-[8px] uppercase tracking-[0.12em]"
+                          style={{ color: "var(--apagado)" }}>
+                      plantel
+                    </span>
                   </span>
-                  <span className="mt-1 block" style={{ height: 2, width: 26, background: metal.borde }} />
                 </span>
 
-                <span className="min-w-0 flex-1 pt-0.5">
-                  <ParteChica etiqueta="plantel" valor={aportes.base} base metal={metal} />
-                  {aportes.lista.slice(0, 3).map((a) => (
-                    <ParteChica key={a.etiqueta} etiqueta={a.etiqueta} valor={a.valor}
-                                siempre={a.etiqueta === "ánimo"} metal={metal} />
+                <span className="min-w-0 flex-1">
+                  {aportes.lista.slice(0, 4).map((a) => (
+                    <Aporte key={a.etiqueta} etiqueta={a.etiqueta} valor={a.valor} />
                   ))}
                 </span>
               </span>
@@ -451,7 +436,7 @@ export default function Escritorio({
                 <span className="relative mt-1.5 flex flex-wrap gap-1">
                   {bajas.length > 0 && (
                     <span className="rounded px-1.5 py-[1px] text-[9px] font-extrabold uppercase"
-                          style={{ background: "#c0392b", color: "#f2ede2" }}>
+                          style={{ background: "var(--ladrillo)", color: "var(--blanco)" }}>
                       {bajas.length} baja{bajas.length > 1 ? "s" : ""}
                     </span>
                   )}
@@ -656,13 +641,13 @@ export default function Escritorio({
               <div className="mt-3 rounded-lg p-2.5" style={{ background: "var(--carbon)" }}>
                 <ParteOvr etiqueta="El plantel que sale a jugar"
                           valor={Math.round(ovr.partes.base)} base />
-                <ParteOvr etiqueta={`Cómo está de cabeza · ánimo ${Math.round(ovr.partes.animoMedio)}`}
+                <ParteOvr etiqueta={`Confianza: cómo se sienten (${Math.round(ovr.partes.animoMedio)} de 100)`}
                           valor={ovr.partes.animo} siempre />
-                <ParteOvr etiqueta="Las piernas" valor={ovr.partes.piernas} />
-                <ParteOvr etiqueta="Jugar fuera de puesto" valor={ovr.partes.puestos} />
+                <ParteOvr etiqueta="Piernas: cómo llegan de físico" valor={ovr.partes.piernas} />
+                <ParteOvr etiqueta="Puesto: los que juegan fuera del suyo" valor={ovr.partes.puestos} />
                 <ParteOvr etiqueta={partido?.ctx.esLocal
-                            ? `El Defensores, ${Math.round(ocupacion * 100)}% lleno`
-                            : "Sin tu cancha"}
+                            ? `Localía: el Defensores, ${Math.round(ocupacion * 100)}% lleno`
+                            : "Localía: se juega afuera"}
                           valor={ovr.partes.cancha} />
                 <ParteOvr etiqueta={partido?.ctx.esLocal ? "El viaje" : `Jugar en ${partido?.ciudad ?? "la de ellos"}`}
                           valor={ovr.partes.viaje} />
@@ -691,19 +676,37 @@ export default function Escritorio({
 // ---------------------------------------------------------------- piezas
 
 /** Un aporte al OVR, en el costado de la card: etiqueta a la izquierda, cifra a la derecha. */
-function ParteChica({ etiqueta, valor, base, siempre, metal }: {
-  etiqueta: string; valor: number; base?: boolean; siempre?: boolean;
-  metal: { dato: string; tenue: string };
-}) {
+/**
+ * Un aporte al OVR, con su barrita saliendo del centro.
+ *
+ * La barra existe para que se vea que es un número que se mueve: sale hacia la
+ * derecha cuando suma y hacia la izquierda cuando resta, y crece con lo que
+ * vale. Una columna de cifras sueltas parece una ficha técnica.
+ */
+function Aporte({ etiqueta, valor }: { etiqueta: string; valor: number }) {
   const n = Math.round(valor);
-  if (!base && !siempre && n === 0) return null;
+  const color = n > 0 ? "#5fd08c" : n < 0 ? "#e8695c" : "var(--apagado)";
+  // seis puntos de aporte llenan media barra: es lo máximo que mueve una parte
+  const largo = Math.min(50, (Math.abs(n) / 6) * 50);
   return (
-    <span className="flex items-baseline justify-between gap-1 leading-[1.32]">
-      <span className="truncate text-[9px]" style={{ color: metal.tenue }}>{etiqueta}</span>
-      <span className="num shrink-0 text-[11px] font-bold"
-            style={{ color: base ? metal.dato
-              : n > 0 ? "#5fd08c" : n < 0 ? "#e8695c" : metal.tenue }}>
-        {base ? n : n === 0 ? "0" : `${n > 0 ? "+" : "−"}${Math.abs(n)}`}
+    <span className="flex items-center gap-1.5 leading-[1.55]">
+      <span className="min-w-0 flex-1 truncate text-[9px]" style={{ color: "var(--apagado)" }}>
+        {etiqueta}
+      </span>
+      <span className="relative block h-[8px] w-[42px] shrink-0 rounded-sm"
+            style={{ background: "rgba(255,255,255,0.07)" }}>
+        <span className="absolute inset-y-0" style={{ left: "50%", width: 1, background: "rgba(255,255,255,0.22)" }} />
+        <span className="absolute inset-y-[1.5px] rounded-[1px]"
+              style={{
+                left: n >= 0 ? "50%" : `${50 - largo}%`,
+                width: `${largo}%`,
+                background: color,
+                boxShadow: `0 0 6px color-mix(in srgb, ${color} 55%, transparent)`,
+                transition: "width 420ms ease-out, left 420ms ease-out",
+              }} />
+      </span>
+      <span className="num w-[22px] shrink-0 text-right text-[11px] font-bold" style={{ color }}>
+        {n === 0 ? "0" : `${n > 0 ? "+" : "−"}${Math.abs(n)}`}
       </span>
     </span>
   );
