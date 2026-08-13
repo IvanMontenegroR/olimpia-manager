@@ -12,7 +12,7 @@ import { colorCondicion, esSub18, nombreCorto, partidosDeOlimpia } from "@/lib/j
 import RIVALES_COPA from "@/data/rivales_internacionales.json";
 import {
   CALENDARIO_COPA, OBJETIVO, TOTAL_FECHAS, borrar, diasAlPartido, esPartidoDeCopa,
-  diasEntre, estadoSub18, formatoDia, hayPartidoHoy, miles, ocupacionDe, partidoDe, plantelDe,
+  diasEntre, estadoSub18, formatoDia, hayPartidoHoy, miles, ocupacionDe, ovrDe, partidoDe, plantelDe,
   posicionDe, sumarDias,
   tablaDe, type EquipoGuardado, type Partida,
 } from "@/lib/temporada.ts";
@@ -26,10 +26,25 @@ import { mejorMolde, MOLDE_DE, repartirEnMolde } from "@/lib/juego.ts";
 
 type Vista = "escritorio" | "plantel" | "tabla" | "fixture" | "mercado" | "bitacora"
   | "copa" | "estrella";
-type Ayuda = "estadio" | "vestuario" | "hinchada" | "dirigencia";
+type Ayuda = "ovr" | "estadio" | "vestuario" | "hinchada" | "dirigencia";
 
 /** Qué mide cada barra del encabezado y qué la mueve. */
 const AYUDAS: Record<Ayuda, { titulo: string; texto: string; mueve: string[] }> = {
+  ovr: {
+    titulo: "El OVR del equipo",
+    texto: "Lo que rinde tu once tal como llega al próximo partido. No es el " +
+      "promedio de las fichas: es el número que de verdad se compara con el del " +
+      "rival cuando se juega. Por eso el mismo plantel puede valer 60 un domingo " +
+      "y 71 el otro.",
+    mueve: [
+      "El nivel de los jugadores que ponés: fichar sube el piso",
+      "El ánimo del plantel, que mueven las decisiones de la semana",
+      "Cómo llegan de piernas después de jugar",
+      "Jugar fuera de puesto: un lateral de central rinde menos",
+      "Adónde se juega: la altura y el viaje descuentan; el Defensores lleno suma",
+      "La línea blanca de la barra es el rival del domingo",
+    ],
+  },
   estadio: {
     titulo: "Estadio",
     texto: "Qué parte del Defensores del Chaco se llena cuando jugás de local. " +
@@ -174,9 +189,13 @@ export default function Escritorio({
     );
   }
 
+  const ovr = ovrDe(partida);
+  /** El once nunca baja de 45 ni pasa de 85: ahí se estira la barra. */
+  const escalaOvr = (n: number) => Math.max(0, Math.min(100, ((n - 45) / 40) * 100));
+  const colorOvr = ovr.rival === null || ovr.hoy >= ovr.rival + 2 ? "var(--cesped)"
+    : ovr.hoy >= ovr.rival - 2 ? "var(--oro)" : "var(--ladrillo)";
+
   const bajas = plantel.filter((j) => j.suspendido || j.lesionado_hasta);
-  const condMedia = Math.round(
-    plantel.reduce((a, j) => a + j.condicion, 0) / Math.max(plantel.length, 1));
   const lider = tabla[0];
   const difLider = lider.id === "olimpia" ? 0 : lider.pts - yo.pts;
   const rivalCopa = (RIVALES_COPA as any[]).find((r) => r.id === partida.copa.rivalId);
@@ -218,28 +237,71 @@ export default function Escritorio({
           </button>
         </div>
 
-        {/* El prestigio manda sobre las otras dos: es el titular de tu ciclo,
-            no una barra más. Por eso va ancho, con nombre y arriba. */}
-        <button onClick={() => setAyuda("dirigencia")} className="mt-2 block w-full text-left">
-          <div className="mb-1 flex items-baseline justify-between">
-            <span className="text-[9px] uppercase tracking-[0.18em]"
-                  style={{ color: partida.paciencia < 25 ? "#c0392b" : "#4a7fb5" }}>
-              {partida.paciencia >= 80 ? "Intocable"
-                : partida.paciencia >= 55 ? "Respetado"
-                : partida.paciencia >= 25 ? "Cuestionado"
-                : "En la cuerda floja"}
+        {/*
+          * El OVR manda. Es el mismo número que decide los partidos ahí abajo,
+          * puesto en pantalla: se mueve con el nivel del plantel, el ánimo, las
+          * piernas, el puesto y adónde se viaja. Antes había una barra de
+          * prestigio acá, que era un número que no se podía tocar con nada.
+          */}
+        <button onClick={() => setAyuda("ovr")} className="mt-2.5 flex w-full items-end gap-3 text-left">
+          <span className="shrink-0">
+            <span className="block text-[9px] uppercase tracking-[0.18em]"
+                  style={{ color: "var(--apagado)" }}>
+              {partido ? (partido.ctx.esLocal ? "Así llegás al domingo" : `Así llegás a ${partido.ciudad}`)
+                        : "Así está el equipo"}
             </span>
-            <Numero valor={partida.paciencia} className="num text-[13px]"
-                    style={{ color: partida.paciencia < 25 ? "#c0392b" : "#4a7fb5" }} />
-          </div>
-          <div className="relieve h-2 overflow-hidden rounded-full" style={{ background: "var(--linea)" }}>
-            <div className="barra-llena h-full rounded-full"
-                 style={{ width: `${partida.paciencia}%`,
-                          background: partida.paciencia < 25
-                            ? "linear-gradient(90deg, #6b1f16, #c0392b)"
-                            : "linear-gradient(90deg, #26486b, #4a7fb5)" }} />
-          </div>
+            <Numero valor={ovr.hoy} formato={(n) => String(Math.round(n))}
+                    className="num block leading-none"
+                    style={{ fontSize: 44, color: colorOvr }} />
+          </span>
+
+          <span className="min-w-0 flex-1 pb-1">
+            {/* dónde cae contra el plantel que tenés y contra el del domingo */}
+            <span className="relative block h-1.5 overflow-hidden rounded-full"
+                  style={{ background: "var(--linea)" }}>
+              <span className="block h-full rounded-full"
+                    style={{ width: `${escalaOvr(ovr.hoy)}%`,
+                             background: `linear-gradient(90deg, color-mix(in srgb, ${colorOvr} 45%, transparent), ${colorOvr})`,
+                             transition: "width 500ms ease-out" }} />
+              {ovr.rival !== null && (
+                <span className="absolute inset-y-0"
+                      style={{ left: `${escalaOvr(ovr.rival)}%`, width: 2,
+                               background: "var(--blanco)", opacity: 0.8 }} />
+              )}
+            </span>
+            <span className="mt-1 flex items-baseline justify-between text-[9px]">
+              <span style={{ color: "var(--apagado)" }}>
+                plantel <span className="num" style={{ color: "var(--tenue)" }}>
+                  {Math.round(ovr.plantel)}
+                </span>
+              </span>
+              {ovr.rival !== null && (
+                <span style={{ color: "var(--apagado)" }}>
+                  {nombreCorto(partido!.rivalId, partido!.rivalNombre)}{" "}
+                  <span className="num" style={{ color: "var(--tenue)" }}>
+                    {Math.round(ovr.rival)}
+                  </span>
+                </span>
+              )}
+            </span>
+          </span>
         </button>
+
+        {/* La dirigencia solo habla cuando hay algo que decir. */}
+        {partida.paciencia < 40 && (
+          <button onClick={() => setAyuda("dirigencia")}
+            className="mt-2 flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left"
+            style={{ background: partida.paciencia < 20
+              ? "color-mix(in srgb, #c0392b 26%, var(--carbon))"
+              : "color-mix(in srgb, #e0902a 20%, var(--carbon))" }}>
+            <span className="text-[13px] leading-none">{partida.paciencia < 20 ? "🔥" : "⚠"}</span>
+            <span className="text-[10px] leading-snug" style={{ color: "var(--blanco)" }}>
+              {partida.paciencia < 20
+                ? "La dirigencia está por cortar el ciclo"
+                : `Arriba esperan más de un plantel de ${Math.round(ovr.plantel)}`}
+            </span>
+          </button>
+        )}
 
         <div className="mt-2 flex gap-2">
           <Medidor etiqueta="Vestuario" valor={partida.ambiente} color="#3fa76a"
@@ -354,8 +416,12 @@ export default function Escritorio({
         <div className="flex min-h-0 flex-1 flex-col px-3">
           {/* tablero del club */}
           <div className="escalona grid shrink-0 grid-cols-2 gap-1.5">
+            {/* La condición media vivía acá, pero con el plantel volviendo
+                entero cada semana marcaba 99% siempre. Lo que ahora importa es
+                con cuántos contás. */}
             <Modulo titulo="Plantel" color="#3fa76a" icono="plantel" onClick={() => setVista("plantel")}
-              numero={condMedia} sufijo="%" pie="condición media"
+              numero={plantel.filter((j) => !j.reserva && !j.suspendido && !j.lesionado_hasta).length}
+              pie="disponibles en primera"
               alerta={
                 !sub18.alcanza ? `Sub-18: faltan ${sub18.faltan}'`
                 : bajas.length ? `${bajas.length} baja${bajas.length > 1 ? "s" : ""}`

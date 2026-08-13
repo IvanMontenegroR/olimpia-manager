@@ -2,9 +2,9 @@
 
 import {
   CUPO_EXTRANJEROS, MOLDE_DE, PLANTEL, esSub18, partidosDeOlimpia, repartirEnMolde,
-  type PartidoUI,
+  salidaAutomatica, type PartidoUI,
 } from "./juego.ts";
-import { P, clamp, factorCondicion, recuperar } from "@/engine/motor.ts";
+import { P, clamp, factorCondicion, ovrDelOnce, recuperar } from "@/engine/motor.ts";
 import { Rng } from "@/engine/rng.ts";
 import equiposJson from "@/data/equipos_2026.json";
 import fixtureJson from "@/data/fixture_clausura2026_final.json";
@@ -19,7 +19,7 @@ import {
 import {
   DIAS_DE_VENTANA, ESTRELLAS, impactoDe, jugadorDeEstrella, sortearEstrella,
 } from "@/engine/estrellas.ts";
-import type { Jugador } from "@/engine/tipos.ts";
+import type { ContextoPartido, Jugador } from "@/engine/tipos.ts";
 
 const EQUIPOS = equiposJson as any[];
 const FIXTURE = fixtureJson as any[];
@@ -577,6 +577,50 @@ function pagarBonus(n: Partida, que: string) {
   n.dineroUsd += 2_500_000;
   n.bitacora.push({ dia: n.dia, marca: "plata",
     texto: `El sponsor pagó el bonus por objetivos: ${miles(2_500_000)} por ganar ${que}.` });
+}
+
+/**
+ * Los dos números que resumen al club.
+ *
+ * `hoy` es lo que rinde el once tal como llega al próximo partido: se mueve
+ * con el ánimo del plantel, las piernas, el viaje y la localía. `plantel` es
+ * lo que valen los jugadores en ficha, que solo sube fichando o cuando crece
+ * un juvenil, y es la vara con la que te mide la dirigencia.
+ *
+ * La distancia entre los dos es la historia de tu ciclo: un plantel de 68
+ * rindiendo a 60 es un vestuario roto; rindiendo a 71, un equipo volando.
+ */
+export function ovrDe(p: Partida): { hoy: number; plantel: number; rival: number | null } {
+  const jugadores = plantelDe(p);
+  const primeros = jugadores.filter((j) => !j.reserva);
+  const mejores = [...primeros].sort((a, b) => b.nivel - a.nivel).slice(0, 11);
+  const plantel = mejores.length
+    ? mejores.reduce((n, j) => n + j.nivel, 0) / mejores.length : 0;
+
+  /*
+   * Se mide contra el próximo partido, que es lo que interesa saber: así vas a
+   * llegar el domingo. Terminada la temporada no hay ninguno, y ahí se mide en
+   * cancha propia como referencia.
+   */
+  const partido = partidoDe(p) ?? partidoDe({ ...p, fechaActual: 1, copa: { ...p.copa, ronda: "eliminado" } });
+  if (!partido) return { hoy: plantel, plantel, rival: null };
+  const ctx: ContextoPartido = partidoDe(p) ? partido.ctx
+    : { ...partido.ctx, esLocal: true, alturaM: 43, viajeKm: 0 };
+  const salida = salidaAutomatica({ ...partido, ctx }, jugadores, estadoSub18Para(p));
+  const hoy = salida.once.length
+    ? ovrDelOnce({ once: salida.once, suplentes: salida.suplentes,
+                   actitud: "equilibrado", puestos: salida.puestos }, ctx)
+    : plantel;
+
+  return { hoy, plantel, rival: partidoDe(p) ? partido.ctx.rivalFuerza : null };
+}
+
+/** El estado Sub-18 con la forma que espera `salidaAutomatica`. */
+function estadoSub18Para(p: Partida) {
+  return {
+    minutos: p.minutosSub18,
+    partidosRestantes: Math.max(0, TOTAL_FECHAS - p.fechaActual + 1),
+  };
 }
 
 export function estadoSub18(p: Partida) {

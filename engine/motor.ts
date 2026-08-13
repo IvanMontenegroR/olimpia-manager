@@ -36,14 +36,23 @@ export const P = {
    * que cansa de verdad es jugar dos veces en la misma semana, que es
    * exactamente cuando cansa en el fútbol.
    */
-  recuperacionTau: 2.2,
-  recuperacionTauVeterano: 3.0,
+  recuperacionTau: 1.9,
+  recuperacionTauVeterano: 2.6,
   /**
    * El día siguiente a un partido no se recupera nada: es el día de descanso.
    * Sin esto, jugar jueves y domingo casi no se notaba, que es justo lo único
    * que tiene que cansar.
    */
-  recuperacionDiaPerdido: 1,
+  recuperacionDiaPerdido: 0,
+  /**
+   * Por encima de esto se completa a 100.
+   *
+   * La fatiga dejó de ser algo que se administra semana a semana: con una
+   * semana entre partidos el plantel vuelve entero y no hay nada que mirar. Lo
+   * único que queda es el resto de jugar dos veces en cuatro días, que es
+   * cuando de verdad se siente.
+   */
+  recuperacionCompleta: 96,
 
   // --- lesiones ---
   lesionBase: 0.012,    // por partido completo, con condición plena
@@ -94,7 +103,7 @@ export const P = {
    * superioridad de Olimpia sobre los equipos flojos dejó de convertirse en
    * goles y el torneo se volvió mucho más difícil de lo que era.
    */
-  ajusteRival: -3,
+  ajusteRival: -2,
 
   localiaLiga: 3.0,
   localiaCopa: 13.0,     // Olimpia de local en copa: eliminó de local a Flamengo, Fluminense y Atlético Nacional
@@ -244,6 +253,24 @@ function media(once: Jugador[], puestos: Map<string, Posicion>, ctx: ContextoPar
   return den ? num / den : 0;
 }
 
+/**
+ * El OVR del once: lo que rinde tu equipo tal como llega hoy.
+ *
+ * Es el promedio del nivel efectivo, o sea el mismo número que ya decide los
+ * partidos ahí abajo, solo que puesto en pantalla. Por eso se mueve con todo:
+ * el nivel de los jugadores, cómo están de ánimo, cómo llegan de piernas, si
+ * juegan fuera de puesto y adónde se viaja.
+ *
+ * Promediar el nivel de ficha en cambio da un número casi quieto: se movía
+ * dos puntos en una temporada entera, contra los once que se mueve este.
+ */
+export function ovrDelOnce(a: Alineacion, ctx: ContextoPartido): number {
+  if (!a.once.length) return 0;
+  const suma = a.once.reduce(
+    (n, j) => n + nivelEfectivo(j, a.puestos.get(j.id) ?? j.posicion, ctx), 0);
+  return suma / a.once.length;
+}
+
 export function fuerzas(a: Alineacion, ctx: ContextoPartido) {
   let ataque = media(a.once, a.puestos, ctx, PESO_ATAQUE);
   let defensa = media(a.once, a.puestos, ctx, PESO_DEFENSA);
@@ -391,5 +418,6 @@ export function recuperar(j: Jugador, dias: number): void {
   if (utiles <= 0) return;
   const tau = j.edad >= 33 ? P.recuperacionTauVeterano : P.recuperacionTau;
   const falta = 100 - j.condicion;
-  j.condicion = clamp(100 - falta * Math.exp(-utiles / tau), 0, 100);
+  const nueva = 100 - falta * Math.exp(-utiles / tau);
+  j.condicion = clamp(nueva >= P.recuperacionCompleta ? 100 : nueva, 0, 100);
 }
