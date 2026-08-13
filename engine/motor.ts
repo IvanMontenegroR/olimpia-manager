@@ -85,6 +85,8 @@ export const P = {
   // mismo y se multiplicaban entre sí. Se centra en 70, que es donde arranca
   // todo el mundo y donde el factor vale exactamente 1: así el ánimo no regala
   // ni descuenta rendimiento por existir, solo por moverse.
+  /** Cuánto del golpe al vestuario se siente enseguida en el plantel. */
+  ambienteEnAnimo: 0.5,
   animoNeutro: 70,
   animoPorPunto: 0.003, // 100 de ánimo rinde +9%, 40 rinde -9%
   animoMinimo: 0.88,

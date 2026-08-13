@@ -1,6 +1,10 @@
 "use client";
 
 import { miles } from "@/lib/temporada.ts";
+import { P } from "@/engine/motor.ts";
+
+/** Lo mismo que aplica resolverAsunto, para prometer exactamente lo que pasa. */
+const AMBIENTE_EN_CONFIANZA = P.ambienteEnAnimo;
 
 export interface EfectoVisible {
   ambiente?: number;
@@ -27,7 +31,15 @@ export default function Efectos({ e }: { e: EfectoVisible }) {
       bueno: e.dineroUsd > 0,
     });
   }
-  if (e.ambiente) chips.push({ texto: `${signo(e.ambiente)} vestuario`, bueno: e.ambiente > 0 });
+  /*
+   * El vestuario se muestra en la misma moneda que la card principal: lo que
+   * importa es cuánto va a subir o bajar la confianza del plantel, no un
+   * número de otra escala que después hay que traducir de cabeza.
+   */
+  if (e.ambiente) {
+    const conf = Math.round(e.ambiente * AMBIENTE_EN_CONFIANZA);
+    if (conf !== 0) chips.push({ texto: `${signo(conf)} confianza`, bueno: conf > 0 });
+  }
   if (e.hinchada) chips.push({ texto: `${signo(e.hinchada)} hinchada`, bueno: e.hinchada > 0 });
   if (e.paciencia) chips.push({ texto: `${signo(e.paciencia)} dirigencia`, bueno: e.paciencia > 0 });
   if (e.condicionTodos) {
@@ -38,7 +50,7 @@ export default function Efectos({ e }: { e: EfectoVisible }) {
   }
   if (e.moralDe) {
     chips.push({
-      texto: `${signo(e.moralDe.delta)} ánimo${e.moralTexto ? ` de ${e.moralTexto}` : ""}`,
+      texto: `${signo(e.moralDe.delta)} confianza${e.moralTexto ? ` de ${e.moralTexto}` : ""}`,
       bueno: e.moralDe.delta > 0,
     });
   }

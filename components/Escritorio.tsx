@@ -202,13 +202,13 @@ export default function Escritorio({
     const p = ovr.partes;
     if (!p) {
       return { base: Math.round(ovr.plantel),
-               lista: [] as { etiqueta: string; valor: number; crudo?: string }[] };
+               lista: [] as { etiqueta: string; valor: number; lleno?: number }[] };
     }
-    const crudos: { etiqueta: string; valor: number; crudo?: string }[] = [
-      { etiqueta: "confianza", valor: p.animo, crudo: String(Math.round(p.animoMedio)) },
-      { etiqueta: "piernas", valor: p.piernas, crudo: String(Math.round(p.condicionMedia)) },
-      { etiqueta: "puesto", valor: p.puestos, crudo: `${p.fueraDePuesto}` },
-      { etiqueta: "localía", valor: p.cancha, crudo: `${Math.round(ocupacion * 100)}%` },
+    const crudos: { etiqueta: string; valor: number; lleno?: number }[] = [
+      { etiqueta: "confianza", valor: p.animo, lleno: p.animoMedio / 100 },
+      { etiqueta: "piernas", valor: p.piernas, lleno: p.condicionMedia / 100 },
+      { etiqueta: "puesto", valor: p.puestos, lleno: (11 - p.fueraDePuesto) / 11 },
+      { etiqueta: "localía", valor: p.cancha, lleno: ocupacion },
       { etiqueta: "viaje", valor: p.viaje },
     ];
     const lista = crudos
@@ -430,7 +430,7 @@ export default function Escritorio({
 
                 <span className="min-w-0 flex-1">
                   {aportes.lista.slice(0, 4).map((a) => (
-                    <Aporte key={a.etiqueta} etiqueta={a.etiqueta} valor={a.valor} crudo={a.crudo} />
+                    <Aporte key={a.etiqueta} etiqueta={a.etiqueta} valor={a.valor} lleno={a.lleno} />
                   ))}
                 </span>
               </span>
@@ -680,26 +680,33 @@ export default function Escritorio({
 
 /** Un aporte al OVR, en el costado de la card: etiqueta a la izquierda, cifra a la derecha. */
 /**
- * Un aporte al OVR: qué es, en cuánto está y cuánto rinde.
+ * Un aporte al OVR: cuánto tenés lleno y cuánto te rinde.
  *
- * El número del medio es el que se puede subir (la confianza está en 74 sobre
- * 100, el estadio al 81%); el de la derecha es lo que eso le pone al OVR. Sin
- * el crudo, un "+2" no dice de dónde viene ni cuánto falta para más.
+ * La barra es el valor crudo (la confianza sobre cien, el estadio sobre lleno)
+ * y se pinta según cómo esté; el número de la derecha es lo que le pone al
+ * OVR. Sin la barra, un "+2" no dice cuánto falta para más.
  */
-function Aporte({ etiqueta, valor, crudo }: {
-  etiqueta: string; valor: number; crudo?: string;
+function Aporte({ etiqueta, valor, lleno }: {
+  etiqueta: string; valor: number; lleno?: number;
 }) {
   const n = Math.round(valor);
   const color = n > 0 ? "#5fd08c" : n < 0 ? "#e8695c" : "var(--apagado)";
+  const p = Math.max(0, Math.min(1, lleno ?? 0));
   return (
-    <span className="flex items-baseline gap-1 leading-[1.5]">
-      <span className="min-w-0 flex-1 truncate text-[9px]" style={{ color: "var(--apagado)" }}>
+    <span className="flex items-center gap-1.5 leading-[1.7]">
+      <span className="w-[46px] shrink-0 truncate text-[9px]" style={{ color: "var(--apagado)" }}>
         {etiqueta}
       </span>
-      {crudo && (
-        <span className="num shrink-0 text-[11px]" style={{ color: "var(--tenue)" }}>{crudo}</span>
+      {lleno !== undefined && (
+        <span className="relative block h-[5px] min-w-0 flex-1 overflow-hidden rounded-full"
+              style={{ background: "rgba(255,255,255,0.08)" }}>
+          <span className="block h-full rounded-full"
+                style={{ width: `${p * 100}%`, background: color,
+                         boxShadow: `0 0 5px color-mix(in srgb, ${color} 60%, transparent)`,
+                         transition: "width 450ms ease-out, background 300ms" }} />
+        </span>
       )}
-      <span className="num w-[21px] shrink-0 text-right text-[11px] font-bold" style={{ color }}>
+      <span className="num w-[19px] shrink-0 text-right text-[11px] font-bold" style={{ color }}>
         {n === 0 ? "0" : `${n > 0 ? "+" : "−"}${Math.abs(n)}`}
       </span>
     </span>

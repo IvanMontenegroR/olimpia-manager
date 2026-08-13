@@ -1375,7 +1375,19 @@ export function resolverAsunto(p: Partida, asuntoId: string, opcionId: string): 
   }
 
   if (efecto) {
-    if (efecto.ambiente) n.ambiente = clamp(n.ambiente + efecto.ambiente, 0, 100);
+    if (efecto.ambiente) {
+      n.ambiente = clamp(n.ambiente + efecto.ambiente, 0, 100);
+      /*
+       * El clima del vestuario también levanta o hunde al plantel en el
+       * momento, no solo con el correr de los días. Antes solo movía el clima
+       * y el ánimo lo seguía de a poco: una decisión de +12 tardaba dos
+       * semanas en verse en la confianza, así que en la pantalla parecía que
+       * no había pasado nada.
+       */
+      for (const id of Object.keys(n.plantel)) {
+        n.plantel[id].animo = clamp(n.plantel[id].animo + efecto.ambiente * P.ambienteEnAnimo, 0, 100);
+      }
+    }
     if (efecto.hinchada) n.hinchada = clamp(n.hinchada + efecto.hinchada, 0, 100);
     if (efecto.dineroUsd) n.dineroUsd += efecto.dineroUsd;
     if (efecto.paciencia) n.paciencia = clamp(n.paciencia + efecto.paciencia, 0, 100);
