@@ -33,8 +33,8 @@ type Ayuda = "ovr" | "estadio" | "vestuario" | "hinchada" | "dirigencia";
 const AYUDAS: Record<Ayuda, { titulo: string; texto: string; mueve: string[] }> = {
   ovr: {
     titulo: "El nivel de tu equipo",
-    texto: "Qué tan fuerte sale Olimpia el domingo. Antes de cada partido se " +
-      "compara con el del rival: el que tiene más nivel gana más seguido.",
+    texto: "Qué tan fuerte sale Olimpia al partido. Antes de cada partido se " +
+      "compara con el del rival: el que tiene más nivel tiene más chance de ganar.",
     mueve: [
       "Traer mejores jugadores",
       "Ganar, y que el vestuario esté contento",
@@ -631,21 +631,15 @@ export default function Escritorio({
                 del plantel, que no aparecía en ninguna otra parte. */}
             {ayuda === "ovr" && ovr.partes && (
               <div className="mt-3 rounded-lg p-2.5" style={{ background: "var(--carbon)" }}>
-                <ParteOvr etiqueta="Los once que ponés"
+                <ParteOvr etiqueta="Plantel (la base)"
                           valor={Math.round(ovr.partes.base)} base />
-                <ParteOvr etiqueta="Cómo está el vestuario"
-                          valor={ovr.partes.animo} siempre />
-                <ParteOvr etiqueta={partido?.ctx.esLocal
-                            ? "La gente en la cancha"
-                            : "Se juega afuera, sin tu gente"}
-                          valor={ovr.partes.cancha} siempre />
-                <ParteOvr etiqueta="Cómo llegan de físico" valor={ovr.partes.piernas} />
-                <ParteOvr etiqueta="Los que juegan fuera de su puesto"
-                          valor={ovr.partes.puestos} />
-                <ParteOvr etiqueta={`El viaje a ${partido?.ciudad ?? "afuera"}`}
-                          valor={ovr.partes.viaje} />
+                <ParteOvr etiqueta="Vestuario" valor={ovr.partes.animo} siempre />
+                <ParteOvr etiqueta="Hinchada" valor={ovr.partes.cancha} siempre />
+                <ParteOvr etiqueta="Físico" valor={ovr.partes.piernas} />
+                <ParteOvr etiqueta="Fuera de puesto" valor={ovr.partes.puestos} />
+                <ParteOvr etiqueta="El viaje" valor={ovr.partes.viaje} />
                 <div className="my-1.5 h-px" style={{ background: "var(--linea)" }} />
-                <ParteOvr etiqueta="Con lo que salís a jugar"
+                <ParteOvr etiqueta="Nivel total para el partido"
                           valor={Math.round(ovr.partes.total)} base fuerte />
               </div>
             )}
