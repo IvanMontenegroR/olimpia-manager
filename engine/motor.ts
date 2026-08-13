@@ -303,8 +303,14 @@ export interface DesgloseOvr {
   /** El viaje: la altura y jugar afuera. */
   viaje: number;
   total: number;
-  /** El ánimo medio del once, para poder nombrarlo. */
+  /*
+   * Los valores crudos de cada cosa, que son los que el DT puede subir. El
+   * aporte al OVR dice cuánto rinde; esto dice de cuánto viene y cuánto le
+   * falta, que es lo que hace que uno quiera moverlo.
+   */
   animoMedio: number;
+  condicionMedia: number;
+  fueraDePuesto: number;
 }
 
 export function desgloseOvr(a: Alineacion, ctx: ContextoPartido): DesgloseOvr {
@@ -328,6 +334,8 @@ export function desgloseOvr(a: Alineacion, ctx: ContextoPartido): DesgloseOvr {
   return {
     base, animo, piernas, puestos, cancha, viaje, total,
     animoMedio: media((j) => j.animo),
+    condicionMedia: media((j) => j.condicion),
+    fueraDePuesto: a.once.filter((j) => (a.puestos.get(j.id) ?? j.posicion) !== j.posicion).length,
   };
 }
 

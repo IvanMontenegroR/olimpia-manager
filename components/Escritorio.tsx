@@ -200,12 +200,15 @@ export default function Escritorio({
    */
   const aportes = (() => {
     const p = ovr.partes;
-    if (!p) return { base: Math.round(ovr.plantel), lista: [] as { etiqueta: string; valor: number }[] };
-    const crudos: { etiqueta: string; valor: number }[] = [
-      { etiqueta: "confianza", valor: p.animo },
-      { etiqueta: "piernas", valor: p.piernas },
-      { etiqueta: "puesto", valor: p.puestos },
-      { etiqueta: "localía", valor: p.cancha },
+    if (!p) {
+      return { base: Math.round(ovr.plantel),
+               lista: [] as { etiqueta: string; valor: number; crudo?: string }[] };
+    }
+    const crudos: { etiqueta: string; valor: number; crudo?: string }[] = [
+      { etiqueta: "confianza", valor: p.animo, crudo: String(Math.round(p.animoMedio)) },
+      { etiqueta: "piernas", valor: p.piernas, crudo: String(Math.round(p.condicionMedia)) },
+      { etiqueta: "puesto", valor: p.puestos, crudo: `${p.fueraDePuesto}` },
+      { etiqueta: "localía", valor: p.cancha, crudo: `${Math.round(ocupacion * 100)}%` },
       { etiqueta: "viaje", valor: p.viaje },
     ];
     const lista = crudos
@@ -427,7 +430,7 @@ export default function Escritorio({
 
                 <span className="min-w-0 flex-1">
                   {aportes.lista.slice(0, 4).map((a) => (
-                    <Aporte key={a.etiqueta} etiqueta={a.etiqueta} valor={a.valor} />
+                    <Aporte key={a.etiqueta} etiqueta={a.etiqueta} valor={a.valor} crudo={a.crudo} />
                   ))}
                 </span>
               </span>
@@ -677,35 +680,26 @@ export default function Escritorio({
 
 /** Un aporte al OVR, en el costado de la card: etiqueta a la izquierda, cifra a la derecha. */
 /**
- * Un aporte al OVR, con su barrita saliendo del centro.
+ * Un aporte al OVR: qué es, en cuánto está y cuánto rinde.
  *
- * La barra existe para que se vea que es un número que se mueve: sale hacia la
- * derecha cuando suma y hacia la izquierda cuando resta, y crece con lo que
- * vale. Una columna de cifras sueltas parece una ficha técnica.
+ * El número del medio es el que se puede subir (la confianza está en 74 sobre
+ * 100, el estadio al 81%); el de la derecha es lo que eso le pone al OVR. Sin
+ * el crudo, un "+2" no dice de dónde viene ni cuánto falta para más.
  */
-function Aporte({ etiqueta, valor }: { etiqueta: string; valor: number }) {
+function Aporte({ etiqueta, valor, crudo }: {
+  etiqueta: string; valor: number; crudo?: string;
+}) {
   const n = Math.round(valor);
   const color = n > 0 ? "#5fd08c" : n < 0 ? "#e8695c" : "var(--apagado)";
-  // seis puntos de aporte llenan media barra: es lo máximo que mueve una parte
-  const largo = Math.min(50, (Math.abs(n) / 6) * 50);
   return (
-    <span className="flex items-center gap-1.5 leading-[1.55]">
+    <span className="flex items-baseline gap-1 leading-[1.5]">
       <span className="min-w-0 flex-1 truncate text-[9px]" style={{ color: "var(--apagado)" }}>
         {etiqueta}
       </span>
-      <span className="relative block h-[8px] w-[42px] shrink-0 rounded-sm"
-            style={{ background: "rgba(255,255,255,0.07)" }}>
-        <span className="absolute inset-y-0" style={{ left: "50%", width: 1, background: "rgba(255,255,255,0.22)" }} />
-        <span className="absolute inset-y-[1.5px] rounded-[1px]"
-              style={{
-                left: n >= 0 ? "50%" : `${50 - largo}%`,
-                width: `${largo}%`,
-                background: color,
-                boxShadow: `0 0 6px color-mix(in srgb, ${color} 55%, transparent)`,
-                transition: "width 420ms ease-out, left 420ms ease-out",
-              }} />
-      </span>
-      <span className="num w-[22px] shrink-0 text-right text-[11px] font-bold" style={{ color }}>
+      {crudo && (
+        <span className="num shrink-0 text-[11px]" style={{ color: "var(--tenue)" }}>{crudo}</span>
+      )}
+      <span className="num w-[21px] shrink-0 text-right text-[11px] font-bold" style={{ color }}>
         {n === 0 ? "0" : `${n > 0 ? "+" : "−"}${Math.abs(n)}`}
       </span>
     </span>

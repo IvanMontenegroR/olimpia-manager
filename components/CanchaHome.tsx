@@ -89,12 +89,25 @@ export default function CanchaHome({
           <button key={j.id} onClick={() => onTocar(j)}
             className="absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center"
             style={{ left: x, top: y, width: 62 * escala }}>
-            <span style={{
-                    borderRadius: 999,
-                    boxShadow: `0 0 0 2px ${color}, 0 2px 6px rgba(0,0,0,0.55)`,
-                    opacity: baja ? 0.5 : 1,
-                  }}>
-              <Dorsal numero={j.numero} tam={tam} />
+            {/*
+              * El anillo alrededor del dorsal se llena con la confianza: lleno
+              * es 100, y lo que falta se ve como hueco. Un color solo decía si
+              * estaba bien o mal; el anillo dice además cuánto falta, que es lo
+              * que hace querer subirlo.
+              */}
+            <span className="relative flex items-center justify-center"
+                  style={{ width: tam + 10, height: tam + 10, opacity: baja ? 0.5 : 1 }}>
+              <span className="absolute inset-0 rounded-full"
+                    style={{
+                      background: `conic-gradient(from -90deg, ${color} ${animo * 3.6}deg,
+                        rgba(255,255,255,0.18) ${animo * 3.6}deg)`,
+                      transition: "background 500ms ease-out",
+                    }} />
+              <span className="absolute rounded-full"
+                    style={{ inset: 4, background: "#10231a" }} />
+              <span className="relative" style={{ boxShadow: "0 2px 6px rgba(0,0,0,0.55)", borderRadius: 999 }}>
+                <Dorsal numero={j.numero} tam={tam} />
+              </span>
             </span>
             <span className="apellido mt-0.5 max-w-full truncate leading-tight"
                   style={{ fontSize: 9 * escala, textShadow: "0 1px 3px rgba(0,0,0,0.9)",
@@ -120,10 +133,10 @@ export default function CanchaHome({
       {/* Qué significa el aro, sin párrafo: los tres colores y listo. */}
       {/* Tocar a un jugador abre su ficha; para mover el equipo, este botón. */}
       <button onClick={onModificar}
-        className="relieve absolute bottom-2 right-2 rounded-md px-2.5 py-1.5 text-[9px] font-bold uppercase tracking-[0.1em]"
+        className="relieve absolute bottom-2 right-4 rounded-md px-2.5 py-1.5 text-[9px] font-bold uppercase tracking-[0.1em]"
         style={{ background: "rgba(10,18,13,0.82)", color: "var(--tenue)",
                  backdropFilter: "blur(3px)", boxShadow: "0 0 0 1px rgba(255,255,255,0.14)" }}>
-        Modificar plantel
+        Modificar
       </button>
     </div>
   );
