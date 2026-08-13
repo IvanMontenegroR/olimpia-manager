@@ -11,6 +11,7 @@ import PanelPartido, { type EstadoJugador } from "./PanelPartido.tsx";
 import { onceRival } from "@/engine/rival.ts";
 import type { CierrePartido } from "@/lib/temporada.ts";
 import MomentoOverlay from "./MomentoOverlay.tsx";
+import Golpe, { type TipoGolpe } from "./Golpe.tsx";
 import { resolverMomento, type Momento, type ResueltoMomento } from "@/engine/momentos.ts";
 import Escudo from "./Escudo.tsx";
 import Dorsal from "./Dorsal.tsx";
@@ -74,6 +75,9 @@ export default function PartidoEnVivo({
   const [panel, setPanel] = useState<"cambio" | "actitud" | null>(null);
   const [terminado, setTerminado] = useState(false);
   const [lesionado, setLesionado] = useState<string | null>(null);
+  /** El golpe que hay que mirar antes de seguir: una lesión o una roja. */
+  const [golpe, setGolpe] = useState<
+    { tipo: TipoGolpe; jugadorId: string; minuto: number; texto: string } | null>(null);
   const [momento, setMomento] = useState<Momento | null>(null);
   const [resueltoMomento, setResuelto] = useState<ResueltoMomento | null>(null);
 
@@ -119,7 +123,7 @@ export default function PartidoEnVivo({
   useEffect(() => {
     // con un momento abierto el partido se detiene: si no, decidís un mano a
     // mano del minuto 11 mientras el marcador ya va por el 45.
-    if (!corriendo || terminado || momento) return;
+    if (!corriendo || terminado || momento || golpe) return;
     const t = setTimeout(() => {
       const siguiente = minuto + 1;
       const ahora: EventoRelato[] = [];
@@ -138,14 +142,24 @@ export default function PartidoEnVivo({
         const conMomento = ahora.find((e) => e.momento);
         if (conMomento?.momento) setMomento(conMomento.momento);
 
+        /*
+         * Lo que obliga a mover el equipo frena el partido y se muestra. Antes
+         * la lesión abría el panel de cambios en el mismo tick, así que el
+         * evento quedaba tapado y aparecías eligiendo un suplente sin saber a
+         * quién ni por qué.
+         */
         const les = ahora.find((e) => e.tipo === "lesion");
         if (les?.jugadorId) {
           setLesionado(les.jugadorId);
-          if (cambios > 0) {
-            setSalen([les.jugadorId]);
-            setEligiendoPara(les.jugadorId);
-            setPanel("cambio");
-          }
+          setGolpe({ tipo: "lesion", jugadorId: les.jugadorId,
+                     minuto: les.minuto, texto: les.texto });
+          setCorriendo(false);
+        }
+        const roja = ahora.find((e) => e.tipo === "roja");
+        if (roja?.jugadorId) {
+          setGolpe({ tipo: "roja", jugadorId: roja.jugadorId,
+                     minuto: roja.minuto, texto: roja.texto });
+          setCorriendo(false);
         }
         if (ahora.some((e) => e.pausa)) setCorriendo(false);
         if (ultimoEv.tipo === "final") { setTerminado(true); setCorriendo(false); }
@@ -156,7 +170,7 @@ export default function PartidoEnVivo({
       }
     }, VELOCIDADES[vel].ms);
     return () => clearTimeout(t);
-  }, [minuto, corriendo, vel, pendientes, terminado, cambios, momento]);
+  }, [minuto, corriendo, vel, pendientes, terminado, cambios, momento, golpe]);
 
   useEffect(() => {
     scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: "smooth" });
@@ -593,11 +607,28 @@ export default function PartidoEnVivo({
         </Panel>
       )}
 
-      {momento && (
+      {momento && !golpe && (
         <MomentoOverlay momento={momento} resuelto={resueltoMomento}
                         alineacion={alineacion} ctx={ctx}
                         onElegir={elegirEnMomento} onSeguir={seguirTrasMomento} />
       )}
+
+      {golpe && (() => {
+        const j = once.find((x) => x.id === golpe.jugadorId)
+          ?? banco.find((x) => x.id === golpe.jugadorId);
+        if (!j) return null;
+        return (
+          <Golpe tipo={golpe.tipo} jugador={j} minuto={golpe.minuto} texto={golpe.texto}
+                 cambiosRestantes={cambios}
+                 onCambiar={() => {
+                   setGolpe(null);
+                   setSalen([j.id]);
+                   setEligiendoPara(j.id);
+                   setPanel("cambio");
+                 }}
+                 onSeguir={() => { setGolpe(null); setCorriendo(true); }} />
+        );
+      })()}
 
       {/* ---------- final ---------- */}
       {terminado && (
