@@ -387,75 +387,59 @@ export default function Escritorio({
               * Es el número más importante de la pantalla, así que ocupa una
               * card entera y no un renglón del encabezado.
               */}
+            {/*
+              * La camiseta de Olimpia hecha card: blanca con la banda negra
+              * cruzada y el número en rojo. En una pantalla que es toda verde
+              * oscura, una card blanca no necesita nada más para ser lo
+              * primero que se mira.
+              */}
             <button onClick={() => setAyuda("ovr")}
-              className="relieve-alto relative overflow-hidden rounded-lg px-2.5 pb-2 pt-2.5 text-left">
-              <span className="absolute inset-0" style={{
-                background: `radial-gradient(120% 110% at 12% -10%,
-                  color-mix(in srgb, ${colorOvr} 34%, #0b1210), #070a09 78%)`,
-              }} />
-              <span className="absolute -left-6 -top-10 h-24 w-32 rounded-full" style={{
-                background: `radial-gradient(closest-side, color-mix(in srgb, ${colorOvr} 65%, transparent), transparent)`,
-                filter: "blur(14px)", opacity: 0.7,
-              }} />
-              <span className="absolute inset-0 rounded-lg" style={{
-                boxShadow: `inset 0 0 0 1px color-mix(in srgb, ${colorOvr} 55%, transparent),
-                            inset 0 1px 0 rgba(255,255,255,0.16)`,
-              }} />
-
-              <span className="relative block">
-                <span className="flex items-center gap-1.5">
-                  <span style={{ width: 3, height: 11, borderRadius: 2, background: colorOvr }} />
-                  <span className="text-[10px] font-extrabold uppercase tracking-[0.2em]"
-                        style={{ color: colorOvr }}>
-                    OVR
-                  </span>
+              className="relieve-alto relative flex flex-col overflow-hidden rounded-lg text-left"
+              style={{ background: "#f2ede2",
+                       boxShadow: `0 0 0 2px ${colorOvr}, 0 6px 18px rgba(0,0,0,0.5)` }}>
+              {/* la costura del cuello */}
+              <span className="flex items-center justify-between px-2.5 pt-1.5">
+                <span className="text-[10px] font-extrabold uppercase tracking-[0.2em]"
+                      style={{ color: "#0d0d0d" }}>
+                  OVR
                 </span>
-
-                <span className="mt-1.5 flex items-center gap-2">
-                  {/*
-                    * El número con la camiseta de Olimpia: círculo blanco,
-                    * banda negra y el número en rojo, igual que los dorsales
-                    * de la cancha. El aro lleva el color del estado.
-                    */}
-                  <span className="dorsal relieve shrink-0"
-                        style={{ width: 60, height: 60, background: "#ffffff",
-                                 boxShadow: `0 0 0 2.5px ${colorOvr}, 0 0 22px color-mix(in srgb, ${colorOvr} 60%, transparent)` }}>
-                    <span className="dorsal-franja" />
-                    <span className="dorsal-numero relative" style={{ fontSize: 30 }}>
-                      {Math.round(ovr.hoy)}
-                    </span>
-                  </span>
-
-                  {/*
-                    * Lo que lo sube y lo que lo baja, a la vista. Es donde el
-                    * que toma una decisión va a buscar si le sirve: si algo
-                    * suma OVR, suma acá.
-                    */}
-                  <span className="min-w-0 flex-1">
-                    <ParteChica etiqueta="plantel" valor={aportes.base} base />
-                    {aportes.lista.map((a) => (
-                      <ParteChica key={a.etiqueta} etiqueta={a.etiqueta} valor={a.valor}
-                                  siempre={a.etiqueta === "ánimo"} />
-                    ))}
-                  </span>
-                </span>
-
                 {(bajas.length > 0 || !sub18.alcanza) && (
-                  <span className="mt-1.5 flex flex-wrap gap-1">
+                  <span className="flex gap-1">
                     {bajas.length > 0 && (
-                      <span className="rounded px-1.5 py-[1px] text-[9px] font-extrabold uppercase"
-                            style={{ background: "var(--ladrillo)", color: "var(--blanco)" }}>
+                      <span className="rounded px-1 py-[1px] text-[8px] font-extrabold uppercase"
+                            style={{ background: "#c0392b", color: "#f2ede2" }}>
                         {bajas.length} baja{bajas.length > 1 ? "s" : ""}
                       </span>
                     )}
                     {!sub18.alcanza && (
-                      <span className="rounded px-1.5 py-[1px] text-[9px] font-extrabold uppercase"
-                            style={{ background: "#e0902a", color: "#0a120d" }}>
-                        Sub-18: {sub18.faltan}'
+                      <span className="rounded px-1 py-[1px] text-[8px] font-extrabold uppercase"
+                            style={{ background: "#b07a12", color: "#f2ede2" }}>
+                        S18
                       </span>
                     )}
                   </span>
                 )}
+              </span>
+
+              {/* la banda negra cruzada, con el número */}
+              <span className="relative mt-1 flex items-center px-2.5"
+                    style={{ background: "#0d0d0d", height: 46 }}>
+                <span className="dorsal-numero" style={{ fontSize: 38, lineHeight: 1 }}>
+                  {Math.round(ovr.hoy)}
+                </span>
+                <span className="ml-auto text-[9px] uppercase tracking-[0.14em]"
+                      style={{ color: "#7e7e7e" }}>
+                  {partido?.ctx.esLocal === false ? "afuera" : ""}
+                </span>
+              </span>
+
+              {/* de dónde sale, sobre la tela */}
+              <span className="grid grid-cols-2 gap-x-2.5 px-2.5 pb-1.5 pt-1">
+                <ParteChica etiqueta="plantel" valor={aportes.base} base />
+                {aportes.lista.slice(0, 3).map((a) => (
+                  <ParteChica key={a.etiqueta} etiqueta={a.etiqueta} valor={a.valor}
+                              siempre={a.etiqueta === "ánimo"} />
+                ))}
               </span>
             </button>
 
@@ -685,16 +669,20 @@ export default function Escritorio({
 // ---------------------------------------------------------------- piezas
 
 /** Un aporte al OVR, en el costado de la card: etiqueta a la izquierda, cifra a la derecha. */
-function ParteChica({ etiqueta, valor, base, siempre }: {
-  etiqueta: string; valor: number; base?: boolean; siempre?: boolean;
+function ParteChica({ etiqueta, valor, base, siempre, sobreOscuro }: {
+  etiqueta: string; valor: number; base?: boolean; siempre?: boolean; sobreOscuro?: boolean;
 }) {
   const n = Math.round(valor);
   if (!base && !siempre && n === 0) return null;
+  const gris = sobreOscuro ? "#8a8a8a" : "#6b6b6b";
+  const verde = sobreOscuro ? "#4fc07e" : "#1a7a44";
+  const rojo = sobreOscuro ? "#e8695c" : "#b8322a";
   return (
-    <span className="flex items-baseline justify-between gap-1 leading-[1.35]">
-      <span className="truncate text-[9px]" style={{ color: "var(--apagado)" }}>{etiqueta}</span>
+    <span className="flex items-baseline justify-between gap-1 leading-[1.3]">
+      <span className="truncate text-[9px]" style={{ color: gris }}>{etiqueta}</span>
       <span className="num shrink-0 text-[11px] font-bold"
-            style={{ color: base ? "var(--tenue)" : n > 0 ? "var(--cesped)" : n < 0 ? "var(--ladrillo)" : "var(--apagado)" }}>
+            style={{ color: base ? (sobreOscuro ? "#e9e4d8" : "#0d0d0d")
+              : n > 0 ? verde : n < 0 ? rojo : gris }}>
         {base ? n : n === 0 ? "0" : `${n > 0 ? "+" : "−"}${Math.abs(n)}`}
       </span>
     </span>
