@@ -373,27 +373,32 @@ export default function Escritorio({
                   color-mix(in srgb, ${colorOvr} 8%, var(--carbon)))`,
                 boxShadow: `inset 0 0 0 1px color-mix(in srgb, ${colorOvr} 40%, transparent)`,
               }}>
-              <span className="flex items-baseline justify-between">
-                <span className="text-[9px] uppercase tracking-[0.16em]" style={{ color: colorOvr }}>
-                  OVR
-                </span>
-                {Math.round(ovr.hoy) !== Math.round(ovr.plantel) && (
-                  <span className="num rounded px-1 py-[1px] text-[9px] font-extrabold"
-                        style={{
-                          background: ovr.hoy >= ovr.plantel
-                            ? "color-mix(in srgb, var(--cesped) 26%, transparent)"
-                            : "color-mix(in srgb, var(--ladrillo) 26%, transparent)",
-                          color: ovr.hoy >= ovr.plantel ? "var(--cesped)" : "var(--ladrillo)",
-                        }}>
-                    {ovr.hoy >= ovr.plantel ? "+" : "−"}
-                    {Math.abs(Math.round(ovr.hoy) - Math.round(ovr.plantel))}
-                  </span>
-                )}
+              <span className="text-[9px] uppercase tracking-[0.16em]" style={{ color: colorOvr }}>
+                OVR
               </span>
-              <Numero valor={ovr.hoy} formato={(n) => String(Math.round(n))}
-                      className="num mt-0.5 block leading-none"
-                      style={{ fontSize: 40, color: colorOvr,
-                               textShadow: `0 0 30px color-mix(in srgb, ${colorOvr} 45%, transparent)` }} />
+              {/*
+                * El total y el plantel, uno al lado del otro y separados por
+                * una línea. El chip "+2" no se entendía: no quedaba claro si el
+                * número grande ya lo incluía o había que sumarlo.
+                */}
+              <span className="mt-0.5 flex items-end gap-2.5">
+                <Numero valor={ovr.hoy} formato={(n) => String(Math.round(n))}
+                        className="num block leading-none"
+                        style={{ fontSize: 40, color: colorOvr,
+                                 textShadow: `0 0 30px color-mix(in srgb, ${colorOvr} 45%, transparent)` }} />
+                <span className="flex items-center gap-2 pb-1">
+                  <span style={{ width: 1, height: 22, background: "var(--linea)" }} />
+                  <span>
+                    <span className="num block text-[16px] leading-none" style={{ color: "var(--tenue)" }}>
+                      {Math.round(ovr.plantel)}
+                    </span>
+                    <span className="block text-[8px] uppercase tracking-[0.12em]"
+                          style={{ color: "var(--apagado)" }}>
+                      plantel
+                    </span>
+                  </span>
+                </span>
+              </span>
               <span className="mt-0.5 block text-[10px]" style={{ color: "var(--tenue)" }}>
                 {partido ? (partido.ctx.esLocal ? "así llegás al partido" : `así llegás a ${partido.ciudad}`)
                           : "así está el equipo"}
@@ -431,6 +436,7 @@ export default function Escritorio({
               once={ovr.once}
               puestos={ovr.puestos}
               formacion={ovr.formacion}
+              ctx={partido?.ctx ?? ({} as never)}
               animoDe={(j) => Math.round(partida.plantel[j.id]?.animo ?? 70)}
               bajaDe={(j) => j.lesionado_hasta ? "lesionado" : j.suspendido ? "suspendido" : null}
               onTocar={(j) => setFichaHome(j.id)} />

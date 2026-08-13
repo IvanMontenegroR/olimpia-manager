@@ -3,15 +3,20 @@
 import { useEffect, useRef, useState } from "react";
 import { repartirCancha } from "@/lib/formacion.ts";
 import Dorsal from "./Dorsal.tsx";
-import type { Jugador, Posicion } from "@/engine/tipos.ts";
+import { nivelEf } from "@/lib/juego.ts";
+import type { ContextoPartido, Jugador, Posicion } from "@/engine/tipos.ts";
 
 /**
  * El once que va a salir, en la cancha, en la pantalla principal.
  *
- * Acá vivía el diario, que era texto para leer y nada para hacer. Esto es lo
- * contrario: es donde se ve el ánimo de cada uno, que es el dato que mueve el
- * OVR y que hasta ahora no aparecía en ninguna parte salvo entrando a la ficha
- * de a uno.
+ * El número debajo de cada uno es lo que vale hoy, que es lo que cualquiera
+ * espera leer ahí: el nivel con el ánimo, las piernas y el puesto ya metidos
+ * adentro. Promediarlos da el OVR de la card, así que los dos números hablan
+ * el mismo idioma.
+ *
+ * El ánimo va en el color del aro, no en el número. Poner el ánimo como cifra
+ * se confundía con el nivel del jugador, que es lo que ese lugar significa en
+ * cualquier juego de fútbol.
  */
 
 /** El color del ánimo, que es lo que se muestra por jugador. */
@@ -39,11 +44,12 @@ function useMedida() {
 }
 
 export default function CanchaHome({
-  once, puestos, formacion, animoDe, bajaDe, onTocar,
+  once, puestos, formacion, ctx, animoDe, bajaDe, onTocar,
 }: {
   once: Jugador[];
   puestos: Map<string, Posicion>;
   formacion: string;
+  ctx: ContextoPartido;
   animoDe: (j: Jugador) => number;
   /** Por qué no está disponible, si no lo está. */
   bajaDe: (j: Jugador) => "lesionado" | "suspendido" | null;
@@ -98,18 +104,29 @@ export default function CanchaHome({
               {adaptado && !baja && (
                 <span className="font-bold" style={{ color: "var(--medio)" }}>{puesto}</span>
               )}
+              {/* lo que vale hoy, no el ánimo: el ánimo está en el aro */}
               <span className="num font-bold"
-                    style={{ color, textShadow: "0 1px 3px rgba(0,0,0,0.9)" }}>
-                {baja === "lesionado" ? "LESIÓN" : baja === "suspendido" ? "SUSP" : animo}
+                    style={{ color: baja ? "#c0392b" : "#e9e4d8",
+                             textShadow: "0 1px 3px rgba(0,0,0,0.9)" }}>
+                {baja === "lesionado" ? "LESIÓN" : baja === "suspendido" ? "SUSP"
+                  : nivelEf(j, puesto, ctx)}
               </span>
             </span>
           </button>
         );
       })}
 
-      <span className="absolute bottom-1 left-2 text-[8px] uppercase tracking-[0.14em]"
-            style={{ color: "#ffffff55" }}>
-        el once · ánimo
+      {/* Qué significa el aro, sin párrafo: los tres colores y listo. */}
+      {/* Arriba a la derecha, que abajo al medio está el arquero. */}
+      <span className="absolute right-2 top-1 flex items-center gap-1.5 text-[8px] uppercase tracking-[0.12em]"
+            style={{ color: "#ffffff66" }}>
+        ánimo
+        {[["#3fa76a", "bien"], ["#e0902a", "flojo"], ["#c0392b", "mal"]].map(([c, q]) => (
+          <span key={q} className="flex items-center gap-[3px]">
+            <span style={{ width: 6, height: 6, borderRadius: 999, background: c }} />
+            {q}
+          </span>
+        ))}
       </span>
     </div>
   );
