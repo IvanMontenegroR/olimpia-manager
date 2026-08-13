@@ -36,10 +36,23 @@ interface FichajeDelCatalogo {
 
 export const CATALOGO = fichajesJson as FichajeDelCatalogo[];
 
-/** Precio de referencia, en la misma escala logarítmica del documento. */
+/**
+ * Precio de referencia, en escala logarítmica sobre el nivel.
+ *
+ * Estaba tan barato que rompía la única decisión económica del juego: un
+ * refuerzo de 70 salía 610 mil, o sea menos de dos partidos de recaudación,
+ * mientras que una estrella del mismo nivel pedía cinco o seis veces eso.
+ * Nadie iba a ahorrar para el crack pudiendo llenarse de buenos a precio de
+ * ganga. Ahora la estrella sale menos del doble que un refuerzo equivalente,
+ * y esa diferencia se paga con lo que trae de hinchada y de vestuario.
+ *
+ * El castigo por edad también era brutal: un cuarentón valía el 40% de su
+ * nivel, y como el catálogo son casi todos veteranos, todo salía regalado.
+ */
 export const precioDe = (nivel: number, edad: number) => {
-  const base = 25_000 * Math.pow(10, (nivel - 45) / 14);
-  const factorEdad = edad <= 23 ? 1.35 : edad <= 28 ? 1.1 : edad <= 32 ? 0.75 : 0.4;
+  const base = 45_000 * Math.pow(10, (nivel - 45) / 14);
+  const factorEdad = edad <= 23 ? 1.3 : edad <= 28 ? 1.1
+    : edad <= 32 ? 0.85 : edad <= 35 ? 0.65 : 0.5;
   return Math.round((base * factorEdad) / 10_000) * 10_000;
 };
 
