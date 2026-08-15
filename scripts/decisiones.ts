@@ -2,103 +2,113 @@
  * Busca las decisiones que no son decisiones.
  *
  * Una opción existe solo si ninguna otra la tapa. Si una tiene todo bueno y la
- * de al lado todo malo, no hay nada que elegir: tocás la primera y seguís. Este
- * script puntúa cada opción de cada situación y marca las dominadas.
+ * de al lado todo malo, no hay nada que elegir: tocás la primera y seguís.
+ *
+ * La versión anterior puntuaba con unos pesos inventados acá adentro (el ánimo
+ * vale 1, la condición 1.2, la plata 1 cada 25 mil) y comparaba ese puntaje.
+ * El problema es que ese número no existía en ninguna pantalla: la cábala del
+ * micro daba 3.2 contra −1.4 y pasaba el corte, cuando en lo que el jugador
+ * de verdad lee decía "+1 nivel" contra "−0.5 nivel", o sea una obvia y la
+ * otra no. Ahora se comparan exactamente los tres chips que se muestran.
+ *
+ * Una opción tapa a otra cuando no es peor en ninguna de las tres monedas y es
+ * mejor en alguna. Con apuestas de por medio la vara sube: para tapar a otra
+ * tiene que ganarle hasta cuando sale mal, porque si no el riesgo es la
+ * decisión.
  *
  *   npx tsx scripts/decisiones.ts
  */
 
-import { sortearSituacion, type Efecto, type Situacion } from "../engine/situaciones.ts";
+import { TODAS, type Efecto, type Situacion } from "../engine/situaciones.ts";
 import { Rng } from "../engine/rng.ts";
-import { partidaNueva, plantelDe } from "../lib/temporada.ts";
+import { nivelSi, partidaNueva, plantelDe, type Partida } from "../lib/temporada.ts";
 
-/** Cuánto vale cada cosa, en la misma unidad, para poder compararlas. */
-const PESO = {
-  ambiente: 1,
-  hinchada: 1,
-  paciencia: 1.4,        // el prestigio es la barra que manda
-  condicionTodos: 1.2,
-  moral: 0.35,           // le pasa a uno solo
-  dinero: 1 / 25_000,    // 25 mil dólares valen un punto de barra
-  suspende: -14,         // perderse un partido
-  pibe: 6,
-  subir: 3,
-};
+/**
+ * Lo que muestran los chips de una opción.
+ *
+ * `jugador` no es un chip: es traer a alguien al club. No mueve el nivel del
+ * domingo porque un pibe de 17 no entra al once, pero la pantalla sí lo enseña
+ * (la ruleta dice en qué nivel puede caer) y es lo que se está comprando. Sin
+ * contarlo, "traerlo a probarse" figura como pagar noventa mil por nada.
+ */
+interface Chips { nivel: number; plata: number; dirigencia: number; jugador: number }
 
-function valorDe(e?: Efecto): number {
-  if (!e) return 0;
-  return (e.ambiente ?? 0) * PESO.ambiente
-    + (e.hinchada ?? 0) * PESO.hinchada
-    + (e.paciencia ?? 0) * PESO.paciencia
-    + (e.condicionTodos ?? 0) * PESO.condicionTodos
-    + (e.moralDe?.delta ?? 0) * PESO.moral
-    + (e.dineroUsd ?? 0) * PESO.dinero
-    + (e.suspendeA ? PESO.suspende : 0)
-    + (e.traerPibe ? PESO.pibe : 0)
-    + (e.ofreceBrasileno ? PESO.pibe : 0)
-    + (e.subirDeReserva ? PESO.subir : 0);
+const chipsDe = (p: Partida, e?: Efecto): Chips => ({
+  nivel: e ? nivelSi(p, e) : 0,
+  plata: e?.dineroUsd ?? 0,
+  dirigencia: e?.paciencia ?? 0,
+  jugador: (e?.traerPibe ? 1 : 0) + (e?.ofreceBrasileno ? 1 : 0) + (e?.subirDeReserva ? 1 : 0),
+});
+
+/** Cuánto tiene que cambiar cada uno para que se note en pantalla. */
+const MINIMO: Chips = { nivel: 0.05, plata: 5_000, dirigencia: 0.5, jugador: 0.5 };
+
+/** `a` no es peor que `b` en nada, y es mejor en algo. */
+function tapa(a: Chips, b: Chips): boolean {
+  const peorEn = (k: keyof Chips) => a[k] < b[k] - MINIMO[k];
+  const mejorEn = (k: keyof Chips) => a[k] > b[k] + MINIMO[k];
+  const claves: (keyof Chips)[] = ["nivel", "plata", "dirigencia", "jugador"];
+  return !claves.some(peorEn) && claves.some(mejorEn);
 }
 
-/** Lo que vale una opción en promedio, contando cómo puede salir. */
-function esperado(s: Situacion, opcionId: string, efectos: Record<string, Efecto>) {
-  const e = efectos[opcionId];
-  const ap = s.opciones.find((o) => o.id === opcionId)?.apuesta;
-  if (!e) return { valor: 0, riesgo: 0 };
-  if (!ap || !e.siSaleMal) return { valor: valorDe(e), riesgo: 0 };
-  const bien = valorDe(e);
-  const mal = valorDe(e.siSaleMal as Efecto);
-  return { valor: ap.exito * bien + (1 - ap.exito) * mal, riesgo: bien - mal };
+/** Lo que muestra una opción: lo seguro, o los dos desenlaces de la apuesta. */
+function verDe(p: Partida, s: Situacion, id: string, efectos: Record<string, Efecto>) {
+  const e = efectos[id];
+  const ap = s.opciones.find((o) => o.id === id)?.apuesta;
+  const bien = chipsDe(p, e);
+  const mal = ap && e?.siSaleMal ? chipsDe(p, e.siSaleMal) : bien;
+  return { bien, mal, esApuesta: !!ap };
 }
 
-const base = partidaNueva();
-const plantel = plantelDe(base);
-const vistas = new Set<string>();
-const informe: { id: string; lineas: string[]; problema: string | null }[] = [];
+const p = partidaNueva();
+const plantel = plantelDe(p);
+const problemas: string[] = [];
+const sanas: string[] = [];
 
-for (let i = 0; i < 6000 && vistas.size < 40; i++) {
-  const armada = sortearSituacion({
-    plantel,
-    ambiente: 25 + (i % 70), hinchada: 20 + (i % 78),
-    racha: [["G", "E", "P"][i % 3] as "G"],
-    posicion: 1 + (i % 8),
-    esSemanaDeClasico: i % 2 === 0,
-    faltanDias: i % 7,
-    vistas: [...vistas],
-  }, new Rng(`d-${i}`));
-  if (!armada || vistas.has(armada.s.id)) continue;
-  vistas.add(armada.s.id);
-
+for (const S of TODAS) {
+  const ctx = {
+    plantel, ambiente: p.ambiente, hinchada: p.hinchada,
+    racha: ["G", "G", "G"] as ("G" | "E" | "P")[], posicion: 3,
+    esSemanaDeClasico: true, faltanDias: 3, vistas: [] as string[],
+  };
+  let armada;
+  try { armada = S.armar(ctx as never, new Rng(`d-${S.id}`)); } catch { continue; }
+  if (!armada) continue;
   const { s, efectos } = armada;
-  const calc = s.opciones.map((o) => ({ id: o.id, etiqueta: o.etiqueta, ...esperado(s, o.id, efectos) }));
-  const mejor = Math.max(...calc.map((c) => c.valor));
-  const peor = Math.min(...calc.map((c) => c.valor));
-  const hayRiesgo = calc.some((c) => c.riesgo > 0);
 
-  /*
-   * Sin riesgo de por medio, si una opción vale mucho más que todas las otras
-   * no hay decisión: se toca esa. El corte son ocho puntos de barra, que es lo
-   * que se nota.
-   */
-  const brecha = mejor - peor;
-  const problema = !hayRiesgo && brecha >= 8
-    ? `la mejor saca ${brecha.toFixed(0)} de ventaja y no arriesga nada`
-    : null;
+  const vistos = s.opciones.map((o) => ({
+    id: o.id, etiqueta: o.etiqueta, ...verDe(p, s, o.id, efectos),
+  }));
 
-  informe.push({
-    id: s.id,
-    problema,
-    lineas: calc.map((c) =>
-      `      ${c.etiqueta.slice(0, 30).padEnd(32)} ${c.valor >= 0 ? "+" : ""}${c.valor.toFixed(1).padStart(6)}` +
-      (c.riesgo ? `   se juega ${c.riesgo.toFixed(0)}` : "")),
-  });
+  const dominadas: string[] = [];
+  for (const a of vistos) {
+    for (const b of vistos) {
+      if (a.id === b.id) continue;
+      /*
+       * Para tapar a otra hay que ganarle en el peor escenario propio; y si la
+       * tapada era una apuesta, hay que ganarle también a su mejor escenario.
+       * Así el riesgo sigue siendo una decisión y no un defecto.
+       */
+      if (tapa(a.mal, b.bien)) dominadas.push(`${b.etiqueta} nunca conviene contra ${a.etiqueta}`);
+    }
+  }
+
+  const linea = vistos.map((v) =>
+    `      ${v.etiqueta.slice(0, 30).padEnd(32)} nivel ${v.bien.nivel >= 0 ? "+" : ""}${v.bien.nivel.toFixed(1).padStart(5)}` +
+    (v.bien.plata ? `  plata ${(v.bien.plata / 1000).toFixed(0)}k` : "") +
+    (v.bien.dirigencia ? `  dirigencia ${v.bien.dirigencia > 0 ? "+" : ""}${v.bien.dirigencia}` : "") +
+    (v.esApuesta ? `  (apuesta: si sale mal, nivel ${v.mal.nivel.toFixed(1)})` : ""));
+
+  if (dominadas.length) {
+    problemas.push(`  ${s.id}  —  ${[...new Set(dominadas)].join("; ")}\n${linea.join("\n")}`);
+  } else {
+    sanas.push(s.id);
+  }
 }
 
-const malas = informe.filter((x) => x.problema);
-console.log(`\n  ${vistas.size} situaciones, ${malas.length} sin decisión real\n`);
-for (const x of malas) {
-  console.log(`  ${x.id}  —  ${x.problema}`);
-  console.log(x.lineas.join("\n"));
-  console.log();
-}
+console.log(`\n  ${problemas.length + sanas.length} situaciones, ${problemas.length} sin decisión real\n`);
+for (const x of problemas) { console.log(x); console.log(); }
+if (problemas.length) process.exitCode = 1;
 console.log("  ---- las que sí tienen tensión ----");
-for (const x of informe.filter((y) => !y.problema)) console.log(`    ${x.id}`);
+for (const id of sanas) console.log(`    ${id}`);
+console.log();
