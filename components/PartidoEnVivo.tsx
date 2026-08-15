@@ -133,12 +133,28 @@ export default function PartidoEnVivo({
       new Set(), onceRival(partido.rivalId, ctx.rivalFuerza), yaVistos.current,
       entradas.current));
 
+  /**
+   * El once con lo que le dejó el partido encima.
+   *
+   * Un festejo que se pudre o un penal errado movían el nivel que se muestra
+   * arriba y nada más: lo que quedaba de partido se seguía simulando con el
+   * ánimo del vestuario. O sea que el número subía y el partido no cambiaba.
+   * Ahora lo que pasa adentro de la cancha se juega adentro de la cancha.
+   */
+  const conLoDelPartido = (a: Alineacion): Alineacion => ({
+    ...a,
+    once: a.once.map((j) => ({
+      ...j,
+      animo: Math.max(0, Math.min(100, j.animo + (animoPorPenales.current[j.id] ?? 0))),
+    })),
+  });
+
   /** Vuelve a simular lo que queda con el equipo que hay ahora. */
   const resimular = (desdeMin: number, nueva: Alineacion) => {
     semilla.current++;
     cursor.current = 0;
     setPendientes(relatarTramo(
-      nueva, ctx, new Rng(`${ctx.fecha}-${ctx.rivalNombre}-${semilla.current}`),
+      conLoDelPartido(nueva), ctx, new Rng(`${ctx.fecha}-${ctx.rivalNombre}-${semilla.current}`),
       desdeMin, 90, gO, gR, amonestados, rival11, yaVistos.current, entradas.current));
   };
 
@@ -309,7 +325,8 @@ export default function PartidoEnVivo({
     semilla.current++;
     cursor.current = 0;
     setPendientes(relatarTramo(
-      { once: nuevoOnce, suplentes: nuevoBanco, actitud: nuevaActitud, puestos: nuevosPuestos },
+      conLoDelPartido(
+        { once: nuevoOnce, suplentes: nuevoBanco, actitud: nuevaActitud, puestos: nuevosPuestos }),
       ctx, new Rng(`${ctx.fecha}-${ctx.rivalNombre}-${semilla.current}`),
       momento.minuto, 90, nuevoO, nuevoR, amonestados, rival11, yaVistos.current,
       entradas.current));

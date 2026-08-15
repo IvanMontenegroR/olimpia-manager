@@ -187,6 +187,8 @@ export interface Partida {
   hito: Hito | null;
   /** La tanda de penales recién jugada, hasta que la mirás. */
   tanda?: Tanda | null;
+  /** Los que vendiste: se van del plantel y no vuelven. */
+  vendidos?: string[];
 
   /**
    * La oportunidad de fichaje que está sobre la mesa, si hay alguna. Tiene
@@ -371,6 +373,7 @@ export function cargar(): Partida {
     }
     p.resultados ??= [];
     p.ofertas ??= [];
+    p.vendidos ??= [];
     p.fichajes ??= [];
     p.pendientes ??= [];
     p.bitacora ??= [];
@@ -415,7 +418,17 @@ export function completarPlantel(p: Partida): Partida {
 
 export function plantelDe(p: Partida): Jugador[] {
   const reserva = new Set(p.enReserva ?? []);
-  return [...PLANTEL, ...(p.incorporados ?? [])].map((j) => {
+  /*
+   * Al que vendiste no lo tenés más.
+   *
+   * Antes venderlo lo marcaba como lesionado hasta el año 2099 y lo dejaba
+   * adentro de la lista: seguía apareciendo en el plantel, le seguías pagando
+   * el sueldo, el mercado comparaba contra él para ver si un fichaje te
+   * mejoraba, y podía salir sorteado en un evento. De ahí que vendieras a uno
+   * y a la semana te contaran que se tatuó el escudo.
+   */
+  const fuera = new Set(p.vendidos ?? []);
+  return [...PLANTEL, ...(p.incorporados ?? [])].filter((j) => !fuera.has(j.id)).map((j) => {
     const e = p.plantel[j.id];
     if (!e) return { ...j, reserva: reserva.has(j.id) };
     return {
@@ -1670,9 +1683,12 @@ export function resolverAsunto(p: Partida, asuntoId: string, opcionId: string): 
     if (!j) return n;
     if (opcionId === "vender") {
       n.dineroUsd += oferta.montoUsd;
-      // sale del plantel; el estado puede faltar si viene de una partida vieja
-      if (n.plantel[oferta.jugadorId]) {
-        n.plantel[oferta.jugadorId].lesionadoHasta = "2099-01-01";
+      // se va de verdad: sale de la lista, del sueldo y de los sorteos
+      n.vendidos = [...(n.vendidos ?? []), oferta.jugadorId];
+      delete n.plantel[oferta.jugadorId];
+      n.enReserva = n.enReserva.filter((id) => id !== oferta.jugadorId);
+      for (const eq of n.equipos ?? []) {
+        eq.jugadores = eq.jugadores.filter((id) => id !== oferta.jugadorId);
       }
       n.hinchada = clamp(n.hinchada - (j.nivel >= 68 ? 9 : 3), 0, 100);
       aplicarAmbiente(n, -3);
