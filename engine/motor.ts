@@ -110,8 +110,14 @@ export const P = {
    * topeó la ventaja máxima para sacar las goleadas: con el tope, la
    * superioridad de Olimpia sobre los equipos flojos dejó de convertirse en
    * goles y el torneo se volvió mucho más difícil de lo que era.
+   *
+   * Subió medio punto cuando los niveles del plantel se corrigieron con el
+   * rendimiento real de la temporada: el equipo quedó medio punto mejor, así
+   * que se le devolvió ese medio punto al resto del torneo. Sin eso el título
+   * local saltaba de 21% a 24% por un cambio que era de datos y no de
+   * dificultad.
    */
-  ajusteRival: -2,
+  ajusteRival: -1.5,
 
   localiaLiga: 3.0,
   // El Defensores de noche en Conmebol pesa el triple que un domingo. Subió un

@@ -77,30 +77,36 @@ const miOvr = ovrDelOnce(normal, ctxDe({ rivalFuerza: 70, esLocal: true }));
 console.log(`\n  Olimpia llega a la copa con OVR ${miOvr.toFixed(0)}\n`);
 
 console.log("  UN PARTIDO SUELTO, EQUILIBRADO");
-console.log("    rival   de local        de visitante");
-const deVisita: number[] = [];
+console.log("    rival   de local        de visitante        te hacen");
+const recibeAfuera: number[] = [];
 for (const rival of [66, 70, 74, 78, 82]) {
   const l = tasa(normal, ctxDe({ rivalFuerza: rival, esLocal: true }));
   const v = tasa(normal, ctxDe({ rivalFuerza: rival, esLocal: false }));
-  deVisita.push(v.gana);
+  recibeAfuera.push(v.gc);
   console.log(`     ${String(rival).padEnd(6)} gana ${pct(l.gana)} emp ${pct(l.empata)}` +
-    `   gana ${pct(v.gana)} emp ${pct(v.empata)}`);
+    `   gana ${pct(v.gana)} emp ${pct(v.empata)}      ${v.gc.toFixed(2)}`);
 }
 
 /*
- * De visitante el rival tiene que seguir importando.
+ * El rival tiene que seguir importando contra los que valen más.
  *
- * Con la diferencia cortada en seco, un 74 y un 82 quedaban los dos del otro
- * lado del corte y ganabas lo mismo contra los dos: el rival desaparecía justo
- * en los partidos donde más tiene que pesar. Es un error que no se ve jugando,
- * solo midiendo, así que queda medido acá.
+ * Se mide en goles recibidos de visitante y no en partidos ganados. A esa
+ * altura Olimpia gana afuera un 7% u 8% contra cualquiera: las victorias se
+ * apilan contra el piso de la varianza y ahí un 74 y un 82 se parecen aunque
+ * el motor los distinga bien. Los goles no tienen ese piso.
+ *
+ * Con la diferencia de nivel cortada en seco, un 74 y un 82 te hacían los
+ * mismos goles (1.98 contra 2.00): el rival desaparecía justo en los partidos
+ * donde más tiene que pesar.
  */
-const caida = deVisita[2] - deVisita[4];   // del 74 al 82
-if (caida < 0.015) {
-  console.log(`\n  ⚠ de visitante el rival dejó de importar: contra un 74 se gana` +
-    ` ${pct(deVisita[2])} y contra un 82 ${pct(deVisita[4])}, o sea lo mismo`);
+const masGoles = recibeAfuera[4] - recibeAfuera[2];   // del 74 al 82
+if (masGoles < 0.10) {
+  console.log(`\n  ⚠ el rival dejó de importar: de visitante un 74 te hace` +
+    ` ${recibeAfuera[2].toFixed(2)} goles y un 82 ${recibeAfuera[4].toFixed(2)}, o sea lo mismo`);
   process.exitCode = 1;
 }
+
+
 
 console.log("\n  PASAR LA SERIE (ida y vuelta)\n");
 console.log("    rival   así nomás   con todo a favor   diferencia");
