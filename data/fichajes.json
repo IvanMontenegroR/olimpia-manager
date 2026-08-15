@@ -494,46 +494,18 @@
     "nota": "Se le va en velocidad a cualquiera, todavía"
   },
   {
-    "id": "junior_alonso",
-    "nombre": "Junior",
-    "apellido": "Alonso",
-    "posicion": "DFC",
-    "edad": 32,
-    "nacionalidad": "PAR",
-    "nivel": 73,
-    "de": "Atlético Mineiro",
-    "rasgos": [
-      "juego_aereo"
-    ],
-    "nota": "Campeón de Libertadores con el Mineiro. Central de selección"
-  },
-  {
     "id": "victor_cuesta",
     "nombre": "Víctor",
     "apellido": "Cuesta",
     "posicion": "DFC",
     "edad": 36,
     "nacionalidad": "ARG",
-    "nivel": 68,
+    "nivel": 67,
     "de": "Vélez",
     "rasgos": [
       "juego_aereo"
     ],
     "nota": "Mil partidos en Independiente y Botafogo. Sabe dónde pararse"
-  },
-  {
-    "id": "lucas_pratto_no",
-    "nombre": "Ramón",
-    "apellido": "Sosa",
-    "posicion": "ED",
-    "edad": 25,
-    "nacionalidad": "PAR",
-    "nivel": 72,
-    "de": "Talleres",
-    "rasgos": [
-      "desequilibrante"
-    ],
-    "nota": "Extremo rápido, se fue del país muy joven"
   },
   {
     "id": "gustavo_velazquez",
@@ -542,7 +514,7 @@
     "posicion": "DFC",
     "edad": 34,
     "nacionalidad": "PAR",
-    "nivel": 69,
+    "nivel": 68,
     "de": "Cerro Porteño",
     "rasgos": [
       "juego_aereo"
@@ -556,7 +528,7 @@
     "posicion": "DFC",
     "edad": 32,
     "nacionalidad": "BRA",
-    "nivel": 70,
+    "nivel": 69,
     "de": "Cruzeiro",
     "rasgos": [
       "juego_aereo"
@@ -564,13 +536,13 @@
     "nota": "Capitán del Cruzeiro. Manda desde el fondo"
   },
   {
-    "id": "marcos_rojo_no",
+    "id": "rodrigo_rojas_gua",
     "nombre": "Rodrigo",
     "apellido": "Rojas",
     "posicion": "DFC",
     "edad": 27,
     "nacionalidad": "PAR",
-    "nivel": 68,
+    "nivel": 66,
     "de": "Guaraní",
     "rasgos": [],
     "nota": "Central joven que ya tiene banca en el medio local"
@@ -582,7 +554,7 @@
     "posicion": "DFC",
     "edad": 32,
     "nacionalidad": "ARG",
-    "nivel": 67,
+    "nivel": 66,
     "de": "Estudiantes",
     "rasgos": [
       "juego_aereo"
@@ -596,7 +568,7 @@
     "posicion": "LD",
     "edad": 36,
     "nacionalidad": "ARG",
-    "nivel": 67,
+    "nivel": 66,
     "de": "San Lorenzo",
     "rasgos": [],
     "nota": "Campeón de Libertadores con River. Sube toda la banda"
@@ -608,7 +580,7 @@
     "posicion": "LD",
     "edad": 36,
     "nacionalidad": "PAR",
-    "nivel": 66,
+    "nivel": 65,
     "de": "Libertad",
     "rasgos": [],
     "nota": "Jugó en la Roma y en el Udinese. Vuelve a casa"
@@ -620,7 +592,7 @@
     "posicion": "LI",
     "edad": 26,
     "nacionalidad": "PAR",
-    "nivel": 68,
+    "nivel": 66,
     "de": "Nacional",
     "rasgos": [],
     "nota": "Lateral izquierdo de ida y vuelta, en su mejor momento"
@@ -632,7 +604,7 @@
     "posicion": "LD",
     "edad": 32,
     "nacionalidad": "ARG",
-    "nivel": 69,
+    "nivel": 67,
     "de": "Unión",
     "rasgos": [],
     "nota": "Lateral derecho que no para de correr los noventa"
@@ -644,7 +616,7 @@
     "posicion": "LI",
     "edad": 27,
     "nacionalidad": "ARG",
-    "nivel": 70,
+    "nivel": 68,
     "de": "Newell's",
     "rasgos": [
       "desequilibrante"
@@ -658,7 +630,7 @@
     "posicion": "MCD",
     "edad": 28,
     "nacionalidad": "PAR",
-    "nivel": 74,
+    "nivel": 70,
     "de": "Grêmio",
     "rasgos": [],
     "nota": "Motor de la selección. Corre por dos"
@@ -670,31 +642,19 @@
     "posicion": "MCD",
     "edad": 35,
     "nacionalidad": "ARG",
-    "nivel": 69,
+    "nivel": 68,
     "de": "Independiente",
     "rasgos": [],
     "nota": "Cinco de los de antes: corta, ordena y la da simple"
   },
   {
-    "id": "jorge_moreira_no",
-    "nombre": "Andrés",
-    "apellido": "Cubas",
-    "posicion": "MCD",
-    "edad": 29,
-    "nacionalidad": "PAR",
-    "nivel": 72,
-    "de": "Vancouver",
-    "rasgos": [],
-    "nota": "Volante de marca, jugó en Francia y en la MLS"
-  },
-  {
-    "id": "richard_ortiz_no",
+    "id": "marcelo_perez",
     "nombre": "Marcelo",
     "apellido": "Pérez",
     "posicion": "MC",
     "edad": 28,
     "nacionalidad": "PAR",
-    "nivel": 67,
+    "nivel": 65,
     "de": "Guaraní",
     "rasgos": [],
     "nota": "Volante central que juega siempre para adelante"
@@ -706,7 +666,7 @@
     "posicion": "MC",
     "edad": 35,
     "nacionalidad": "PAR",
-    "nivel": 68,
+    "nivel": 66,
     "de": "Sin club",
     "rasgos": [],
     "nota": "Diez años en el Villarreal. Está libre"
@@ -718,43 +678,43 @@
     "posicion": "MCD",
     "edad": 31,
     "nacionalidad": "PER",
-    "nivel": 68,
+    "nivel": 67,
     "de": "Orlando City",
     "rasgos": [],
     "nota": "Volante peruano de selección, disciplinado"
   },
   {
-    "id": "rodrigo_rojas_pj",
+    "id": "rodrigo_ramirez",
     "nombre": "Rodrigo",
     "apellido": "Ramírez",
     "posicion": "MC",
     "edad": 24,
     "nacionalidad": "PAR",
-    "nivel": 66,
+    "nivel": 65,
     "de": "Sportivo Luqueño",
     "rasgos": [],
     "nota": "Pibe del medio local que rompió la temporada"
   },
   {
-    "id": "gatito_fernandez",
+    "id": "antony_silva",
     "nombre": "Antony",
     "apellido": "Silva",
     "posicion": "ARQ",
     "edad": 40,
     "nacionalidad": "PAR",
-    "nivel": 68,
+    "nivel": 67,
     "de": "Sin club",
     "rasgos": [],
     "nota": "Arquero de mil partidos. Está libre y quiere seguir"
   },
   {
-    "id": "jean_paulo",
+    "id": "alfredo_aguilar",
     "nombre": "Alfredo",
     "apellido": "Aguilar",
     "posicion": "ARQ",
     "edad": 29,
     "nacionalidad": "PAR",
-    "nivel": 70,
+    "nivel": 69,
     "de": "Libertad",
     "rasgos": [],
     "nota": "Arquero de selección, seguro abajo del arco"
@@ -766,7 +726,7 @@
     "posicion": "MCO",
     "edad": 30,
     "nacionalidad": "PAR",
-    "nivel": 74,
+    "nivel": 73,
     "de": "Inter Miami",
     "rasgos": [
       "desequilibrante"
@@ -780,7 +740,7 @@
     "posicion": "MCO",
     "edad": 27,
     "nacionalidad": "COL",
-    "nivel": 72,
+    "nivel": 71,
     "de": "Dinamo Moscú",
     "rasgos": [
       "desequilibrante",
@@ -789,31 +749,7 @@
     "nota": "Un día te gana el partido solo y al otro no aparece"
   },
   {
-    "id": "nico_de_la_cruz_no",
-    "nombre": "Damián",
-    "apellido": "Bobadilla",
-    "posicion": "MC",
-    "edad": 25,
-    "nacionalidad": "PAR",
-    "nivel": 69,
-    "de": "San Lorenzo",
-    "rasgos": [],
-    "nota": "Volante joven de selección, va y viene todo el partido"
-  },
-  {
-    "id": "braian_ojeda",
-    "nombre": "Braian",
-    "apellido": "Ojeda",
-    "posicion": "MCD",
-    "edad": 25,
-    "nacionalidad": "PAR",
-    "nivel": 70,
-    "de": "Nottingham Forest",
-    "rasgos": [],
-    "nota": "Se fue muy chico a Inglaterra. Busca minutos"
-  },
-  {
-    "id": "adam_bareiro_no",
+    "id": "alexis_duarte",
     "nombre": "Alexis",
     "apellido": "Duarte",
     "posicion": "DFC",
@@ -833,21 +769,9 @@
     "posicion": "MCD",
     "edad": 34,
     "nacionalidad": "ARG",
-    "nivel": 67,
+    "nivel": 66,
     "de": "Chicago Fire",
     "rasgos": [],
     "nota": "Volante de contención con oficio de sobra"
-  },
-  {
-    "id": "tiago_caceres",
-    "nombre": "Diego",
-    "apellido": "Gómez",
-    "posicion": "MC",
-    "edad": 23,
-    "nacionalidad": "PAR",
-    "nivel": 71,
-    "de": "Brighton",
-    "rasgos": [],
-    "nota": "Se fue del Libertad a Inglaterra. Vuelve a préstamo"
   }
 ]
