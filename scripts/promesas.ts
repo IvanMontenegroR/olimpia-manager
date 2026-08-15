@@ -14,26 +14,13 @@
  */
 
 import {
-  ovrDe, partidaNueva, plantelDe, resolverAsunto, type Asunto, type Partida,
+  nivelSi, ovrDe, partidaNueva, plantelDe, resolverAsunto, type Asunto, type Partida,
 } from "../lib/temporada.ts";
 import { TODAS } from "../engine/situaciones.ts";
-import { P } from "../engine/motor.ts";
 import { Rng } from "../engine/rng.ts";
 
-const ONCE = 11;
-
-/** Lo que el chip de vestuario dice que va a pasar. */
-function prometido(e: { ambiente?: number; moralDe?: { delta: number } } | undefined) {
-  if (!e) return 0;
-  return (e.ambiente ?? 0) * P.ambienteEnAnimo + (e.moralDe?.delta ?? 0) / ONCE;
-}
-
-/** El ánimo medio del once, que es el número "vestuario" de la card. */
-const vestuarioDe = (p: Partida) => {
-  const o = ovrDe(p);
-  if (!o.once.length) return 0;
-  return o.once.reduce((s, j) => s + (p.plantel[j.id]?.animo ?? j.animo), 0) / o.once.length;
-};
+/** El nivel del club, que es el número grande de la pantalla principal. */
+const nivelDe = (p: Partida) => ovrDe(p).hoy;
 
 let revisadas = 0;
 const fallas: string[] = [];
@@ -63,22 +50,18 @@ for (const S of TODAS) {
     };
     p.pendientes = [asunto];
 
-    const antesVest = vestuarioDe(p);
+    const antesNivel = nivelDe(p);
     const antesPlata = p.dineroUsd;
-    const antesHin = p.hinchada;
     const antesDir = p.paciencia;
 
     const d = resolverAsunto(p, asunto.id, op.id);
     revisadas++;
 
-    const enElOnce = new Set(ovrDe(p).once.map((j) => j.id));
-    const dice = prometido(
-      efecto.moralDe && !enElOnce.has(efecto.moralDe.id)
-        ? { ...efecto, moralDe: undefined } : efecto);
-    const pasa = vestuarioDe(d) - antesVest;
-    // media unidad de tolerancia: el chip está redondeado a entero
-    if (Math.abs(dice - pasa) > 0.6) {
-      fallas.push(`${S.id}/${op.id}  vestuario: promete ${dice.toFixed(1)}, pasa ${pasa.toFixed(1)}`);
+    // lo que el chip promete, calculado igual que en la pantalla
+    const dice = nivelSi(p, efecto);
+    const pasa = nivelDe(d) - antesNivel;
+    if (Math.abs(dice - pasa) > 0.05) {
+      fallas.push(`${S.id}/${op.id}  nivel: promete ${dice.toFixed(2)}, pasa ${pasa.toFixed(2)}`);
     }
     const chequear = (que: string, prom: number, real: number) => {
       if (Math.abs(prom - real) > 0.6) {
@@ -86,7 +69,6 @@ for (const S of TODAS) {
       }
     };
     chequear("plata", efecto.dineroUsd ?? 0, d.dineroUsd - antesPlata);
-    chequear("hinchada", efecto.hinchada ?? 0, d.hinchada - antesHin);
     chequear("dirigencia", efecto.paciencia ?? 0, d.paciencia - antesDir);
   }
 }

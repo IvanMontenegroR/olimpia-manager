@@ -1,13 +1,26 @@
 "use client";
 
 import { miles } from "@/lib/temporada.ts";
-import { P } from "@/engine/motor.ts";
 
-/** Lo mismo que aplica resolverAsunto, para prometer exactamente lo que pasa. */
-const AMBIENTE_EN_CONFIANZA = P.ambienteEnAnimo;
-
-/** El vestuario que se muestra es el promedio del once. */
-const ONCE = 11;
+/**
+ * Lo que va a pasar si elegís esto, en las tres únicas monedas del juego.
+ *
+ *   NIVEL       lo que te cambia para el domingo
+ *   PLATA       lo que entra o sale de la caja
+ *   DIRIGENCIA  lo que te acerca o te aleja de que te echen
+ *
+ * Antes había cinco: vestuario, hinchada y físico iban por separado, cada uno
+ * en su propia escala interna de 0 a 100. Eso tenía dos problemas. Uno, que
+ * eran tres números más para seguir. Y dos, peor, que ninguno de los tres
+ * coincidía con lo que después se movía en la pantalla: un "+14 hinchada"
+ * levantaba el nivel del equipo dos décimas, así que la card no se movía
+ * nunca y el chip quedaba como una promesa vacía.
+ *
+ * Ahora los tres se calculan juntos aplicando el efecto de verdad sobre una
+ * copia de la partida y midiendo el nivel que queda. Vestuario, hinchada y
+ * físico siguen existiendo: son la explicación de por qué el nivel es el que
+ * es, y viven adentro de la card principal, que es donde se entienden.
+ */
 
 export interface EfectoVisible {
   ambiente?: number;
@@ -17,56 +30,48 @@ export interface EfectoVisible {
   moralDe?: { id: string; delta: number };
   moralTexto?: string;
   paciencia?: number;
-  /** Se pierde el próximo partido: es el costo más caro y no se veía. */
+  /** Se pierde el próximo partido: no es un número, es quién falta. */
   suspendeA?: string;
   /** Apellido del que se pierde el partido, para poder nombrarlo. */
   suspendeTexto?: string;
-  /** Lo que la decisión mueve del nivel con el que se llega al partido. */
+  /**
+   * Lo que la decisión mueve del nivel. Lo calcula la pantalla aplicando el
+   * efecto sobre una copia: acá llega ya resuelto.
+   */
   nivel?: number;
+  /** El que se va del plantel: el once del domingo lo tiene que reemplazar. */
+  seVa?: string;
+  /** Lo que suma llegar aclimatado, ya medido en nivel. */
+  aclimatacion?: number;
   /** Los números del otro desenlace, si la opción era una apuesta. */
   siSaleMal?: EfectoVisible;
 }
 
-/**
- * Los números de lo que va a pasar, antes de elegir. La idea es que el costo
- * de cada opción se vea sin tener que leer el texto.
- */
 export default function Efectos({ e }: { e: EfectoVisible }) {
   const chips: { texto: string; bueno: boolean }[] = [];
 
+  /*
+   * El nivel se muestra con un decimal cuando no llega a la unidad. Redondear
+   * a entero convertía media docena de decisiones reales en "+0", que es peor
+   * que no decir nada: parece que la opción no hace nada.
+   */
+  if (e.nivel && Math.abs(e.nivel) >= 0.05) {
+    const n = Math.abs(e.nivel) >= 1 ? Math.round(e.nivel) : Math.round(e.nivel * 10) / 10;
+    if (n !== 0) {
+      chips.push({ texto: `${n > 0 ? "+" : "−"}${Math.abs(n)} nivel`, bueno: n > 0 });
+    }
+  }
   if (e.dineroUsd) {
     chips.push({
       texto: `${e.dineroUsd > 0 ? "+" : "−"}${miles(Math.abs(e.dineroUsd))}`,
       bueno: e.dineroUsd > 0,
     });
   }
-  if (e.nivel) chips.push({ texto: `${signo(e.nivel)} nivel`, bueno: e.nivel > 0 });
-  /*
-   * El vestuario es UN chip, siempre.
-   *
-   * Hay decisiones que mueven el clima del grupo para un lado y el ánimo de un
-   * jugador para el otro: multar al que llegó tarde le cae bien al plantel y
-   * mal a él. Como los dos terminan en el mismo número (el ánimo medio del
-   * once, que es lo que dice la card principal), mostrarlos por separado ponía
-   * un "+1 vestuario" al lado de un "−1 vestuario" en la misma opción. Se
-   * suman y se muestra el neto, que es lo que de verdad va a pasar.
-   */
-  const vest = (e.ambiente ?? 0) * AMBIENTE_EN_CONFIANZA + (e.moralDe?.delta ?? 0) / ONCE;
-  // se redondea alejándose del cero: media unidad para arriba no es "0"
-  const vestEntero = Math.sign(vest) * Math.round(Math.abs(vest));
-  if (vestEntero !== 0) {
-    chips.push({ texto: `${signo(vestEntero)} vestuario`, bueno: vestEntero > 0 });
+  if (e.paciencia) {
+    chips.push({ texto: `${signo(e.paciencia)} dirigencia`, bueno: e.paciencia > 0 });
   }
-  if (e.hinchada) chips.push({ texto: `${signo(e.hinchada)} hinchada`, bueno: e.hinchada > 0 });
-  if (e.paciencia) chips.push({ texto: `${signo(e.paciencia)} dirigencia`, bueno: e.paciencia > 0 });
-  if (e.condicionTodos) {
-    chips.push({
-      texto: `${signo(e.condicionTodos)} condición a todo el plantel`,
-      bueno: e.condicionTodos > 0,
-    });
-  }
-  // perder al jugador para la fecha que viene es el costo más caro de varias
-  // apuestas y no aparecía por ningún lado
+  // perder al jugador para la fecha que viene ya está adentro del nivel; esto
+  // dice quién es, que es lo que el número solo no cuenta
   if (e.suspendeA) {
     chips.push({
       texto: e.suspendeTexto ? `${e.suspendeTexto} se pierde la próxima` : "Se pierde la próxima",

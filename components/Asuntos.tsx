@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import {
-  AFORO, miles, nivelConAclimatacion, ocupacionDe, ovrDe, plantelDe, salioBienLaApuesta,
+  AFORO, miles, nivelConAclimatacion, nivelSi, ocupacionDe, plantelDe, salioBienLaApuesta,
   type Asunto, type Partida,
 } from "@/lib/temporada.ts";
+import type { Efecto } from "@/engine/situaciones.ts";
 import Efectos, { type EfectoVisible } from "./Efectos.tsx";
 import { DibujoEscena, ESCENAS, type TipoEscena } from "./Escena.tsx";
 import Sorteo from "./Sorteo.tsx";
@@ -184,11 +185,23 @@ export default function Asuntos({
   );
 }
 
-function opcionesDe(a: Asunto, p: Partida): {
+interface OpcionUI {
   id: string; etiqueta: string; detalle: string; efecto?: EfectoVisible;
   apuesta?: { exito: number; bien: string; mal: string };
   rango?: { min: number; max: number; valor: number; unidad: string };
-}[] {
+}
+
+/*
+ * Todo lo que se muestra sale del mismo lugar: la lista cruda de opciones y
+ * después una sola pasada de `paraMostrar`, que es la que mide el nivel. Antes
+ * las cuatro clases de asunto armaban sus chips por su cuenta y cada una podía
+ * prometer en la escala que quisiera.
+ */
+function opcionesDe(a: Asunto, p: Partida): OpcionUI[] {
+  return crudas(a, p).map((o) => ({ ...o, efecto: paraMostrar(o.efecto, p) }));
+}
+
+function crudas(a: Asunto, p: Partida): OpcionUI[] {
   if (a.tipo === "marketing") {
     /*
      * Lo que deja el partido con cada precio. El texto decía "entra la mitad
@@ -217,7 +230,7 @@ function opcionesDe(a: Asunto, p: Partida): {
      * "pagá 150 mil por algo": se veía el costo y no el beneficio.
      */
     const base = nivelConAclimatacion(p, 0);
-    const gana = (acl: number) => Math.round(nivelConAclimatacion(p, acl) - base);
+    const gana = (acl: number) => nivelConAclimatacion(p, acl) - base;
     return [
       { id: "vispera", etiqueta: "Viajar la víspera",
         detalle: altura
@@ -227,12 +240,12 @@ function opcionesDe(a: Asunto, p: Partida): {
         detalle: altura
           ? "Media adaptación: la altura pega bastante menos"
           : "El plantel llega descansado",
-        efecto: { dineroUsd: -60_000, nivel: gana(0.55) } },
+        efecto: { dineroUsd: -60_000, aclimatacion: gana(0.55) } },
       { id: "semana", etiqueta: "Concentrar en destino",
         detalle: altura
           ? "Adaptación completa, pero una semana lejos de casa pesa adentro"
           : "Llegan enteros, aunque se hace largo",
-        efecto: { dineroUsd: -150_000, ambiente: -3, nivel: gana(1) } },
+        efecto: { dineroUsd: -150_000, ambiente: -3, aclimatacion: gana(1) } },
     ];
   }
 
@@ -248,6 +261,8 @@ function opcionesDe(a: Asunto, p: Partida): {
           dineroUsd: oferta?.montoUsd,
           hinchada: (j?.nivel ?? 0) >= 68 ? -9 : -3,
           ambiente: -3,
+          // el domingo tiene que jugar otro, y eso es lo que más pesa
+          seVa: oferta?.jugadorId,
         } },
       { id: "rechazar", etiqueta: "Rechazar",
         detalle: oferta?.quiereIrse
@@ -261,10 +276,9 @@ function opcionesDe(a: Asunto, p: Partida): {
         } },
     ];
   }
-  const enElOnce = new Set(ovrDe(p).once.map((j) => j.id));
   return (a.situacion?.opciones ?? []).map((o) => ({
     ...o,
-    efecto: paraMostrar(a.efectos?.[o.id] as EfectoVisible | undefined, p, enElOnce),
+    efecto: paraMostrar(a.efectos?.[o.id] as EfectoVisible | undefined, p),
   }));
 }
 
@@ -278,16 +292,17 @@ function opcionesDe(a: Asunto, p: Partida): {
  * ese número ni un poco. Prometer "+1 vestuario" por eso era prometer algo que
  * el jugador no iba a ver pasar.
  */
-function paraMostrar(
-  e: EfectoVisible | undefined, p: Partida, enElOnce: Set<string>,
-): EfectoVisible | undefined {
+function paraMostrar(e: EfectoVisible | undefined, p: Partida): EfectoVisible | undefined {
   if (!e) return e;
   const apellido = (id?: string) =>
     id ? plantelDe(p).find((j) => j.id === id)?.apellido : undefined;
   return {
     ...e,
-    moralDe: e.moralDe && enElOnce.has(e.moralDe.id) ? e.moralDe : undefined,
+    /* El nivel no se estima: se aplica el efecto sobre una copia y se mide. Lo
+       único aparte es el viaje, que no cambia el club sino el partido: eso ya
+       viene medido y se suma. */
+    nivel: nivelSi(p, e as Efecto, e.seVa) + (e.aclimatacion ?? 0),
     suspendeTexto: apellido(e.suspendeA),
-    siSaleMal: paraMostrar(e.siSaleMal, p, enElOnce),
+    siSaleMal: paraMostrar(e.siSaleMal, p),
   };
 }

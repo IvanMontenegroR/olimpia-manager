@@ -21,7 +21,7 @@ import {
 import {
   DIAS_DE_VENTANA, ESTRELLAS, impactoDe, jugadorDeEstrella, sortearEstrella,
 } from "@/engine/estrellas.ts";
-import type { Actitud, ContextoPartido, Jugador, Posicion } from "@/engine/tipos.ts";
+import { LINEA_DE, type Actitud, type ContextoPartido, type Jugador, type Posicion } from "@/engine/tipos.ts";
 
 const EQUIPOS = equiposJson as any[];
 const FIXTURE = fixtureJson as any[];
@@ -503,7 +503,14 @@ export function ocupacionDe(p: Partida, esClasico = false): number {
   // sería obvio y no habría nada que decidir. Así la decisión es de verdad:
   // caja contra el Defensores lleno.
   const porPrecio = clamp(1.15 - p.precioEntrada / 220, 0.28, 1.0);
-  const porHumor = 0.55 + (p.hinchada / 100) * 0.55;
+  /*
+   * El humor de la gente pesa el doble que antes en cuánta viene. Con la
+   * pendiente vieja, ganarse a la hinchada movía el estadio cuatro mil
+   * personas y el nivel dos décimas: las decisiones que se pagaban con la
+   * tribuna no compraban nada. El punto medio quedó donde estaba, así que un
+   * club en su humor normal llena igual que siempre y el balance no se corre.
+   */
+  const porHumor = 0.16 + (p.hinchada / 100) * 1.10;
   return clamp(porPrecio * porHumor * (esClasico ? 1.25 : 1), 0.15, 1);
 }
 
@@ -1220,6 +1227,7 @@ export function ficharEstrella(p: Partida): Partida {
 
   const j = jugadorDeEstrella(e, numero);
   n.incorporados.push(j);
+  meterEnElOnce(n, j);
   n.plantel[j.id] = {
     condicion: j.condicion, amarillas: 0, suspendidoFechas: 0, lesionadoHasta: null,
     golesTorneo: 0, minutos: 0, animo: j.animo, crecimiento: 0,
@@ -1228,7 +1236,8 @@ export function ficharEstrella(p: Partida): Partida {
 
   const imp = impactoDe(e);
   n.hinchada = clamp(n.hinchada + imp.hinchada, 0, 100);
-  n.ambiente = clamp(n.ambiente + imp.ambiente, 0, 100);
+  // el vestuario que se ve es el ánimo del once, no el clima solo
+  aplicarAmbiente(n, imp.ambiente);
   n.paciencia = clamp(n.paciencia + imp.prestigio, 0, 100);
   n.estrella = null;
 
@@ -1338,6 +1347,89 @@ export function salioBienLaApuesta(
   asuntoId: string, opcionId: string, dia: string, exito: number,
 ): boolean {
   return new Rng(`apuesta-${asuntoId}-${opcionId}-${dia}`).chance(exito);
+}
+
+/**
+ * Al que traés, si es mejor, lo pone a jugar.
+ *
+ * Desde que la cancha de la pantalla principal muestra tu once guardado, un
+ * fichaje entraba al plantel pero no al equipo: pagabas cuatro millones por un
+ * central de 77 y el nivel del club subía dos décimas, porque el domingo
+ * seguía jugando el de 64. Lo saca al más flojo de su línea y solo si de
+ * verdad es mejor, así que nunca te desarma un once que ya estaba bien.
+ */
+function meterEnElOnce(n: Partida, nuevo: Jugador) {
+  const eq = n.equipos?.[0];
+  if (!eq) return;
+  const slots = MOLDE_DE(eq.formacion);
+  const porId = new Map(plantelDe(n).map((j) => [j.id, j]));
+  /*
+   * Primero se busca su puesto exacto y recién después cualquiera de su línea.
+   * Sin eso, un central podía entrar por el lateral izquierdo solo porque era
+   * el más flojo de la defensa, y ahí lo que ganabas en ficha lo perdías
+   * jugando fuera de puesto.
+   */
+  const buscar = (mismoPuesto: boolean) => {
+    let peor: { i: number; nivel: number } | null = null;
+    for (let i = 0; i < slots.length && i < eq.jugadores.length; i++) {
+      const cabe = mismoPuesto
+        ? slots[i] === nuevo.posicion
+        : LINEA_DE[slots[i]] === LINEA_DE[nuevo.posicion];
+      if (!cabe) continue;
+      const nivel = porId.get(eq.jugadores[i])?.nivel ?? 0;
+      if (!peor || nivel < peor.nivel) peor = { i, nivel };
+    }
+    return peor;
+  };
+  const peor = buscar(true) ?? buscar(false);
+  if (peor && nuevo.nivel > peor.nivel) eq.jugadores[peor.i] = nuevo.id;
+}
+
+/**
+ * Todo lo que un efecto mueve y se puede medir: el clima, la gente, la plata,
+ * los de arriba, el ánimo de uno y las piernas de todos.
+ *
+ * Está separado del resto de `resolverAsunto` porque la pantalla necesita
+ * poder aplicarlo sobre una copia para saber, antes de que elijas, cuánto
+ * nivel te va a mover la decisión. Es lo único que garantiza que el chip diga
+ * exactamente lo que después vas a ver en la card.
+ */
+function aplicarNumeros(n: Partida, efecto: Efecto) {
+  if (efecto.ambiente) aplicarAmbiente(n, efecto.ambiente);
+  if (efecto.hinchada) n.hinchada = clamp(n.hinchada + efecto.hinchada, 0, 100);
+  if (efecto.dineroUsd) n.dineroUsd += efecto.dineroUsd;
+  if (efecto.paciencia) n.paciencia = clamp(n.paciencia + efecto.paciencia, 0, 100);
+  if (efecto.moralDe) {
+    const e = n.plantel[efecto.moralDe.id];
+    if (e) e.animo = clamp(e.animo + efecto.moralDe.delta, 0, 100);
+  }
+  if (efecto.condicionTodos) {
+    for (const id of Object.keys(n.plantel)) {
+      n.plantel[id].condicion = clamp(n.plantel[id].condicion + efecto.condicionTodos, 0, 100);
+    }
+  }
+  // un expulsado o roto se pierde la próxima
+  if (efecto.suspendeA && n.plantel[efecto.suspendeA]) {
+    n.plantel[efecto.suspendeA].suspendidoFechas = 1;
+  }
+}
+
+/**
+ * Cuánto nivel mueve una decisión, medido contra el mismo número que muestra
+ * la pantalla principal.
+ *
+ * No hay conversión ni regla de tres: se aplica el efecto sobre una copia y se
+ * vuelve a calcular el nivel. Por eso lo que promete el chip no puede
+ * diferir de lo que después pasa.
+ */
+export function nivelSi(p: Partida, efecto: Efecto, seVa?: string): number {
+  const antes = ovrDe(p).hoy;
+  const copia: Partida = estructurado(p);
+  aplicarNumeros(copia, efecto);
+  // vender es lo que más nivel te saca, y no sale de ningún efecto: sale de
+  // que el domingo tiene que jugar otro
+  if (seVa && copia.plantel[seVa]) copia.plantel[seVa].lesionadoHasta = "2099-01-01";
+  return ovrDe(copia).hoy - antes;
 }
 
 /**
@@ -1457,23 +1549,7 @@ export function resolverAsunto(p: Partida, asuntoId: string, opcionId: string): 
   }
 
   if (efecto) {
-    if (efecto.ambiente) aplicarAmbiente(n, efecto.ambiente);
-    if (efecto.hinchada) n.hinchada = clamp(n.hinchada + efecto.hinchada, 0, 100);
-    if (efecto.dineroUsd) n.dineroUsd += efecto.dineroUsd;
-    if (efecto.paciencia) n.paciencia = clamp(n.paciencia + efecto.paciencia, 0, 100);
-    if (efecto.moralDe) {
-      const e = n.plantel[efecto.moralDe.id];
-      if (e) e.animo = clamp(e.animo + efecto.moralDe.delta, 0, 100);
-    }
-    if (efecto.condicionTodos) {
-      for (const id of Object.keys(n.plantel)) {
-        n.plantel[id].condicion = clamp(n.plantel[id].condicion + efecto.condicionTodos, 0, 100);
-      }
-    }
-    // un expulsado o roto se pierde la próxima
-    if (efecto.suspendeA && n.plantel[efecto.suspendeA]) {
-      n.plantel[efecto.suspendeA].suspendidoFechas = 1;
-    }
+    aplicarNumeros(n, efecto);
     if (efecto.traerPibe) sumarPibe(n, efecto.traerPibe.pueblo, efecto.traerPibe.nivel);
     // el brasileño de la carpeta, cuando el video no era humo
     if (efecto.ofreceBrasileno) ofrecerBrasileno(n);
@@ -1529,7 +1605,8 @@ export function fichar(p: Partida, fichajeId: string): Partida | null {
     condicion: 88, amarillas: 0, suspendidoFechas: 0, lesionadoHasta: null,
     golesTorneo: 0, minutos: 0, animo: 78, crecimiento: 0,
   };
-  n.ambiente = clamp(n.ambiente + 2, 0, 100);
+  meterEnElOnce(n, jugador);
+  aplicarAmbiente(n, 2);
   n.bitacora.push({ dia: n.dia, texto:
     `Refuerzo: llega ${f.apellido} (${f.posicion}, nivel ${f.nivel}) por ${miles(f.precioUsd)}.` });
   return n;

@@ -1,7 +1,7 @@
 "use client";
 
 import { BANDERA } from "@/lib/juego.ts";
-import { diasEntre, miles, type Partida } from "@/lib/temporada.ts";
+import { diasEntre, ficharEstrella, miles, ovrDe, type Partida } from "@/lib/temporada.ts";
 import { CHANCE_POR_CATEGORIA, ESTRELLAS, impactoDe, type CategoriaEstrella } from "@/engine/estrellas.ts";
 
 /**
@@ -50,6 +50,14 @@ export default function PantallaEstrella({ partida, onFichar, onRechazar, onVolv
   const falta = e.precioUsd - partida.dineroUsd;
   const dias = Math.max(0, diasEntre(partida.dia, partida.estrella.venceEl));
   const imp = impactoDe(e);
+  /*
+   * Lo que sube el nivel del club si lo traés, medido de verdad: se ficha
+   * sobre una copia y se vuelve a calcular. Antes esta pantalla prometía
+   * "+16 hinchada" y "+10 vestuario", dos escalas internas que no coincidían
+   * con ningún número de la pantalla principal.
+   */
+  const gana = ovrDe(ficharEstrella({ ...partida, dineroUsd: e.precioUsd })).hoy
+    - ovrDe(partida).hoy;
 
   return (
     <div className="app" style={{ background: est.fondo }}>
@@ -121,9 +129,11 @@ export default function PantallaEstrella({ partida, onFichar, onRechazar, onVolv
         </div>
 
         {/* ---------- qué cambia si lo traés ---------- */}
+        {/* En las mismas tres monedas que el resto del juego. El nivel se mide
+            de verdad: con él adentro del once, que es de donde sale casi todo
+            lo que aporta un crack. */}
         <div className="mt-3 flex flex-wrap gap-1.5">
-          <Chip texto={`+${imp.hinchada} hinchada`} color={est.acento} />
-          <Chip texto={`+${imp.ambiente} vestuario`} color={est.acento} />
+          <Chip texto={`+${gana.toFixed(gana >= 1 ? 0 : 1)} nivel`} color={est.acento} />
           <Chip texto={`+${imp.prestigio} dirigencia`} color={est.acento} />
         </div>
 
