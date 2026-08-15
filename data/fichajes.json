@@ -35,7 +35,7 @@
     "edad": 33,
     "nacionalidad": "VEN",
     "nivel": 71,
-    "de": "sin club",
+    "de": "Sin club",
     "rasgos": [
       "definidor"
     ],
@@ -113,7 +113,7 @@
     "edad": 33,
     "nacionalidad": "PAR",
     "nivel": 67,
-    "de": "sin club",
+    "de": "Sin club",
     "rasgos": [
       "definicion_irregular"
     ],
@@ -332,7 +332,7 @@
     "edad": 38,
     "nacionalidad": "ARG",
     "nivel": 66,
-    "de": "sin club",
+    "de": "Sin club",
     "rasgos": [
       "definidor"
     ],
@@ -428,7 +428,7 @@
   {
     "id": "deyverson",
     "nombre": "Deyverson",
-    "apellido": "Deyverson",
+    "apellido": "Brum",
     "posicion": "DC",
     "edad": 35,
     "nacionalidad": "BRA",
@@ -437,7 +437,7 @@
     "rasgos": [
       "definidor"
     ],
-    "nota": "Le hizo el gol a Flamengo en la final de la Libertadores"
+    "nota": "El nueve más polémico de Brasil. Campeón de Libertadores con Palmeiras."
   },
   {
     "id": "dudu",
@@ -773,5 +773,73 @@
     "de": "Chicago Fire",
     "rasgos": [],
     "nota": "Volante de contención con oficio de sobra"
+  },
+  {
+    "id": "lucas_quintana",
+    "nombre": "Lucas",
+    "apellido": "Quintana",
+    "posicion": "DFC",
+    "edad": 21,
+    "nacionalidad": "PAR",
+    "nivel": 66,
+    "de": "Cerro Porteño",
+    "rasgos": [
+      "juego_aereo"
+    ],
+    "nota": "Cuatro millones de euros a los veintiuno: el jugador más valioso de toda la liga. Y es de Cerro."
+  },
+  {
+    "id": "rodrigo_villalba",
+    "nombre": "Rodrigo",
+    "apellido": "Villalba",
+    "posicion": "ED",
+    "edad": 20,
+    "nacionalidad": "PAR",
+    "nivel": 64,
+    "de": "Libertad",
+    "rasgos": [
+      "desequilibrante"
+    ],
+    "nota": "Extremo de veinte años que ya vale casi dos millones. Libertad no lo quiere soltar."
+  },
+  {
+    "id": "gabriel_aguayo",
+    "nombre": "Gabriel",
+    "apellido": "Aguayo",
+    "posicion": "ED",
+    "edad": 21,
+    "nacionalidad": "PAR",
+    "nivel": 64,
+    "de": "Cerro Porteño",
+    "rasgos": [],
+    "nota": "Otro pibe de Cerro en la lista de los más valorados del medio local."
+  },
+  {
+    "id": "gilberto_flores",
+    "nombre": "Gilberto",
+    "apellido": "Flores",
+    "posicion": "DFC",
+    "edad": 23,
+    "nacionalidad": "PAR",
+    "nivel": 64,
+    "de": "Libertad",
+    "rasgos": [
+      "juego_aereo"
+    ],
+    "nota": "Central joven de Libertad, ya con banca en el equipo grande."
+  },
+  {
+    "id": "enso_gonzalez",
+    "nombre": "Enso",
+    "apellido": "González",
+    "posicion": "MCO",
+    "edad": 20,
+    "nacionalidad": "PAR",
+    "nivel": 70,
+    "de": "Wolverhampton",
+    "rasgos": [
+      "desequilibrante"
+    ],
+    "nota": "La figura de Paraguay en el Mundial Sub-20. Se fue muy chico a Inglaterra y busca minutos."
   }
 ]

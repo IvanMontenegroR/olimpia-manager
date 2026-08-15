@@ -413,9 +413,10 @@
     "nombre": "Rubén",
     "apellido": "Lezcano",
     "numero": 19,
-    "posicion": "MCO",
+    "posicion": "EI",
     "posiciones_secundarias": [
-      "EI"
+      "MCO",
+      "ED"
     ],
     "edad": 22,
     "fecha_nacimiento": "2004-02-09",
@@ -810,5 +811,36 @@
     "rasgos": [],
     "reserva": true,
     "animo": 70
+  },
+  {
+    "id": "cesar_mino",
+    "nombre": "César",
+    "apellido": "Miño",
+    "numero": 16,
+    "posicion": "ED",
+    "posiciones_secundarias": [
+      "EI"
+    ],
+    "edad": 19,
+    "fecha_nacimiento": "2006-08-14",
+    "nacionalidad": "PAR",
+    "extranjero": false,
+    "canterano": true,
+    "nota": "Uno de los juveniles más valorados del medio local: dos millones de euros a los diecinueve. Cuenta para la regla Sub-18.",
+    "nivel": 61,
+    "nivel_incertidumbre": 11,
+    "condicion": 100,
+    "partidos_internacionales": 0,
+    "contrato_hasta": 2029,
+    "sueldo_usd": 7000,
+    "valor_usd": 2000000,
+    "valor_comercial": 3,
+    "lesionado_hasta": null,
+    "tarjetas_amarillas": 0,
+    "suspendido": false,
+    "rasgos": [
+      "desequilibrante"
+    ],
+    "animo": 80
   }
 ]

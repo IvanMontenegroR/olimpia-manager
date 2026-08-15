@@ -989,7 +989,10 @@ const PLANTILLAS: Plantilla[] = [
           },
           multar: { ambiente: 1, dineroUsd: 15_000, moralDe: { id: j.id, delta: -22 },
             texto: `Se multó a ${j.apellido}. Quedó claro el límite y él quedó dolido.` },
-          nada: { ambiente: 2, moralDe: { id: j.id, delta: 12 }, hinchada: -7,
+          /* La diferencia sale del clima del grupo, que siempre toca a los
+             once. Apoyada en el ánimo de uno solo, esta decisión se volvía
+             dominada o no según si ese día el sorteado era titular. */
+          nada: { ambiente: 8, moralDe: { id: j.id, delta: 12 }, hinchada: -7,
             texto: "Puertas adentro no se dijo nada. El plantel vio que los bancás; afuera, que no hacés nada." },
         },
       };

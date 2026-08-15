@@ -71,13 +71,45 @@ for (let i = 1; i < porNivel.length; i++) {
   }
 }
 
+// ---------------------------------------------------------------- edades
+/*
+ * El mercado no puede ser solo un asilo. Tenía 32 años de media y CERO
+ * jugadores de 23 o menos, así que reforzarse envejecía el plantel sí o sí y
+ * la mecánica de crecimiento quedaba muerta: solo crecen los de 21 o menos y
+ * no había ninguno para fichar.
+ */
+const jovenes = CATALOGO.filter((f) => f.edad <= 23).length;
+const conCrecimiento = CATALOGO.filter((f) => f.edad <= 21).length;
+if (jovenes < 4) {
+  fallas.push(`el mercado tiene ${jovenes} jugadores de 23 o menos: te obliga a envejecer`);
+}
+if (conCrecimiento < 2) {
+  fallas.push(`solo ${conCrecimiento} del mercado pueden crecer (21 o menos): ` +
+    `la mecánica de crecimiento no se puede usar`);
+}
+
+// ---------------------------------------------------------------- nombres
+for (const j of [...CATALOGO, ...ESTRELLAS, ...PLANTEL]) {
+  if (j.nombre === j.apellido || j.nombre.split(" ").includes(j.apellido)) {
+    fallas.push(`nombre mal cargado: "${j.nombre} ${j.apellido}" (${j.id})`);
+  }
+}
+const clubes = new Set([...CATALOGO, ...ESTRELLAS].map((f) => f.de));
+const sinClub = [...clubes].filter((c) => /^sin club$/i.test(c));
+if (sinClub.length > 1) fallas.push(`"sin club" escrito de ${sinClub.length} formas: ${sinClub.join(", ")}`);
+
 // ---------------------------------------------------------------- informe
 console.log(`\n  ${PLANTEL.length} en el plantel · ${CATALOGO.length} en el mercado ` +
   `· ${ESTRELLAS.length} estrellas\n`);
 console.log(`  mercado   nivel ${Math.min(...CATALOGO.map((f) => f.nivel))}` +
   `-${Math.max(...CATALOGO.map((f) => f.nivel))}`);
 console.log(`  estrellas nivel ${Math.min(...ESTRELLAS.map((f) => f.nivel))}` +
-  `-${Math.max(...ESTRELLAS.map((f) => f.nivel))}\n`);
+  `-${Math.max(...ESTRELLAS.map((f) => f.nivel))}`);
+const media = (xs: { edad: number }[]) =>
+  (xs.reduce((s, j) => s + j.edad, 0) / xs.length).toFixed(1);
+console.log(`\n  edad media: plantel ${media(PLANTEL)} · mercado ${media(CATALOGO)}` +
+  ` · estrellas ${media(ESTRELLAS)}`);
+console.log(`  en el mercado hay ${CATALOGO.filter((f) => f.edad <= 23).length} de 23 o menos\n`);
 
 if (!fallas.length) {
   console.log("  Nadie repetido, nadie fuera de su lista.\n");
