@@ -150,16 +150,30 @@ export default function Asuntos({
                 )
               )}
 
-              {o.apuesta && !esta && (
-                <span className="mt-1 block text-[10px] leading-snug" style={{ color: "var(--apagado)" }}>
-                  Sale bien: {o.apuesta.bien}. Sale mal: {o.apuesta.mal}.
-                </span>
-              )}
-              {/* Al resolverse se muestran los números del desenlace que salió,
-                  no los del que esperabas. */}
+              {/*
+                * Los dos desenlaces con sus números, no solo el bueno.
+                *
+                * Antes se veían los chips del "sale bien" y del otro lado
+                * apenas una frase. O sea que apostabas sabiendo exactamente
+                * cuánto ganabas y nada de cuánto perdías, y ahí la barra roja
+                * no significaba nada.
+                *
+                * Al resolverse queda solo el desenlace que salió: ya no hay
+                * nada que comparar.
+                */}
               {o.efecto && !descartada && (
-                <Efectos e={esta && listo && !salioBien && o.efecto.siSaleMal
-                  ? o.efecto.siSaleMal : o.efecto} />
+                esta && listo ? (
+                  <Efectos e={!salioBien && o.efecto.siSaleMal ? o.efecto.siSaleMal : o.efecto} />
+                ) : o.apuesta && o.efecto.siSaleMal ? (
+                  <span className="mt-1.5 block">
+                    <Rama color="var(--cesped)" que={`Sale bien: ${o.apuesta.bien}`}
+                          efecto={o.efecto} />
+                    <Rama color="var(--ladrillo)" que={`Sale mal: ${o.apuesta.mal}`}
+                          efecto={o.efecto.siSaleMal} />
+                  </span>
+                ) : (
+                  <Efectos e={o.efecto} />
+                )
               )}
             </button>
           );
@@ -197,6 +211,21 @@ interface OpcionUI {
  * las cuatro clases de asunto armaban sus chips por su cuenta y cada una podía
  * prometer en la escala que quisiera.
  */
+/** Uno de los dos desenlaces de una apuesta, con lo que se gana o se pierde. */
+function Rama({ color, que, efecto }: { color: string; que: string; efecto: EfectoVisible }) {
+  return (
+    <span className="mt-1 flex gap-1.5">
+      <span className="mt-[3px] w-[2px] shrink-0 rounded-full" style={{ background: color }} />
+      <span className="min-w-0 flex-1">
+        <span className="block text-[10px] leading-snug" style={{ color: "var(--apagado)" }}>
+          {que}
+        </span>
+        <Efectos e={efecto} />
+      </span>
+    </span>
+  );
+}
+
 function opcionesDe(a: Asunto, p: Partida): OpcionUI[] {
   return crudas(a, p).map((o) => ({ ...o, efecto: paraMostrar(o.efecto, p) }));
 }

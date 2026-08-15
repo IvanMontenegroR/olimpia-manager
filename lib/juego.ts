@@ -8,7 +8,15 @@ export const PLANTEL = plantelJson as unknown as Jugador[];
 const EQUIPOS = equiposJson as any[];
 const FIXTURE = fixtureJson as any[];
 
+/**
+ * El cupo de extranjeros es del torneo local. La Conmebol no lo tiene, así que
+ * en copa podés poner a los que quieras: es una de las razones por las que los
+ * equipos paraguayos arman planteles con más extranjeros de los que pueden
+ * usar el domingo.
+ */
 export const CUPO_EXTRANJEROS = 4;
+export const cupoDe = (competencia: string) =>
+  competencia === "sudamericana" ? Infinity : CUPO_EXTRANJEROS;
 export const SUB18_DESDE = "2007-01-01";
 export const esSub18 = (j: Jugador) => j.fecha_nacimiento >= SUB18_DESDE;
 
@@ -287,7 +295,7 @@ export function autoOnce(
     const cand = plantel
       .filter((j) => !usado.has(j.id))
       .sort((a, b) => nivelEf(b, puesto, ctx) - nivelEf(a, puesto, ctx));
-    const j = cand.find((c) => !c.extranjero || ext < CUPO_EXTRANJEROS);
+    const j = cand.find((c) => !c.extranjero || ext < cupoDe(ctx.competencia));
     if (j) meter(j);
   }
 
@@ -295,7 +303,7 @@ export function autoOnce(
   for (const j of [...plantel].sort((a, b) => b.nivel - a.nivel)) {
     if (elegidos.length >= 11) break;
     if (usado.has(j.id)) continue;
-    if (j.extranjero && ext >= CUPO_EXTRANJEROS) continue;
+    if (j.extranjero && ext >= cupoDe(ctx.competencia)) continue;
     meter(j);
   }
   return elegidos.slice(0, 11).map((j) => j.id);

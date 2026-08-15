@@ -16,6 +16,12 @@ export const P = {
   condExp: 0.6,
 
   desgaste90: 36,       // puntos de condición que cuesta un partido completo
+  /**
+   * Lo que le cuesta a un arquero, comparado con uno de campo. Un arquero
+   * corre en un partido una fracción de lo que corre un volante: por eso los
+   * arqueros juegan todos los partidos del año y los de campo no.
+   */
+  desgasteArquero: 0.35,
   desgasteViajeKm: 3.0, // extra cada 1000 km
   desgasteVeterano: 4,  // 33 años o más
   /**
@@ -537,6 +543,8 @@ export function simularPartido(
 export function desgastePorPartido(j: Jugador, minutos: number, ctx: ContextoPartido,
                                    actitud: Actitud): number {
   let d = P.desgaste90 * (minutos / 90);
+  // el arquero no corre lo que corre un volante, y por eso juega todo el año
+  if (j.posicion === "ARQ") d *= P.desgasteArquero;
   // viajar con tiempo también ahorra piernas, no solo pulmón
   const aclimatado = clamp(ctx.aclimatacion ?? 0, 0, 1);
   d += (ctx.viajeKm / 1000) * P.desgasteViajeKm * (1 - P.viajeAclimataMax * aclimatado);

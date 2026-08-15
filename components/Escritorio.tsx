@@ -175,6 +175,26 @@ export default function Escritorio({
         mercado: "Fichajes", bitacora: "Bitácora", copa: "Sudamericana",
         estrella: "Mercado",
       }[vista]} onVolver={() => setVista("escritorio")}>
+        {(vista === "mercado" || vista === "plantel") && (
+          <div className="mb-2 flex gap-1">
+            {([["mercado", "Mercado"], ["plantel", "Mi plantel"]] as const).map(([id, texto]) => (
+              <button key={id} onClick={() => setVista(id)}
+                className="flex-1 rounded-md py-2 text-[10px] font-bold uppercase tracking-[0.14em]"
+                style={{
+                  background: vista === id ? "var(--blanco)" : "var(--carbon)",
+                  color: vista === id ? "var(--negro)" : "var(--tenue)",
+                }}>
+                {texto}
+                {id === "plantel" && (
+                  <span className="num ml-1.5 text-[9px]"
+                        style={{ color: vista === id ? "var(--apagado)" : "var(--apagado)" }}>
+                    {plantel.length}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
         {vista === "plantel" && (
           <VistaPlantel plantel={plantel} partida={partida} onGuardarEquipos={onGuardarEquipos}
                         onMoverReserva={onMoverReserva} />

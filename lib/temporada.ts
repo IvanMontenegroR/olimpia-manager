@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  CUPO_EXTRANJEROS, MOLDE_DE, PLANTEL, bancoSugerido, esSub18, partidosDeOlimpia,
+  MOLDE_DE, PLANTEL, bancoSugerido, cupoDe, esSub18, partidosDeOlimpia,
   repartirEnMolde, salidaAutomatica, type PartidoUI,
 } from "./juego.ts";
 import {
@@ -240,13 +240,14 @@ function equiposIniciales(): EquipoGuardado[] {
   const slots = MOLDE_DE("4-3-3");
 
   const armar = (disponibles: typeof PLANTEL): string[] => {
-    // se respeta el cupo de extranjeros sacando a los que sobran por nivel
+    // el cupo es del torneo local; en copa no hay, así que ahí no saca a nadie
+    const cupo = cupoDe(ctx.competencia);
     let ext = 0;
     const elegibles = [...disponibles]
       .sort((a, b) => b.nivel - a.nivel)
       .filter((j) => {
         if (!j.extranjero) return true;
-        if (ext >= CUPO_EXTRANJEROS) return false;
+        if (ext >= cupo) return false;
         ext++;
         return true;
       });
@@ -1607,6 +1608,21 @@ export function fichar(p: Partida, fichajeId: string): Partida | null {
   };
   meterEnElOnce(n, jugador);
   aplicarAmbiente(n, 2);
+  /*
+   * Un fichaje tapa la pantalla, como una vuelta olímpica. Antes se cerraba el
+   * mercado y volvías al escritorio sin ninguna señal de que algo había
+   * pasado: pagabas medio millón y no te enterabas de si había entrado.
+   */
+  const entra = n.equipos?.[0]?.jugadores.includes(jugador.id);
+  n.hito = {
+    tipo: "fichaje",
+    titulo: `${f.nombre} ${f.apellido}`,
+    detalle: entra
+      ? `Firma con Olimpia por ${miles(f.precioUsd)}. Va derecho al once.`
+      : `Firma con Olimpia por ${miles(f.precioUsd)}. Se suma al plantel.`,
+    cifra: String(f.nivel),
+    pie: `${f.posicion} · ${f.edad} años · viene de ${f.de}`,
+  };
   n.bitacora.push({ dia: n.dia, texto:
     `Refuerzo: llega ${f.apellido} (${f.posicion}, nivel ${f.nivel}) por ${miles(f.precioUsd)}.` });
   return n;

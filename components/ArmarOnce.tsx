@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import {
-  autoOnce, bancoSugerido, CUPO_EXTRANJEROS, esSub18, mejorMolde, MOLDE_DE,
+  autoOnce, bancoSugerido, cupoDe, esSub18, mejorMolde, MOLDE_DE,
   nivelEf, nombreCorto, type PartidoUI, repartirEnMolde,
 } from "@/lib/juego.ts";
 import type { Actitud, Jugador, Posicion } from "@/engine/tipos.ts";
@@ -64,6 +64,8 @@ export default function ArmarOnce({
   estado.alineado.forEach((id, s) => { if (id) puestos.set(id, slots[s]); });
 
   const extranjeros = once.filter((j) => j.extranjero).length;
+  // en la Sudamericana no hay cupo: eso es del torneo local
+  const cupo = cupoDe(ctx.competencia);
   const sub18 = once.filter(esSub18).length;
   const arqueros = once.filter((j) => j.posicion === "ARQ").length;
   const nivelOnce = once.length === 11
@@ -74,7 +76,7 @@ export default function ArmarOnce({
     once.length !== 11
       ? `Faltan ${11 - once.length} · tocá un hueco de la cancha` :
     arqueros !== 1 ? "Necesitás un arquero" :
-    extranjeros > CUPO_EXTRANJEROS ? `${extranjeros} extranjeros, el cupo es ${CUPO_EXTRANJEROS}` :
+    extranjeros > cupo ? `${extranjeros} extranjeros, el cupo es ${cupo}` :
     null;
 
   const aplicarEquipo = (e: EquipoGuardado) => {
@@ -151,9 +153,10 @@ export default function ArmarOnce({
       <div className="flex items-stretch border-y" style={{ borderColor: "var(--linea)" }}>
         <Dato etiqueta="Once" valor={`${once.length}/11`} alerta={once.length !== 11} />
         <Dato etiqueta="Formación" valor={estado.formacion} />
-        {extranjeros >= CUPO_EXTRANJEROS && (
-          <Dato etiqueta="Extranj." valor={`${extranjeros}/${CUPO_EXTRANJEROS}`}
-                alerta={extranjeros > CUPO_EXTRANJEROS} />
+        {/* En copa no hay cupo, así que no hay nada que mirar. */}
+        {Number.isFinite(cupo) && extranjeros >= cupo && (
+          <Dato etiqueta="Extranj." valor={`${extranjeros}/${cupo}`}
+                alerta={extranjeros > cupo} />
         )}
         {sub18 === 0 && <Dato etiqueta="Sub-18" valor="0" alerta />}
         <Dato etiqueta="Nivel" valor={nivelOnce ? String(nivelOnce) : "—"} fuerte />

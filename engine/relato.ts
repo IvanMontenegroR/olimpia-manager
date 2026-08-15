@@ -23,6 +23,12 @@ export interface EventoRelato {
   momento?: Momento;
   /** Para eventos del rival: a qué jugador suyo le pasó. */
   rivalJugadorId?: string;
+  /**
+   * Cuántos días se pierde el lesionado. Se decide acá, con la semilla del
+   * partido, para que el relato pueda contar una molestia como molestia y una
+   * rotura como rotura, y para que sea el mismo número que después se guarda.
+   */
+  diasFuera?: number;
 }
 
 // ---------------------------------------------------------------- plantillas
@@ -136,13 +142,45 @@ const TRIBUNA_ARRIBA = [
   "La hinchada empuja, se viene una ola desde la popular.",
   "El estadio es una fiesta. Olimpia lo está manejando.",
 ];
-const LESION = [
-  "{j} se toca atrás del muslo y pide el cambio.",
-  "Queda tendido {j}. Entra el médico y no puede seguir.",
-  "{j} pisó mal y se resintió. No va a poder continuar.",
-  "Choque fuerte y {j} queda dolorido en el piso. No sigue.",
-  "{j} hace señas al banco agarrándose el gemelo.",
+/*
+ * Las lesiones por gravedad.
+ *
+ * Antes había una sola lista y todas decían lo mismo: "se rompió", "no puede
+ * seguir". Después el juego lo dejaba afuera una semana y el texto había
+ * anunciado una tragedia. Peor todavía, los días se sorteaban recién al
+ * terminar el partido y con Math.random, o sea que el relato no podía saber de
+ * qué estaba hablando. Ahora la gravedad se decide cuando pasa y el texto sale
+ * de ahí.
+ */
+const MOLESTIA = [
+  "{j} siente algo atrás del muslo y pide el cambio por las dudas.",
+  "{j} pisó mal y quedó dolorido. Prefiere no arriesgar.",
+  "Golpe feo y {j} le hace señas al banco. Puede caminar, pero no seguir.",
+  "{j} se toca el gemelo y pide que lo saquen a tiempo.",
 ];
+const DESGARRO = [
+  "{j} se agarró el isquiotibial y se tiró al piso. Esta vez es en serio.",
+  "Queda tendido {j}. Entra el médico y lo saca del brazo.",
+  "{j} quiso arrancar, sintió el tirón y se frenó de golpe. No sigue.",
+  "Se le fue el gemelo a {j}. Sale caminando pero con la cara desencajada.",
+];
+const ROTURA = [
+  "{j} quedó en el piso agarrándose la rodilla. No se levanta.",
+  "Choque durísimo y {j} sale en camilla. Se teme lo peor.",
+  "{j} se dobló el tobillo y se escuchó desde la platea. Sale llorando.",
+  "Se le fue la rodilla a {j} sin que nadie lo tocara. Mal asunto.",
+];
+
+/** Qué tan grave es, para el relato y para lo que después se pierde. */
+export type Gravedad = "molestia" | "desgarro" | "rotura";
+
+export function gravedadDe(dias: number): Gravedad {
+  return dias <= 12 ? "molestia" : dias <= 28 ? "desgarro" : "rotura";
+}
+
+const POR_GRAVEDAD: Record<Gravedad, string[]> = {
+  molestia: MOLESTIA, desgarro: DESGARRO, rotura: ROTURA,
+};
 
 // ---------------------------------------------------------------- helpers
 
@@ -285,10 +323,17 @@ export function relatarTramo(
     if (j.edad >= 33) pLes *= P.lesionVeterano;
     if (rng.chance(pLes * parte)) {
       const m = rng.entero(desde + 1, Math.max(hasta, desde + 1));
-      const puesto = a.puestos.get(j.id) ?? j.posicion;
+      /*
+       * Las roturas son las menos, como en el fútbol: la mayoría de las veces
+       * es una molestia de una semana y no una temporada perdida.
+       */
+      const dias = rng.chance(0.55) ? rng.entero(5, 12)
+        : rng.chance(0.7) ? rng.entero(14, 28)
+        : rng.entero(32, 75);
+      const g = gravedadDe(dias);
       sucesos.push({ min: m, hacer: () =>
-        push(m, "lesion", `${texto(rng, LESION, j)} Se queda sin ${puesto}.`,
-             { jugadorId: j.id, pausa: true }) });
+        push(m, "lesion", texto(rng, POR_GRAVEDAD[g], j),
+             { jugadorId: j.id, pausa: true, diasFuera: dias }) });
     }
   }
 

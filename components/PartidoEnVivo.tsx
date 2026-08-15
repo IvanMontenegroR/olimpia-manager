@@ -68,7 +68,15 @@ export default function PartidoEnVivo({
   const [gR, setGR] = useState(0);
   const [corriendo, setCorriendo] = useState(true);
   const [vel, setVel] = useState(0);
-  const [cambios, setCambios] = useState(3);
+  /*
+   * Cinco cambios en tres ventanas, como se juega ahora.
+   *
+   * Las dos cosas se cuentan por separado a propósito: podés meter tres de una
+   * y te queda una sola interrupción para los otros dos. Eso es lo que hace que
+   * el momento en que parás el partido sea una decisión y no un trámite.
+   */
+  const [cambios, setCambios] = useState(5);
+  const [ventanas, setVentanas] = useState(3);
   /** Lo que sumó la gente por un golazo, para pasarlo al cierre. */
   const hinchadaPorGolazos = useRef(0);
   const [actitudUsada, setActitudUsada] = useState(false);
@@ -77,7 +85,8 @@ export default function PartidoEnVivo({
   const [lesionado, setLesionado] = useState<string | null>(null);
   /** El golpe que hay que mirar antes de seguir: una lesión o una roja. */
   const [golpe, setGolpe] = useState<
-    { tipo: TipoGolpe; jugadorId: string; minuto: number; texto: string } | null>(null);
+    { tipo: TipoGolpe; jugadorId: string; minuto: number; texto: string;
+      diasFuera?: number } | null>(null);
   const [momento, setMomento] = useState<Momento | null>(null);
   const [resueltoMomento, setResuelto] = useState<ResueltoMomento | null>(null);
 
@@ -159,7 +168,7 @@ export default function PartidoEnVivo({
         if (les?.jugadorId) {
           setLesionado(les.jugadorId);
           setGolpe({ tipo: "lesion", jugadorId: les.jugadorId,
-                     minuto: les.minuto, texto: les.texto });
+                     minuto: les.minuto, texto: les.texto, diasFuera: les.diasFuera });
           setCorriendo(false);
         }
         const roja = ahora.find((e) => e.tipo === "roja");
@@ -209,6 +218,8 @@ export default function PartidoEnVivo({
     setPuestos(nuevosPuestos);
     setBanco(nuevoBanco);
     setCambios((c) => c - pares.length);
+    // parar el partido cuesta una ventana, metas uno o metas tres
+    setVentanas((v) => v - 1);
     if (lesionado && salen.includes(lesionado)) setLesionado(null);
 
     const detalle = pares.map(([s, e]) => `sale ${s.apellido}, entra ${e.apellido}`).join("; ");
@@ -256,7 +267,7 @@ export default function PartidoEnVivo({
     }
     if (r.gastaCambio) {
       const entra = banco.find((j) => j.posicion !== "ARQ");
-      if (entra && cambios > 0) {
+      if (entra && cambios > 0 && ventanas > 0) {
         nuevoOnce = once.map((j) => (j.id === r.gastaCambio ? entra : j));
         nuevoBanco = banco.filter((j) => j.id !== entra.id);
         nuevosPuestos.set(entra.id, puestos.get(r.gastaCambio) ?? entra.posicion);
@@ -264,6 +275,7 @@ export default function PartidoEnVivo({
         setBanco(nuevoBanco);
         setPuestos(nuevosPuestos);
         setCambios((c) => c - 1);
+        setVentanas((v) => v - 1);
       }
     }
 
@@ -386,8 +398,12 @@ export default function PartidoEnVivo({
       amarillas: visibles.filter((e) => e.tipo === "amarilla" && e.jugadorId)
         .map((e) => e.jugadorId!),
       rojas: visibles.filter((e) => e.tipo === "roja" && e.jugadorId).map((e) => e.jugadorId!),
+      /* Los días salen del propio evento, que ya los trae sorteados con la
+         semilla del partido. Antes se volvían a sortear acá con Math.random,
+         así que el relato podía anunciar una rotura y el jugador volvía en una
+         semana, y encima el mismo partido daba resultados distintos. */
       lesionados: visibles.filter((e) => e.tipo === "lesion" && e.jugadorId)
-        .map((e) => ({ id: e.jugadorId!, dias: 7 + Math.floor(Math.random() * 30) })),
+        .map((e) => ({ id: e.jugadorId!, dias: e.diasFuera ?? 14 })),
       goleadores: visibles.filter((e) => e.tipo === "gol" && e.jugadorId).map((e) => e.jugadorId!),
       // los golazos de los momentos levantan a la gente más allá del resultado
       hinchadaExtra: hinchadaPorGolazos.current,
@@ -511,10 +527,14 @@ export default function PartidoEnVivo({
               {VELOCIDADES[vel].etiqueta}
             </button>
             <button onClick={() => { setCorriendo(false); setPanel("cambio"); }}
-              disabled={cambios === 0}
+              disabled={cambios === 0 || ventanas === 0}
               className="flex-1 rounded py-2.5 text-[11px] font-bold uppercase tracking-wider"
-              style={{ background: "var(--carbon)", color: cambios ? "var(--blanco)" : "var(--apagado)" }}>
+              style={{ background: "var(--carbon)",
+                       color: cambios && ventanas ? "var(--blanco)" : "var(--apagado)" }}>
               Cambios · {cambios}
+              <span className="ml-1 text-[9px]" style={{ color: "var(--apagado)" }}>
+                {ventanas} {ventanas === 1 ? "parada" : "paradas"}
+              </span>
             </button>
             {/* muestra la actitud puesta, con su color */}
             <button onClick={() => { if (!actitudUsada) { setCorriendo(false); setPanel("actitud"); } }}
@@ -626,7 +646,8 @@ export default function PartidoEnVivo({
         if (!j) return null;
         return (
           <Golpe tipo={golpe.tipo} jugador={j} minuto={golpe.minuto} texto={golpe.texto}
-                 cambiosRestantes={cambios}
+                 diasFuera={golpe.diasFuera}
+                 cambiosRestantes={ventanas > 0 ? cambios : 0}
                  onCambiar={() => {
                    setGolpe(null);
                    setSalen([j.id]);

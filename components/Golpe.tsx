@@ -14,36 +14,61 @@ import type { Jugador } from "@/engine/tipos.ts";
 
 export type TipoGolpe = "lesion" | "roja";
 
-const ESTILOS: Record<TipoGolpe, {
-  rotulo: string; titulo: string; color: string; fondo: string;
-}> = {
-  lesion: {
-    rotulo: "se rompió",
-    titulo: "NO PUEDE SEGUIR",
-    color: "#e0902a",
-    fondo: "radial-gradient(120% 90% at 50% 30%, #3a2a12, #0a120d 70%)",
-  },
-  roja: {
-    rotulo: "roja directa",
-    titulo: "TE QUEDÁS CON DIEZ",
-    color: "#c0392b",
+/*
+ * Una molestia no es una rotura. Todas las lesiones decían "se rompió" y "no
+ * puede seguir", y después el jugador volvía en seis días: la pantalla gritaba
+ * una tragedia que el juego no cumplía. Acá se dice lo que va a pasar de
+ * verdad, con los días a la vista.
+ */
+function estiloLesion(dias: number) {
+  if (dias <= 12) {
+    return {
+      rotulo: "se resintió", titulo: "PIDE EL CAMBIO", color: "#d9a832",
+      fondo: "radial-gradient(120% 90% at 50% 30%, #3a3212, #0a120d 70%)",
+    };
+  }
+  if (dias <= 28) {
+    return {
+      rotulo: "desgarro", titulo: "NO PUEDE SEGUIR", color: "#e0902a",
+      fondo: "radial-gradient(120% 90% at 50% 30%, #3a2a12, #0a120d 70%)",
+    };
+  }
+  return {
+    rotulo: "se rompió", titulo: "SE PIERDE LA TEMPORADA", color: "#c0392b",
     fondo: "radial-gradient(120% 90% at 50% 30%, #3a1616, #0a120d 70%)",
-  },
+  };
+}
+
+const ROJA = {
+  rotulo: "roja directa",
+  titulo: "TE QUEDÁS CON DIEZ",
+  color: "#c0392b",
+  fondo: "radial-gradient(120% 90% at 50% 30%, #3a1616, #0a120d 70%)",
 };
 
+/** Cuánto tiempo se pierde, en la unidad que se entiende. */
+function tiempoFuera(dias: number): string {
+  if (dias <= 10) return `${dias} días afuera`;
+  const semanas = Math.round(dias / 7);
+  if (semanas < 9) return `${semanas} semanas afuera`;
+  return `${Math.round(dias / 30)} meses afuera`;
+}
+
 export default function Golpe({
-  tipo, jugador, minuto, texto, cambiosRestantes, onCambiar, onSeguir,
+  tipo, jugador, minuto, texto, diasFuera, cambiosRestantes, onCambiar, onSeguir,
 }: {
   tipo: TipoGolpe;
   jugador: Jugador;
   minuto: number;
   texto: string;
+  /** Cuánto se pierde, si fue lesión. */
+  diasFuera?: number;
   /** Cuántos cambios te quedan. Sin ninguno, no hay nada que decidir. */
   cambiosRestantes: number;
   onCambiar: () => void;
   onSeguir: () => void;
 }) {
-  const e = ESTILOS[tipo];
+  const e = tipo === "roja" ? ROJA : estiloLesion(diasFuera ?? 20);
   const puedeCambiar = tipo === "lesion" && cambiosRestantes > 0;
 
   return (
@@ -70,6 +95,13 @@ export default function Golpe({
             style={{ color: e.color }}>
         {e.titulo}
       </span>
+      {/* cuánto se pierde, que es lo que de verdad importa decidir */}
+      {tipo === "lesion" && diasFuera !== undefined && (
+        <span className="num relative mt-1 rounded px-2 py-0.5 text-[11px] font-extrabold"
+              style={{ background: e.color, color: "#0a120d" }}>
+          {tiempoFuera(diasFuera)}
+        </span>
+      )}
       <p className="relative mt-1.5 max-w-[280px] text-center text-[12px] leading-snug"
          style={{ color: "var(--tenue)" }}>
         {texto}

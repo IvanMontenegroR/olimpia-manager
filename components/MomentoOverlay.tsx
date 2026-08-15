@@ -62,22 +62,22 @@ export default function MomentoOverlay({
 
   useEffect(() => {
     if (resuelto) return;
-    const t = setInterval(() => {
-      setRestante((r) => {
-        if (r <= 1) {
-          clearInterval(t);
-          if (!yaElegido.current) {
-            yaElegido.current = true;
-            setElegida(momento.porDefecto);
-            onElegir(momento.porDefecto);
-          }
-          return 0;
-        }
-        return r - 1;
-      });
-    }, 100);
+    const t = setInterval(() => setRestante((r) => Math.max(0, r - 1)), 100);
     return () => clearInterval(t);
-  }, [momento, resuelto, onElegir]);
+  }, [resuelto]);
+
+  /*
+   * Que se acabe el tiempo avisa al partido desde acá y no desde adentro del
+   * setRestante. Meter el aviso en el updater lo hacía correr durante el
+   * render, y React se quejaba de que un componente cambia el estado de otro
+   * mientras se dibuja: eso podía disparar la opción por defecto dos veces.
+   */
+  useEffect(() => {
+    if (resuelto || restante > 0 || yaElegido.current) return;
+    yaElegido.current = true;
+    setElegida(momento.porDefecto);
+    onElegir(momento.porDefecto);
+  }, [restante, resuelto, momento, onElegir]);
 
   const idElegida = elegida ?? momento.porDefecto;
   const chanceElegida = chanceDe(momento, idElegida, alineacion, ctx);
