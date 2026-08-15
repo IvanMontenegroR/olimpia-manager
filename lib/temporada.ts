@@ -321,7 +321,7 @@ export function partidaNueva(): Partida {
     estrellasVistas: [],
     copa: { ronda: "octavos", rivalId: "vasco_da_gama", globalO: 0, globalR: 0, jugadosEnRonda: 0 },
     ofertas: [],
-    fichajes: generarMercado(DIA_INICIAL),
+    fichajes: generarMercado(DIA_INICIAL, 6, [], PLANTEL),
     pendientes: [],
     bitacora: [{ dia: DIA_INICIAL, texto: "Arranca la pretemporada del Clausura." }],
   };
@@ -1192,6 +1192,19 @@ export function avanzarUnDia(p: Partida): ResultadoAvance {
   const novedades: string[] = [];
   n.dia = sumarDias(p.dia, 1);
   const rng = new Rng(`dia-${n.dia}-${n.fechaActual}`);
+
+  /*
+   * El mercado se renueva cada quince días y se arma contra el plantel que
+   * tenés HOY. Antes se sorteaba una sola vez al empezar la partida y del
+   * catálogo entero: veías los mismos seis nombres toda la temporada, y la
+   * mitad eran peores que tu titular de ese puesto.
+   */
+  if (diasEntre(DIA_INICIAL, n.dia) % 15 === 0) {
+    n.fichajes = generarMercado(
+      `mercado-${n.dia}`, 6,
+      plantelDe(n).map((j) => j.id),
+      plantelDe(n).filter((j) => !j.reserva));
+  }
 
   /*
    * El primero de cada mes se paga la planilla. Es lo único que hace que la

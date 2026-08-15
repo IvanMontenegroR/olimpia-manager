@@ -67,7 +67,15 @@ export default function PartidoEnVivo({
   const [gO, setGO] = useState(0);
   const [gR, setGR] = useState(0);
   const [corriendo, setCorriendo] = useState(true);
-  const [vel, setVel] = useState(0);
+  /*
+   * Qué tan importante es este partido.
+   *
+   * Una noche de Conmebol y un clásico no se miran como una fecha cualquiera
+   * del Clausura: se ven jugada por jugada. El resto del torneo son veintidós
+   * partidos y adelantarlos es lo normal, así que arrancan al doble.
+   */
+  const grande = ctx.competencia === "sudamericana" || ctx.esClasico;
+  const [vel, setVel] = useState(grande ? 0 : 1);
   /*
    * Cinco cambios en tres ventanas, como se juega ahora.
    *
@@ -421,15 +429,29 @@ export default function PartidoEnVivo({
   const golDe: "olimpia" | "rival" | null =
     ultimo?.tipo === "gol" ? "olimpia" : ultimo?.tipo === "gol_rival" ? "rival" : null;
   const act = ACTITUD[actitud];
+  /** El color del partido, si es de los que valen distinto. */
+  const acento = ctx.esClasico ? "#c0392b"
+    : ctx.competencia === "sudamericana" ? "#5fb0e8" : null;
   const faltaAsignar = salen.some((s) => !entran[s]);
 
   return (
     <div className="app">
       {/* ---------- marcador ---------- */}
-      <header className="px-4 pb-2 pt-2.5">
+      <header className="relative px-4 pb-2 pt-2.5"
+              style={{ background: acento
+                ? `linear-gradient(180deg, color-mix(in srgb, ${acento} 22%, transparent), transparent)`
+                : undefined }}>
+        {/* La noche de copa y el clásico se anuncian desde el encabezado: el
+            rótulo se enciende y el estadio queda abajo. Un partido que vale
+            distinto tiene que verse distinto desde antes del pitazo. */}
         <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.18em]"
              style={{ color: "var(--tenue)" }}>
-          <span className="shrink-0">{partido.etiqueta}</span>
+          <span className="shrink-0 rounded px-1.5 py-0.5 font-extrabold"
+                style={acento
+                  ? { background: acento, color: "#0a120d", letterSpacing: "0.16em" }
+                  : undefined}>
+            {ctx.esClasico ? "CLÁSICO" : partido.etiqueta}
+          </span>
           <span className="truncate pl-2">{partido.estadio}</span>
         </div>
         {/* cada equipo de su lado, marcador y reloj en el medio */}
@@ -528,11 +550,15 @@ export default function PartidoEnVivo({
               style={{ background: "var(--blanco)", color: "var(--negro)" }}>
               {corriendo ? "❚❚" : "▶"}
             </button>
-            <button onClick={() => setVel((v) => (v + 1) % VELOCIDADES.length)}
-              className="w-12 rounded py-2.5 text-[11px] font-bold"
-              style={{ background: "var(--carbon)", color: "var(--tenue)" }}>
-              {VELOCIDADES[vel].etiqueta}
-            </button>
+            {/* Los partidos grandes se juegan a tiempo real y no se adelantan:
+                si pudieras pasarlos rápido dejarían de sentirse distintos. */}
+            {!grande && (
+              <button onClick={() => setVel((v) => (v + 1) % VELOCIDADES.length)}
+                className="w-12 rounded py-2.5 text-[11px] font-bold"
+                style={{ background: "var(--carbon)", color: "var(--tenue)" }}>
+                {VELOCIDADES[vel].etiqueta}
+              </button>
+            )}
             <button onClick={() => { setCorriendo(false); setPanel("cambio"); }}
               disabled={cambios === 0 || ventanas === 0}
               className="flex-1 rounded py-2.5 text-[11px] font-bold uppercase tracking-wider"

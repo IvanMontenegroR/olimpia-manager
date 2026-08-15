@@ -1,6 +1,6 @@
 import fichajesJson from "@/data/fichajes.json";
 import { Rng } from "./rng.ts";
-import type { Jugador, Posicion, Rasgo } from "./tipos.ts";
+import { LINEA_DE, type Jugador, type Posicion, type Rasgo } from "./tipos.ts";
 
 /**
  * Mercado de pases, versión mínima del documento: comprar, vender y nada de
@@ -75,12 +75,48 @@ export interface FichajeGenerado {
   nota: string;
 }
 
+/** Cuántos de cada línea juegan, para saber a quién le tiene que ganar. */
+const TITULARES_POR_LINEA: Record<string, number> = { ARQ: 1, DEF: 4, MED: 3, DEL: 3 };
+
+/**
+ * Solo los que te mejoran el once.
+ *
+ * El mercado sorteaba del catálogo entero, así que la mitad de lo que te
+ * ofrecía era peor que tu titular de ese puesto: nadie paga dos millones por
+ * un central que va a mirar el partido desde el banco.
+ *
+ * La vara es ganarle al más flojo de los que hoy juegan en su línea, no al
+ * mejor. Contra el mejor sería imposible: si tenés un nueve de 74, no habría
+ * un solo delantero del catálogo que pase, y el mercado se quedaría sin
+ * delanteros para siempre. Ganarle a uno de los once es lo que lo convierte en
+ * un refuerzo de verdad.
+ */
+function mejoraAlPlantel(f: { posicion: Posicion; nivel: number }, plantel: PlantelBase): boolean {
+  const linea = LINEA_DE[f.posicion];
+  const suyos = plantel.filter((j) => LINEA_DE[j.posicion] === linea)
+    .sort((a, b) => b.nivel - a.nivel);
+  if (!suyos.length) return true;
+  const cuantos = TITULARES_POR_LINEA[linea] ?? 3;
+  const masFlojoQueJuega = suyos[Math.min(cuantos, suyos.length) - 1].nivel;
+  return f.nivel > masFlojoQueJuega;
+}
+
+type PlantelBase = { posicion: Posicion; nivel: number }[];
+
 export function generarMercado(
-  semilla: string, cantidad = 6, yaEstan: string[] = [],
+  semilla: string, cantidad = 6, yaEstan: string[] = [], plantel: PlantelBase = [],
 ): FichajeGenerado[] {
   const rng = new Rng(`mercado-${semilla}`);
   const dentro = new Set(yaEstan);
-  const libres = CATALOGO.filter((f) => !dentro.has(f.id));
+  const utiles = CATALOGO.filter((f) => !dentro.has(f.id) && mejoraAlPlantel(f, plantel));
+  /*
+   * Si ya sos tan bueno que nadie del catálogo te mejora, el mercado no queda
+   * vacío: se muestra lo mejor que hay, que es la señal de que a esta altura
+   * los refuerzos ya no vienen de acá sino de una estrella.
+   */
+  const libres = utiles.length >= cantidad ? utiles
+    : [...CATALOGO.filter((f) => !dentro.has(f.id))]
+        .sort((a, b) => b.nivel - a.nivel).slice(0, Math.max(cantidad, 8));
   const lista: FichajeGenerado[] = [];
   const usados = new Set<string>();
 

@@ -267,7 +267,7 @@ export function relatarTramo(
       push(m, "gol", "GOL. " + texto(rng, banco, j), { jugadorId: j.id });
       // El gol ya pasaba y vos mirabas. Adónde va a festejar sí es tuyo, y no
       // toca el resultado: mueve a la gente y puede costar una amarilla.
-      if (!yaVistos.has("festejo") && rng.chance(0.2)) {
+      if (!yaVistos.has("festejo") && rng.chance(0.2 * peso)) {
         const fest = generarMomento("festejo", m, a, ctx, rng, j.id);
         if (fest) push(m, "momento", fest.titulo, { pausa: true, momento: fest, jugadorId: j.id });
       }
@@ -363,8 +363,16 @@ export function relatarTramo(
         : rng.elegir(TRIBUNA_ABAJO)) });
   }
 
-  // Momentos: decisiones con el reloj corriendo. Poco frecuentes a propósito,
-  // para que cuando aparezcan pesen.
+  /*
+   * Momentos: decisiones con el reloj corriendo. Poco frecuentes a propósito,
+   * para que cuando aparezcan pesen.
+   *
+   * En la copa y en el clásico aparecen bastante más. Son los partidos que el
+   * juego quiere que mires jugada por jugada, y un partido que vale distinto
+   * tiene que además pedirte más: si te frena lo mismo que un miércoles contra
+   * Rubio Ñú, la diferencia es solo el escudo.
+   */
+  const peso = ctx.esClasico ? 1.9 : ctx.competencia === "sudamericana" ? 1.7 : 1;
   const posibles: [Parameters<typeof generarMomento>[0], number][] = [
     ["penal_favor", 0.09],
     ["penal_contra", 0.08],
@@ -373,7 +381,7 @@ export function relatarTramo(
     ["rival_con_diez", 0.10],
   ];
   for (const [tipo, prob] of posibles) {
-    if (!rng.chance(prob * parte)) continue;
+    if (!rng.chance(Math.min(0.75, prob * peso) * parte)) continue;
     const m = rng.entero(desde + 2, Math.max(hasta - 2, desde + 3));
     const momento = generarMomento(tipo, m, a, ctx, rng);
     if (!momento) continue;
@@ -391,7 +399,7 @@ export function relatarTramo(
     sucesos.push({ min: m, hacer: () => {
       // sirve igual arriba que abajo por uno: en los dos casos hay que decidir
       // cómo se juegan los últimos veinte
-      if (Math.abs(gO - gR) !== 1 || !rng.chance(0.5)) return;
+      if (Math.abs(gO - gR) !== 1 || !rng.chance(Math.min(0.9, 0.5 * peso))) return;
       const cerrar = generarMomento("cerrar_o_seguir", m, a, ctx, rng, undefined, [gO, gR]);
       if (cerrar) push(m, "momento", cerrar.titulo, { pausa: true, momento: cerrar });
     }});
@@ -401,7 +409,7 @@ export function relatarTramo(
   // última pelota y estás uno abajo: si fuera siempre, dejaría de ser eso.
   if (hasta >= 89) {
     sucesos.push({ min: 90, hacer: () => {
-      if (gR - gO !== 1 || !rng.chance(0.5)) return;
+      if (gR - gO !== 1 || !rng.chance(Math.min(0.9, 0.5 * peso))) return;
       const corner = generarMomento("arquero_al_area", 90, a, ctx, rng);
       if (corner) push(90, "momento", corner.titulo, { pausa: true, momento: corner });
     }});
@@ -409,7 +417,7 @@ export function relatarTramo(
 
   // Penal sobre la hora, solo si el partido está para definirse. Es el momento
   // con más peso del juego y por eso está condicionado, no librado al azar.
-  if (hasta >= 88 && Math.abs(gO - gR) <= 1 && rng.chance(0.12)) {
+  if (hasta >= 88 && Math.abs(gO - gR) <= 1 && rng.chance(0.12 * peso)) {
     const m = rng.entero(88, 90);
     const ultimo = generarMomento("penal_ultima", m, a, ctx, rng);
     if (ultimo) sucesos.push({ min: m, hacer: () =>
