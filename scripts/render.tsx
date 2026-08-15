@@ -11,6 +11,10 @@
 
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import MomentoOverlay from "@/components/MomentoOverlay.tsx";
+import {
+  generarMomento, resolverMomento, type TipoMomento,
+} from "@/engine/momentos.ts";
 
 void React;
 import Asuntos from "@/components/Asuntos.tsx";
@@ -21,9 +25,10 @@ import Escritorio from "@/components/Escritorio.tsx";
 import { ESTRELLAS } from "@/engine/estrellas.ts";
 import { sortearSituacion } from "@/engine/situaciones.ts";
 import { sortearOferta } from "@/engine/mercado.ts";
+import { salidaAutomatica } from "@/lib/juego.ts";
 import { Rng } from "@/engine/rng.ts";
 import {
-  fichar, ficharEstrella, partidaNueva, plantelDe, sumarDias,
+  fichar, ficharEstrella, partidaNueva, partidoDe, plantelDe, sumarDias,
   type Asunto, type Partida,
 } from "@/lib/temporada.ts";
 
@@ -156,6 +161,38 @@ for (const [que, p2] of escritorios) {
                   onFicharEstrella={() => {}} onRechazarEstrella={() => {}} />,
     );
   });
+}
+
+/*
+ * Los momentos del partido, antes y después de elegir. Es donde vive la barra
+ * que cambia de forma según el momento: dos tramos, la escala del pibe o el
+ * arco entero del penal en contra.
+ */
+{
+  const p0 = partidaNueva();
+  const m0 = partidoDe(p0)!;
+  const sal = salidaAutomatica(m0, plantelDe(p0), { minutos: 0, partidosRestantes: 22 });
+  const ali = { once: sal.once, suplentes: sal.suplentes,
+                actitud: "equilibrado" as const, puestos: sal.puestos };
+  const tipos: TipoMomento[] = [
+    "penal_favor", "penal_ultima", "penal_contra", "tiro_libre", "mano_a_mano",
+    "jugador_caliente", "festejo", "arquero_al_area", "cerrar_o_seguir", "rival_con_diez",
+  ];
+  for (const tipo of tipos) {
+    const mom = generarMomento(tipo, 60, ali, m0.ctx, new Rng(`r-${tipo}`), sal.once[4].id, [1, 1]);
+    if (!mom) { fallas.push(`momento ${tipo}: no se genera`); continue; }
+    for (const o of mom.opciones) {
+      const res = resolverMomento(mom, o.id, ali, m0.ctx, new Rng(`rr-${tipo}-${o.id}`));
+      for (const [cuando, r] of [["sin elegir", null], ["resuelto", res]] as const) {
+        probar(`momento ${tipo}/${o.id} ${cuando}`, () => {
+          renderToStaticMarkup(
+            <MomentoOverlay momento={mom} resuelto={r} alineacion={ali} ctx={m0.ctx}
+                            onElegir={() => {}} onSeguir={() => {}} />,
+          );
+        });
+      }
+    }
+  }
 }
 
 // ----------------------------------------------------------------

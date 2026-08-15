@@ -29,6 +29,8 @@ interface FichajeDelCatalogo {
   edad: number;
   nacionalidad: string;
   nivel: number;
+  /** Hasta dónde puede llegar, en los que todavía crecen. */
+  potencial?: number;
   de: string;
   rasgos: Rasgo[];
   nota: string;
@@ -65,6 +67,13 @@ export interface FichajeGenerado {
   nacionalidad: string;
   extranjero: boolean;
   nivel: number;
+  /**
+   * Hasta dónde puede llegar, si es de los que todavía crecen. Un pibe de
+   * veinte a 64 no se ve atractivo al lado de un veterano a 71, y sin embargo
+   * es el mejor negocio del mercado: lo que lo hace atractivo es el techo, así
+   * que hay que mostrarlo.
+   */
+  potencial?: number;
   precioUsd: number;
   sueldoUsd: number;
   valorComercial: number;
@@ -134,6 +143,7 @@ export function generarMercado(
       nacionalidad: f.nacionalidad,
       extranjero,
       nivel: f.nivel,
+      potencial: f.potencial,
       precioUsd: precioDe(f.nivel, f.edad),
       sueldoUsd: Math.round((f.nivel - 40) * 900),
       valorComercial: extranjero && f.edad <= 28 ? 3 : f.edad <= 31 ? 2 : 1,

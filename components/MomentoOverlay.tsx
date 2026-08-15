@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { chanceDe, riesgoDe, type Momento, type ResueltoMomento } from "@/engine/momentos.ts";
+import {
+  chanceDe, riesgoDe, zonaDelArquero, type Momento, type ResueltoMomento,
+} from "@/engine/momentos.ts";
 import type { Alineacion, ContextoPartido } from "@/engine/tipos.ts";
 import Sorteo from "./Sorteo.tsx";
 
@@ -29,7 +31,7 @@ const TRAMOS: Partial<Record<string, [string, string, string?]>> = {
   penal_ultima:     ["GOL", "AFUERA"],
   tiro_libre:       ["GOL", "NO ENTRA", "CONTRA"],
   mano_a_mano:      ["GOL", "NO ENTRA", "CONTRA"],
-  penal_contra:     ["LA ATAJA", "GOL RIVAL", "REBOTE Y GOL"],
+  penal_contra:     ["LA ATAJA", "GOL RIVAL"],
   jugador_caliente: ["AGUANTA", "ROJA"],
   festejo:          ["ZAFA", "AMARILLA"],
   arquero_al_area:  ["GOL", "NADA", "ARCO VACÍO"],
@@ -130,6 +132,10 @@ export default function MomentoOverlay({
           {momento.opciones.map((o) => {
             const chance = chanceDe(momento, o.id, alineacion, ctx);
             const riesgo = riesgoDe(momento, o.id);
+            /* En el penal en contra la barra no es una probabilidad: es el
+               arco, y lo verde es lo que el arquero alcanza a tapar. */
+            const z = momento.tipo === "penal_contra"
+              ? zonaDelArquero(alineacion, ctx, o.id) : null;
             const esta = resuelto !== null && o.id === idElegida;
             /* Las descartadas se achican pero no se van: parte de la gracia es
                ver la barra que dejaste pasar. */
@@ -174,8 +180,28 @@ export default function MomentoOverlay({
                         exito={resuelto!.exito}
                         enRiesgo={!!resuelto!.porElRiesgo}
                         bien={tramos[0]} mal={tramos[1]} peor={tramos[2]}
+                        zona={z && resuelto!.dondeFue !== undefined
+                          ? { desde: z.desde, hasta: z.hasta, donde: resuelto!.dondeFue }
+                          : undefined}
                         semilla={momento.minuto * 7 + o.id.length}
                         onTermina={() => setListo(true)} />
+                    ) : z ? (
+                      // el arco entero, con lo que tapás marcado en verde
+                      <span className="mt-1.5 block">
+                        <span className="relative flex h-2 overflow-hidden rounded-full"
+                              style={{ background: "#c0392b" }}>
+                          <span className="absolute inset-y-0"
+                                style={{ left: `${z.desde * 100}%`,
+                                         width: `${(z.hasta - z.desde) * 100}%`, background: color }} />
+                          {[33.3, 66.6].map((x) => (
+                            <span key={x} className="absolute inset-y-0"
+                                  style={{ left: `${x}%`, width: 1, background: "#ffffff22" }} />
+                          ))}
+                        </span>
+                        <span className="mt-0.5 block text-[9px]" style={{ color: "var(--apagado)" }}>
+                          el arco de palo a palo · lo verde es lo que llega a tapar
+                        </span>
+                      </span>
                     ) : chance !== null && (
                       // la franja oscura se recorta del tramo del que sale, que
                       // no siempre es el del fallo

@@ -25,6 +25,19 @@ const REMATE = 620;
  * traés a ciegas. La barra deja de tener dos tramos y pasa a ser la escala
  * entera, y la bolilla frena en el número que salió.
  */
+/**
+ * Cuando la barra no es una probabilidad sino un lugar: el arco, de palo a
+ * palo, con lo que el arquero alcanza a tapar. La pelota cae donde cae y si
+ * cae adentro de la zona, la sacó.
+ */
+export interface ZonaSorteo {
+  /** Lo que tapa el arquero, de 0 a 1 sobre el arco. */
+  desde: number;
+  hasta: number;
+  /** Dónde pegó el remate, de 0 a 1. */
+  donde: number;
+}
+
 export interface RangoSorteo {
   min: number;
   max: number;
@@ -80,7 +93,7 @@ export function tramosDe({ chance, riesgo, riesgoSobre, exito, enRiesgo, semilla
 
 export default function Sorteo({
   chance, riesgo, riesgoSobre = "fallo", exito, enRiesgo = false,
-  bien, mal, peor, semilla, rango, onTermina,
+  bien, mal, peor, semilla, rango, zona, onTermina,
 }: {
   /** Lo que decía la barra antes de elegir, 0 a 1. */
   chance: number;
@@ -103,6 +116,8 @@ export default function Sorteo({
   semilla: number;
   /** Si viene, la barra es una escala y no dos tramos. */
   rango?: RangoSorteo;
+  /** Si viene, la barra es el arco y la zona es lo que tapás. */
+  zona?: ZonaSorteo;
   onTermina: () => void;
 }) {
   const [pos, setPos] = useState(0);
@@ -117,10 +132,11 @@ export default function Sorteo({
 
   /** Dónde frena: en la escala, el número exacto; si no, adentro del tramo. */
   const destino = useRef(
-    rango
-      ? Math.max(2, Math.min(98,
-          ((rango.valor - rango.min) / Math.max(1, rango.max - rango.min)) * 100))
-      : t.donde,
+    zona ? Math.max(1.5, Math.min(98.5, zona.donde * 100))
+      : rango
+        ? Math.max(2, Math.min(98,
+            ((rango.valor - rango.min) / Math.max(1, rango.max - rango.min)) * 100))
+        : t.donde,
   ).current;
 
   useEffect(() => {
@@ -189,8 +205,12 @@ export default function Sorteo({
               boxShadow: frenado ? `0 0 22px ${color}66` : "none",
               transition: "box-shadow 200ms ease-out",
             }}>
-        {/* con rango la barra es la escala entera; si no, lo que tenías a favor */}
-        {rango ? (
+        {/* con zona la barra es el arco: rojo todo, verde lo que tapás */}
+        {zona ? (
+          <span className="absolute inset-y-0"
+                style={{ left: `${zona.desde * 100}%`,
+                         width: `${(zona.hasta - zona.desde) * 100}%`, background: "#3fa76a" }} />
+        ) : rango ? (
           <span className="absolute inset-0"
                 style={{ background: "linear-gradient(90deg, #c0392b, #d9a832 52%, #3fa76a)" }} />
         ) : (
@@ -198,7 +218,7 @@ export default function Sorteo({
                 style={{ width: `${pct}%`, background: "#3fa76a" }} />
         )}
         {/* la parte que además termina en gol del rival */}
-        {riesgo !== null && (
+        {riesgo !== null && !zona && (
           <span className="absolute inset-y-0"
                 style={{ left: `${desdeRiesgo}%`, width: `${hastaRiesgo - desdeRiesgo}%`,
                          background: "#7a1f16" }} />
@@ -207,11 +227,16 @@ export default function Sorteo({
         <span className="absolute inset-0" style={{
           backgroundImage: "repeating-linear-gradient(90deg, transparent 0 8px, rgba(0,0,0,0.16) 8px 9px)",
         }} />
-        {/* la división entre ganar y perder; en la escala no hay ninguna */}
-        {!rango && (
+        {/* la división entre ganar y perder; en la escala y en el arco no hay */}
+        {!rango && !zona && (
           <span className="absolute inset-y-0"
                 style={{ left: `${pct}%`, width: 1, background: "#0a120daa" }} />
         )}
+        {/* los tres palos del arco, para que se lea como un arco */}
+        {zona && [33.3, 66.6].map((x) => (
+          <span key={x} className="absolute inset-y-0"
+                style={{ left: `${x}%`, width: 1, background: "#ffffff22" }} />
+        ))}
 
         {/* la bolilla */}
         <span className="absolute inset-y-0"

@@ -6,7 +6,7 @@
     "posicion": "EI",
     "edad": 36,
     "nacionalidad": "PAR",
-    "nivel": 68,
+    "nivel": 70,
     "de": "Libertad",
     "rasgos": [
       "juego_aereo"
@@ -48,7 +48,7 @@
     "posicion": "MCO",
     "edad": 34,
     "nacionalidad": "PER",
-    "nivel": 69,
+    "nivel": 71,
     "de": "Cienciano",
     "rasgos": [
       "definicion_irregular"
@@ -112,7 +112,7 @@
     "posicion": "ED",
     "edad": 33,
     "nacionalidad": "PAR",
-    "nivel": 67,
+    "nivel": 70,
     "de": "Sin club",
     "rasgos": [
       "definicion_irregular"
@@ -126,7 +126,7 @@
     "posicion": "DC",
     "edad": 35,
     "nacionalidad": "PAR",
-    "nivel": 68,
+    "nivel": 70,
     "de": "Cerro Porteño",
     "rasgos": [
       "juego_aereo"
@@ -192,7 +192,7 @@
     "posicion": "DC",
     "edad": 28,
     "nacionalidad": "PAR",
-    "nivel": 69,
+    "nivel": 71,
     "de": "Cerro Porteño",
     "rasgos": [
       "definidor"
@@ -235,7 +235,7 @@
     "posicion": "DC",
     "edad": 30,
     "nacionalidad": "ECU",
-    "nivel": 68,
+    "nivel": 70,
     "de": "Toluca",
     "rasgos": [
       "juego_aereo"
@@ -263,7 +263,7 @@
     "posicion": "SD",
     "edad": 33,
     "nacionalidad": "URU",
-    "nivel": 69,
+    "nivel": 71,
     "de": "Internacional",
     "rasgos": [
       "definidor"
@@ -289,7 +289,7 @@
     "posicion": "MCO",
     "edad": 34,
     "nacionalidad": "VEN",
-    "nivel": 69,
+    "nivel": 71,
     "de": "Athletico Paranaense",
     "rasgos": [
       "definidor"
@@ -303,40 +303,12 @@
     "posicion": "DC",
     "edad": 36,
     "nacionalidad": "ARG",
-    "nivel": 68,
+    "nivel": 70,
     "de": "Newell's",
     "rasgos": [
       "definidor"
     ],
     "nota": "El Pipa. Nueve de área de los de antes"
-  },
-  {
-    "id": "wanchope",
-    "nombre": "Ramón",
-    "apellido": "Ábila",
-    "posicion": "DC",
-    "edad": 37,
-    "nacionalidad": "ARG",
-    "nivel": 65,
-    "de": "Colón",
-    "rasgos": [
-      "juego_aereo"
-    ],
-    "nota": "Wanchope. Cabecea todo lo que pasa por el área"
-  },
-  {
-    "id": "gaitan",
-    "nombre": "Nicolás",
-    "apellido": "Gaitán",
-    "posicion": "EI",
-    "edad": 38,
-    "nacionalidad": "ARG",
-    "nivel": 66,
-    "de": "Sin club",
-    "rasgos": [
-      "definidor"
-    ],
-    "nota": "Jugó en Benfica y Atlético de Madrid. Le queda la pausa"
   },
   {
     "id": "valoyes",
@@ -396,7 +368,7 @@
     "posicion": "LD",
     "edad": 32,
     "nacionalidad": "PAR",
-    "nivel": 68,
+    "nivel": 70,
     "de": "Sportivo Luqueño",
     "rasgos": [],
     "nota": "Sube y baja los noventa. Un fierro para el lateral"
@@ -408,7 +380,7 @@
     "posicion": "MCD",
     "edad": 29,
     "nacionalidad": "PAR",
-    "nivel": 69,
+    "nivel": 71,
     "de": "Guaraní",
     "rasgos": [],
     "nota": "Corta todo. De los mejores cinco del medio local"
@@ -420,7 +392,7 @@
     "posicion": "LI",
     "edad": 34,
     "nacionalidad": "PAR",
-    "nivel": 69,
+    "nivel": 71,
     "de": "Cerro Porteño",
     "rasgos": [],
     "nota": "Fue campeón con Boca. Le sobra oficio"
@@ -432,7 +404,7 @@
     "posicion": "DC",
     "edad": 35,
     "nacionalidad": "BRA",
-    "nivel": 68,
+    "nivel": 70,
     "de": "Cuiabá",
     "rasgos": [
       "definidor"
@@ -500,7 +472,7 @@
     "posicion": "DFC",
     "edad": 36,
     "nacionalidad": "ARG",
-    "nivel": 67,
+    "nivel": 70,
     "de": "Vélez",
     "rasgos": [
       "juego_aereo"
@@ -514,7 +486,7 @@
     "posicion": "DFC",
     "edad": 34,
     "nacionalidad": "PAR",
-    "nivel": 68,
+    "nivel": 70,
     "de": "Cerro Porteño",
     "rasgos": [
       "juego_aereo"
@@ -528,7 +500,7 @@
     "posicion": "DFC",
     "edad": 32,
     "nacionalidad": "BRA",
-    "nivel": 69,
+    "nivel": 71,
     "de": "Cruzeiro",
     "rasgos": [
       "juego_aereo"
@@ -542,7 +514,7 @@
     "posicion": "DFC",
     "edad": 27,
     "nacionalidad": "PAR",
-    "nivel": 66,
+    "nivel": 71,
     "de": "Guaraní",
     "rasgos": [],
     "nota": "Central joven que ya tiene banca en el medio local"
@@ -554,36 +526,12 @@
     "posicion": "DFC",
     "edad": 32,
     "nacionalidad": "ARG",
-    "nivel": 66,
+    "nivel": 71,
     "de": "Estudiantes",
     "rasgos": [
       "juego_aereo"
     ],
     "nota": "Central zurdo, sale jugando limpio"
-  },
-  {
-    "id": "julio_buffarini",
-    "nombre": "Julio",
-    "apellido": "Buffarini",
-    "posicion": "LD",
-    "edad": 36,
-    "nacionalidad": "ARG",
-    "nivel": 66,
-    "de": "San Lorenzo",
-    "rasgos": [],
-    "nota": "Campeón de Libertadores con River. Sube toda la banda"
-  },
-  {
-    "id": "ivan_piris",
-    "nombre": "Iván",
-    "apellido": "Piris",
-    "posicion": "LD",
-    "edad": 36,
-    "nacionalidad": "PAR",
-    "nivel": 65,
-    "de": "Libertad",
-    "rasgos": [],
-    "nota": "Jugó en la Roma y en el Udinese. Vuelve a casa"
   },
   {
     "id": "juan_patino",
@@ -592,7 +540,7 @@
     "posicion": "LI",
     "edad": 26,
     "nacionalidad": "PAR",
-    "nivel": 66,
+    "nivel": 71,
     "de": "Nacional",
     "rasgos": [],
     "nota": "Lateral izquierdo de ida y vuelta, en su mejor momento"
@@ -604,7 +552,7 @@
     "posicion": "LD",
     "edad": 32,
     "nacionalidad": "ARG",
-    "nivel": 67,
+    "nivel": 70,
     "de": "Unión",
     "rasgos": [],
     "nota": "Lateral derecho que no para de correr los noventa"
@@ -616,7 +564,7 @@
     "posicion": "LI",
     "edad": 27,
     "nacionalidad": "ARG",
-    "nivel": 68,
+    "nivel": 70,
     "de": "Newell's",
     "rasgos": [
       "desequilibrante"
@@ -642,22 +590,10 @@
     "posicion": "MCD",
     "edad": 35,
     "nacionalidad": "ARG",
-    "nivel": 68,
+    "nivel": 70,
     "de": "Independiente",
     "rasgos": [],
     "nota": "Cinco de los de antes: corta, ordena y la da simple"
-  },
-  {
-    "id": "marcelo_perez",
-    "nombre": "Marcelo",
-    "apellido": "Pérez",
-    "posicion": "MC",
-    "edad": 28,
-    "nacionalidad": "PAR",
-    "nivel": 65,
-    "de": "Guaraní",
-    "rasgos": [],
-    "nota": "Volante central que juega siempre para adelante"
   },
   {
     "id": "hernan_perez",
@@ -666,7 +602,7 @@
     "posicion": "MC",
     "edad": 35,
     "nacionalidad": "PAR",
-    "nivel": 66,
+    "nivel": 71,
     "de": "Sin club",
     "rasgos": [],
     "nota": "Diez años en el Villarreal. Está libre"
@@ -678,22 +614,10 @@
     "posicion": "MCD",
     "edad": 31,
     "nacionalidad": "PER",
-    "nivel": 67,
+    "nivel": 70,
     "de": "Orlando City",
     "rasgos": [],
     "nota": "Volante peruano de selección, disciplinado"
-  },
-  {
-    "id": "rodrigo_ramirez",
-    "nombre": "Rodrigo",
-    "apellido": "Ramírez",
-    "posicion": "MC",
-    "edad": 24,
-    "nacionalidad": "PAR",
-    "nivel": 65,
-    "de": "Sportivo Luqueño",
-    "rasgos": [],
-    "nota": "Pibe del medio local que rompió la temporada"
   },
   {
     "id": "antony_silva",
@@ -702,7 +626,7 @@
     "posicion": "ARQ",
     "edad": 40,
     "nacionalidad": "PAR",
-    "nivel": 67,
+    "nivel": 70,
     "de": "Sin club",
     "rasgos": [],
     "nota": "Arquero de mil partidos. Está libre y quiere seguir"
@@ -714,7 +638,7 @@
     "posicion": "ARQ",
     "edad": 29,
     "nacionalidad": "PAR",
-    "nivel": 69,
+    "nivel": 71,
     "de": "Libertad",
     "rasgos": [],
     "nota": "Arquero de selección, seguro abajo del arco"
@@ -769,7 +693,7 @@
     "posicion": "MCD",
     "edad": 34,
     "nacionalidad": "ARG",
-    "nivel": 66,
+    "nivel": 71,
     "de": "Chicago Fire",
     "rasgos": [],
     "nota": "Volante de contención con oficio de sobra"
@@ -786,7 +710,8 @@
     "rasgos": [
       "juego_aereo"
     ],
-    "nota": "Cuatro millones de euros a los veintiuno: el jugador más valioso de toda la liga. Y es de Cerro."
+    "nota": "Cuatro millones de euros a los veintiuno: el jugador más valioso de toda la liga. Y es de Cerro.",
+    "potencial": 74
   },
   {
     "id": "rodrigo_villalba",
@@ -800,7 +725,8 @@
     "rasgos": [
       "desequilibrante"
     ],
-    "nota": "Extremo de veinte años que ya vale casi dos millones. Libertad no lo quiere soltar."
+    "nota": "Extremo de veinte años que ya vale casi dos millones. Libertad no lo quiere soltar.",
+    "potencial": 72
   },
   {
     "id": "gabriel_aguayo",
@@ -812,7 +738,8 @@
     "nivel": 64,
     "de": "Cerro Porteño",
     "rasgos": [],
-    "nota": "Otro pibe de Cerro en la lista de los más valorados del medio local."
+    "nota": "Otro pibe de Cerro en la lista de los más valorados del medio local.",
+    "potencial": 71
   },
   {
     "id": "gilberto_flores",
@@ -826,7 +753,8 @@
     "rasgos": [
       "juego_aereo"
     ],
-    "nota": "Central joven de Libertad, ya con banca en el equipo grande."
+    "nota": "Central joven de Libertad, ya con banca en el equipo grande.",
+    "potencial": 71
   },
   {
     "id": "enso_gonzalez",
@@ -840,6 +768,7 @@
     "rasgos": [
       "desequilibrante"
     ],
-    "nota": "La figura de Paraguay en el Mundial Sub-20. Se fue muy chico a Inglaterra y busca minutos."
+    "nota": "La figura de Paraguay en el Mundial Sub-20. Se fue muy chico a Inglaterra y busca minutos.",
+    "potencial": 77
   }
 ]

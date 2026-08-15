@@ -88,6 +88,17 @@ export interface ResueltoMomento {
    * que se pudre levanta al equipo, que es lo que sí se ve.
    */
   enciendeAlEquipo?: number;
+  /**
+   * Dónde pegó la pelota, de palo a palo (0 a 1). Solo en el penal en contra:
+   * la barra es el arco y la bolilla tiene que frenar exactamente donde fue el
+   * remate, no en un tramo abstracto de "atajada" o "gol".
+   */
+  dondeFue?: number;
+  /**
+   * Lo que le sacás de piernas al rival por el resto del partido. Hacerlo
+   * correr con un hombre menos lo funde, y eso baja su nivel de verdad.
+   */
+  cansaAlRival?: number;
 }
 
 /*
@@ -160,12 +171,9 @@ export function chanceDe(
       return acotar(p, 0.25, 0.92);
     }
     case "penal_contra": {
-      const arq = a.once.find((j) => (a.puestos.get(j.id) ?? j.posicion) === "ARQ");
-      if (!arq) return null;
-      // un tercio de acertar el palo, y si acertás depende del arquero
-      let siAcierta = 0.29 + (nivel(arq) - 60) * 0.013;
-      if (opcionId === "centro") siAcierta += 0.08;
-      return acotar((1 / 3) * acotar(siAcierta, 0.02, 0.7) + (2 / 3) * 0.05, 0.02, 0.7);
+      const z = zonaDelArquero(a, ctx, opcionId);
+      // la chance ES el pedazo de arco que tapás: la barra no miente
+      return z ? z.hasta - z.desde : null;
     }
     case "tiro_libre": {
       if (opcionId === "arco") {
@@ -208,6 +216,37 @@ export function chanceDe(
 }
 
 /**
+ * El arco, y qué pedazo tapa el arquero según adónde se tire.
+ *
+ * La barra del penal en contra pasó a ser el arco entero, de palo a palo, y la
+ * zona verde es lo que de verdad cubrís. La pelota cae en algún lugar de esa
+ * barra: si cae adentro de tu zona, la atajás.
+ *
+ * Antes cada opción tenía su propio porcentaje y su propia ruleta, y elegir un
+ * palo era elegir un número abstracto. Así el arquero se ve: un 78 tapa una
+ * franja ancha y un 60 una rendija, sobre el mismo arco.
+ */
+export function zonaDelArquero(a: Alineacion, ctx: ContextoPartido, opcionId: string) {
+  const arq = a.once.find((j) => (a.puestos.get(j.id) ?? j.posicion) === "ARQ");
+  if (!arq) return null;
+  const nivel = nivelEfectivo(arq, "ARQ", ctx);
+  /*
+   * Cuánto del arco alcanza a cubrir. Un arquero del montón llega a poco más
+   * de una quinta parte; uno de selección, a un tercio largo. Quedarse en el
+   * medio cubre menos superficie pero no hay que adivinar hacia dónde va: por
+   * eso su zona es más angosta y la de los palos más ancha.
+   */
+  const alcance = acotar(0.20 + (nivel - 60) * 0.009, 0.10, 0.42);
+  const ancho = opcionId === "centro" ? alcance * 0.72 : alcance;
+  const centroDe = opcionId === "izq" ? 0.17 : opcionId === "der" ? 0.83 : 0.5;
+  return {
+    desde: Math.max(0, centroDe - ancho / 2),
+    hasta: Math.min(1, centroDe + ancho / 2),
+    arquero: arq,
+  };
+}
+
+/**
  * El riesgo de cada opción: qué puede salir mal además de no entrar.
  *
  * Es lo que rompe el empate entre opciones que si no serían la misma cosa con
@@ -223,9 +262,6 @@ export function riesgoDe(m: Momento, opcionId: string): RiesgoOpcion | null {
   }
   if (m.tipo === "arquero_al_area" && opcionId === "arquero") {
     return { contra: 0.3, texto: "el arco tuyo queda vacío", sobre: "fallo" };
-  }
-  if (m.tipo === "penal_contra" && opcionId === "centro") {
-    return { contra: 0.10, texto: "aun atajándola, puede quedar el rebote", sobre: "exito" };
   }
   return null;
 }
@@ -304,6 +340,29 @@ export function candidatosAlPenal(a: Alineacion, ctx: ContextoPartido) {
   return elegidos.slice(0, 3);
 }
 
+/**
+ * Lo que sube el nivel del equipo si se le levanta el ánimo a los once.
+ *
+ * Es la misma cuenta que hace la pantalla principal, para poder prometer el
+ * beneficio en la moneda que se ve arriba en el marcador y no en ánimo, que no
+ * se muestra en ninguna parte.
+ */
+function enciende(a: Alineacion, deAnimo: number): string {
+  const media = a.once.reduce((s, x) => s + x.nivel, 0) / Math.max(1, a.once.length);
+  return (media * deAnimo * P.animoPorPunto).toFixed(1);
+}
+
+/**
+ * Cuánto cambia el peligro al cambiar cómo te parás, en porcentaje.
+ *
+ * Meterse atrás y tirarse encima no mueven el nivel del equipo, así que no
+ * tenían un solo número a la vista: eran tres frases y elegías por intuición.
+ * Esto es lo que de verdad hacen, que es multiplicar las ocasiones de cada
+ * lado.
+ */
+const cuantoMenos = (puntos: number) =>
+  Math.round((1 - Math.exp(-P.xgK * Math.abs(puntos))) * 100);
+
 /** Ordena a los del once por lo bien que patearían. */
 function pateadores(a: Alineacion, ctx: ContextoPartido): Jugador[] {
   const valor = (j: Jugador) => {
@@ -364,9 +423,12 @@ export function generarMomento(
         titulo: "PENAL EN CONTRA",
         contexto: `${apellido(arq)} espera. ¿Para qué lado se tira?`,
         opciones: [
-          { id: "izq", etiqueta: "Izquierda", detalle: "Se juega a adivinar" },
-          { id: "centro", etiqueta: "Quedarse", detalle: "Menos común, sorprende" },
-          { id: "der", etiqueta: "Derecha", detalle: "Se juega a adivinar" },
+          { id: "izq", etiqueta: "Al palo izquierdo",
+            detalle: "Tapa más arco, pero hay que acertar el lado" },
+          { id: "centro", etiqueta: "Quedarse parado",
+            detalle: "Menos arco, pero no hay que adivinar nada" },
+          { id: "der", etiqueta: "Al palo derecho",
+            detalle: "Tapa más arco, pero hay que acertar el lado" },
         ],
         porDefecto: "centro",
       };
@@ -398,10 +460,21 @@ export function generarMomento(
         tipo, minuto, segundos: 8,
         titulo: "VA CALIENTE",
         contexto: `${apellido(j)} ya tiene amarilla y sigue yendo fuerte. Te lo van a echar.`,
+        /*
+         * Las tres dicen su número. "Si aguanta la cancha se prende" no decía
+         * nada: la única cifra a la vista era el porcentaje de zafar, así que
+         * dejarlo parecía todo riesgo y ninguna ganancia.
+         */
         opciones: [
-          { id: "sacar", etiqueta: "Sacarlo", detalle: "Te gasta un cambio", jugadorId: j.id },
-          { id: "hablar", etiqueta: "Hablarle", detalle: "Puede que se calme", jugadorId: j.id },
-          { id: "dejar", etiqueta: "Dejarlo", detalle: "Riesgo de roja, pero si aguanta la cancha se prende", jugadorId: j.id },
+          { id: "sacar", etiqueta: "Sacarlo",
+            detalle: `Te gasta un cambio y perdés a ${apellido(j)} el resto del partido`,
+            jugadorId: j.id },
+          { id: "hablar", etiqueta: "Hablarle",
+            detalle: `Puede que se calme. Si responde, +${enciende(a, 6)} de nivel`,
+            jugadorId: j.id },
+          { id: "dejar", etiqueta: "Dejarlo",
+            detalle: `Si la aguanta, +${enciende(a, 12)} de nivel. Si no, te quedás con diez`,
+            jugadorId: j.id },
         ],
         porDefecto: "hablar",
       };
@@ -432,13 +505,20 @@ export function generarMomento(
         tipo, minuto, segundos: 8,
         titulo: "EL RIVAL SE QUEDÓ CON DIEZ",
         contexto: "Hay un hombre de más. ¿Qué hacés con la ventaja?",
+        /*
+         * Las tres cambian cómo te parás y nada más, así que el detalle es lo
+         * único que informa: sin números eran tres frases bonitas y elegías por
+         * intuición.
+         */
         opciones: [
           { id: "ahogar", etiqueta: "Ahogarlo arriba",
-            detalle: "Máxima presión, desgasta mucho" },
+            detalle: `Llegás ${cuantoMenos(P.actitudAtaque.ofensivo)}% más y le sacás 8 de ` +
+              `condición. Te dejás abierto: te llegan ${cuantoMenos(P.actitudDefensa.ofensivo)}% más` },
           { id: "abrir", etiqueta: "Abrir la cancha",
-            detalle: "Cansarlo moviendo la pelota" },
+            detalle: "Sin exponerte, pero corriendo con diez se funden: le sacás 16 de condición" },
           { id: "sostener", etiqueta: "No cambiar nada",
-            detalle: "Administrar sin regalar nada" },
+            detalle: `Administrás con el hombre de más: te llegan ` +
+              `${cuantoMenos(P.actitudDefensa.defensivo)}% menos` },
         ],
         porDefecto: "sostener",
       };
@@ -453,13 +533,13 @@ export function generarMomento(
         contexto: `Lo metió ${apellido(j)} y sale corriendo. ¿Adónde va?`,
         opciones: [
           { id: "tribuna", etiqueta: "A la tribuna",
-            detalle: "La cancha se prende y el equipo con ella. Amarilla si el árbitro se pone duro",
+            detalle: `La cancha se prende: +${enciende(a, 4)} de nivel. Amarilla si el árbitro se pone duro`,
             jugadorId: j.id },
           { id: "provocar", etiqueta: "Callarle la boca al rival",
-            detalle: "Enciende al equipo como nada. Se la están buscando y esta suele costar amarilla",
+            detalle: `Enciende al equipo como nada: +${enciende(a, 7)} de nivel. Y esta suele costar amarilla`,
             jugadorId: j.id },
           { id: "banco", etiqueta: "Correr al banco",
-            detalle: "Se lo dedica a los compañeros. Levanta menos, pero por esto no lo amonesta nadie",
+            detalle: `Se lo dedica a los compañeros: +${enciende(a, 2)} de nivel, y no lo amonesta nadie`,
             jugadorId: j.id },
         ],
         porDefecto: "banco",
@@ -494,13 +574,13 @@ export function generarMomento(
           : "Quedan veinte minutos y estás uno abajo. Hay tiempo, pero no tanto.",
         opciones: [
           { id: "cerrar", etiqueta: "Meterse atrás",
-            detalle: arriba
-              ? "Se aguanta: mucho menos peligro en contra, y casi no vas a atacar"
-              : "Salvar el punto y no perder por más. Casi no vas a llegar" },
+            detalle: `Te llegan ${cuantoMenos(P.actitudDefensa.defensivo)}% menos, ` +
+              `y llegás ${cuantoMenos(P.actitudAtaque.defensivo)}% menos` },
           { id: "seguir", etiqueta: "No cambiar nada",
-            detalle: "Se sigue jugando igual que hasta acá" },
+            detalle: "Se sigue jugando igual que hasta acá: 0% para los dos lados" },
           { id: "matarlo", etiqueta: arriba ? "Ir por el segundo" : "Tirarse encima",
-            detalle: "Más peligro arriba, más expuesto atrás y más piernas gastadas" },
+            detalle: `Llegás ${cuantoMenos(P.actitudAtaque.ofensivo)}% más, pero te llegan ` +
+              `${cuantoMenos(P.actitudDefensa.ofensivo)}% más y gastás piernas` },
         ],
         porDefecto: "seguir",
       };
@@ -574,28 +654,25 @@ export function resolverMomento(
     }
 
     case "penal_contra": {
-      const arq = a.once.find((j) => (a.puestos.get(j.id) ?? j.posicion) === "ARQ")!;
-      const lado = rng.elegir(["izq", "centro", "der"]);
-      const acerto = lado === opcionId;
-      let p = acerto ? 0.29 + (nivel(arq) - 60) * 0.013 : 0.05;
-      if (opcionId === "centro" && acerto) p += 0.08;
-      const ataja = rng.chance(Math.max(0.02, Math.min(0.7, p)));
-      // quedarse parado deja la pelota viva adelante: puede volver el rebote
-      if (ataja && opcionId === "centro") {
-        const r = riesgoDe(m, "centro");
-        if (r && rng.chance(r.contra)) {
-          return { exito: false, golRival: true, porElRiesgo: true,
-            texto: `${apellido(arq)} la sacó con el cuerpo pero quedó picando y la empujaron. Gol del rival.` };
-        }
-      }
+      const z = zonaDelArquero(a, ctx, opcionId);
+      if (!z) return { exito: false, golRival: true, texto: "Gol del rival." };
+      /*
+       * Adónde va la pelota, de palo a palo. No se sortea si la ataja: se
+       * sortea dónde pega y se mira si eso cae adentro de lo que el arquero
+       * tapó. Es lo mismo que ve el jugador en la barra.
+       */
+      const donde = rng.next();
+      const ataja = donde >= z.desde && donde <= z.hasta;
+      const cerca = !ataja && Math.min(Math.abs(donde - z.desde), Math.abs(donde - z.hasta)) < 0.07;
       return {
         exito: ataja,
         golRival: !ataja,
+        dondeFue: donde,
         texto: ataja
-          ? `¡LA ATAJÓ! ${apellido(arq)} adivinó y la sacó. Se salvó Olimpia.`
-          : acerto
-            ? `${apellido(arq)} llegó a rozarla pero se metió igual. Gol del rival.`
-            : `${apellido(arq)} se tiró para el otro lado. Gol del rival.`,
+          ? `¡LA ATAJÓ! ${apellido(z.arquero)} llegó y la sacó. Se salvó Olimpia.`
+          : cerca
+            ? `${apellido(z.arquero)} la rozó con los dedos y se metió igual. Gol del rival.`
+            : `${apellido(z.arquero)} se tiró para el otro lado. Gol del rival.`,
       };
     }
 
@@ -635,7 +712,10 @@ export function resolverMomento(
       }
       if (opcionId === "hablar") {
         const calma = rng.chance(0.58);
-        if (calma) return { exito: true, texto: `${apellido(j)} escuchó y bajó un cambio.` };
+        if (calma) {
+          return { exito: true, enciendeAlEquipo: 6,
+            texto: `${apellido(j)} escuchó, bajó un cambio y siguió metiendo.` };
+        }
         const roja = rng.chance(0.35);
         return { exito: !roja, rojaA: roja ? j.id : undefined,
           texto: roja
@@ -645,6 +725,7 @@ export function resolverMomento(
       const roja = rng.chance(0.32);
       return { exito: !roja, rojaA: roja ? j.id : undefined,
         levantaHinchada: roja ? undefined : 10,
+        enciendeAlEquipo: roja ? undefined : 12,
         texto: roja
           ? `ROJA. Era cuestión de tiempo. ${apellido(j)} se va y quedan diez.`
           : `${apellido(j)} siguió al límite, metió otra y la tribuna se vino abajo.` };
@@ -668,12 +749,20 @@ export function resolverMomento(
     }
 
     case "rival_con_diez": {
-      const textos: Record<string, string> = {
-        ahogar: "Olimpia se va con todo arriba. El rival no puede salir de su área.",
-        abrir: "Olimpia abre la cancha y lo hace correr de lado a lado.",
-        sostener: "Olimpia administra la ventaja sin apurarse.",
-      };
-      return { exito: true, texto: textos[opcionId] ?? textos.sostener };
+      /*
+       * Las tres hacen algo. Antes devolvían un texto y nada más: tres
+       * opciones, cero consecuencias, la decisión más falsa del juego.
+       */
+      if (opcionId === "ahogar") {
+        return { exito: true, cambiaActitud: "ofensivo", cansaAlRival: 8,
+          texto: "Olimpia se va con todo arriba. El rival no puede salir de su área." };
+      }
+      if (opcionId === "abrir") {
+        return { exito: true, cambiaActitud: "equilibrado", cansaAlRival: 16,
+          texto: "Olimpia abre la cancha y lo hace correr de lado a lado. Los diez ya no llegan." };
+      }
+      return { exito: true, cambiaActitud: "defensivo",
+        texto: "Olimpia administra la ventaja sin apurarse." };
     }
 
     case "festejo": {

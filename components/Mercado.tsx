@@ -58,7 +58,18 @@ export default function Mercado({
                   {f.extranjero && " · ocupa cupo"}
                 </span>
               </span>
-              <span className="num text-[20px]">{f.nivel}</span>
+              {/* El nivel de hoy y, en los que todavía crecen, hasta dónde
+                  puede llegar. Sin el techo, un pibe de veinte a 64 se ve peor
+                  que un veterano a 71 cuando en realidad es mejor negocio. */}
+              <span className="flex flex-col items-end leading-none">
+                <span className="num text-[20px]">{f.nivel}</span>
+                {!!f.potencial && f.potencial > f.nivel && (
+                  <span className="num mt-0.5 text-[10px] font-extrabold"
+                        style={{ color: "var(--ok)" }}>
+                    ↗ {f.potencial}
+                  </span>
+                )}
+              </span>
             </div>
 
             {f.nota && (

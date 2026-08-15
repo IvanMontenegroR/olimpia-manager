@@ -1772,7 +1772,9 @@ export function fichar(p: Partida, fichajeId: string): Partida | null {
     nacionalidad: f.nacionalidad,
     extranjero: f.extranjero,
     nivel: f.nivel,
-    nivel_incertidumbre: f.edad <= 21 ? 8 : 0,
+    // el techo que mostraba el mercado es el que de verdad puede alcanzar
+    nivel_incertidumbre: f.potencial ? Math.max(0, f.potencial - f.nivel)
+      : f.edad <= 21 ? 8 : 0,
     condicion: 88,
     animo: 70,
     partidos_internacionales: f.extranjero ? 12 : 4,

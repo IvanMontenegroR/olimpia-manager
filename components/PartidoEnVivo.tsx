@@ -52,7 +52,17 @@ const ESTILO_EVENTO: Record<string, { color: string; etiqueta?: string; fuerte?:
 export default function PartidoEnVivo({
   partido, salida, onTerminar,
 }: { partido: PartidoUI; salida: Salida; onTerminar: (c: CierrePartido) => void }) {
-  const { ctx } = partido;
+  const { ctx: ctxBase } = partido;
+
+  /**
+   * Lo que el rival fue perdiendo de piernas por lo que hiciste en la cancha.
+   * Hacerlo correr con un hombre menos lo funde, y eso baja su nivel de verdad
+   * en lo que queda: sin esto, "abrir la cancha" era una frase linda.
+   */
+  const [rivalGastado, setRivalGastado] = useState(0);
+  const ctx = useMemo(
+    () => ({ ...ctxBase, rivalCondicion: Math.max(20, (ctxBase.rivalCondicion ?? 100) - rivalGastado) }),
+    [ctxBase, rivalGastado]);
 
   const [once, setOnce] = useState<Jugador[]>(salida.once);
   const [banco, setBanco] = useState<Jugador[]>(salida.suplentes);
@@ -116,6 +126,7 @@ export default function PartidoEnVivo({
   const cursor = useRef(0);
   /** Los momentos que ya se jugaron, para que no se repitan en el partido. */
   const yaVistos = useRef(new Set<string>());
+
   const scroller = useRef<HTMLDivElement>(null);
 
   const condAhora = (j: Jugador) =>
@@ -274,6 +285,7 @@ export default function PartidoEnVivo({
         (animoPorPenales.current[r.golpeAnimo.id] ?? 0) + r.golpeAnimo.delta;
     }
     // un festejo que se pudre levanta a los once, no solo al que hizo el gol
+    if (r.cansaAlRival) setRivalGastado((v) => v + r.cansaAlRival!);
     if (r.enciendeAlEquipo) {
       for (const j of once) {
         animoPorPenales.current[j.id] =
