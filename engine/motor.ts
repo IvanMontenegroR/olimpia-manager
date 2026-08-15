@@ -102,6 +102,12 @@ export const P = {
   // cancha vacía y la hinchada enojada, jugar de local casi no sirve.
   alientoMin: 0.55,
   alientoMax: 1.35,
+  /**
+   * Cuántos puntos de nivel vale el aliento, de punta a punta. Es el mismo
+   * número en la liga y en la copa: llenar el Defensores vale lo que vale, y
+   * lo que hace especial la noche de Conmebol es el ambiente de base.
+   */
+  alientoPeso: 5.0,
 
   // --- contexto ---
   /**
@@ -383,11 +389,22 @@ export function desgloseOvr(a: Alineacion, ctx: ContextoPartido): DesgloseOvr {
   };
 }
 
-/** Lo que suma jugar en tu cancha, con la gente que tengas y como esté. */
+/**
+ * Lo que suma jugar en tu cancha, con la gente que tengas y como esté.
+ *
+ * El aliento SUMA, no multiplica. Multiplicando, la misma hinchada pesaba tres
+ * veces más en la copa que en la liga solo porque la base es más grande: de
+ * local en Sudamericana, ir de la peor hinchada a la mejor valía casi seis
+ * puntos de nivel y veintiún puntos de probabilidad de ganar, más que
+ * cualquier otra palanca del juego. Un estadio lleno vale más o menos lo mismo
+ * un jueves de Conmebol que un domingo; lo que cambia entre las dos es el
+ * ambiente de base, y eso ya está en localiaCopa.
+ */
 export function bonoLocalia(ctx: ContextoPartido): number {
   if (!ctx.esLocal || ctx.neutral) return 0;
   const base = ctx.competencia === "sudamericana" ? P.localiaCopa : P.localiaLiga;
-  return base * factorAliento(ctx.hinchada ?? 70, ctx.ocupacion ?? 0.7);
+  const aliento = factorAliento(ctx.hinchada ?? 70, ctx.ocupacion ?? 0.7);
+  return Math.max(0, base + (aliento - 1) * P.alientoPeso);
 }
 
 export function fuerzas(a: Alineacion, ctx: ContextoPartido) {
