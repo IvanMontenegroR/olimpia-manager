@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { colorCondicion, esSub18 } from "@/lib/juego.ts";
+import { aroDe, colorComoLlega, comoLlegaAlPartido, esSub18 } from "@/lib/juego.ts";
 import { repartirCancha } from "@/lib/formacion.ts";
 import { factorPosicion } from "@/engine/motor.ts";
 import Dorsal from "./Dorsal.tsx";
-import type { Jugador, Posicion } from "@/engine/tipos.ts";
+import type { ContextoPartido, Jugador, Posicion } from "@/engine/tipos.ts";
 
 export interface Casillero {
   slot: number;
@@ -31,10 +31,11 @@ function useMedida() {
 }
 
 export default function CanchaArmado({
-  casilleros, formacion, seleccionado, destino, onTocar,
+  casilleros, formacion, ctx, seleccionado, destino, onTocar,
 }: {
   casilleros: Casillero[];
   formacion: string;
+  ctx: ContextoPartido;
   seleccionado: string | null;
   /** Casillero resaltado mientras se arrastra algo encima. */
   destino: number | null;
@@ -82,18 +83,21 @@ export default function CanchaArmado({
             {j ? (
               <>
                 {/*
-                  * El mismo aro que la cancha de la pantalla principal: se
-                  * llena con cómo llega y se vacía con lo que le falta. Acá es
-                  * donde más falta hacía, porque es la pantalla donde elegís a
-                  * quién ponés: antes eso estaba escondido en el color de un
-                  * número de ocho píxeles.
+                  * El mismo aro que la cancha de la pantalla principal, con lo
+                  * mismo adentro: cuánto de su ficha está rindiendo hoy. Antes
+                  * este se llenaba con la condición y el de la home con el
+                  * ánimo, así que el mismo jugador se veía distinto en cada
+                  * pantalla y ninguna de las dos mostraba el estado completo.
                   */}
                 <span className="relative flex items-center justify-center"
                       style={{ width: tamDorsal + 10, height: tamDorsal + 10 }}>
                   <span className="absolute inset-0 rounded-full"
                         style={{
-                          background: `conic-gradient(from -90deg, ${colorCondicion(j.condicion)} ${
-                            j.condicion * 3.6}deg, rgba(255,255,255,0.16) ${j.condicion * 3.6}deg)`,
+                          background: `conic-gradient(from -90deg, ${
+                            colorComoLlega(comoLlegaAlPartido(j, c.puesto, ctx))} ${
+                            aroDe(comoLlegaAlPartido(j, c.puesto, ctx)) * 360}deg,
+                            rgba(255,255,255,0.16) ${
+                            aroDe(comoLlegaAlPartido(j, c.puesto, ctx)) * 360}deg)`,
                           transition: "background 400ms ease-out",
                         }} />
                   <span className="absolute rounded-full" style={{ inset: 4, background: "#10231a" }} />

@@ -492,7 +492,7 @@ export default function Escritorio({
               once={ovr.once}
               puestos={ovr.puestos}
               formacion={ovr.formacion}
-              animoDe={(j) => Math.round(partida.plantel[j.id]?.animo ?? 70)}
+              ctx={ovr.ctx}
               bajaDe={(j) => j.lesionado_hasta ? "lesionado" : j.suspendido ? "suspendido" : null}
               onTocar={(j) => setFichaHome(j.id)}
               onModificar={onDirigir} />

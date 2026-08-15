@@ -129,7 +129,7 @@ export default function Alineador({
   return (
     <div className="flex min-h-0 flex-1 flex-col" {...handlers}>
       <div className="flex min-h-0 flex-1 flex-col py-2">
-        <CanchaArmado casilleros={casilleros} formacion={formacion}
+        <CanchaArmado casilleros={casilleros} formacion={formacion} ctx={ctx}
           seleccionado={
             marcado?.tipo === "cancha" && alineado[marcado.slot]
               ? alineado[marcado.slot]

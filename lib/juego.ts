@@ -251,6 +251,44 @@ export const colorCondicion = (c: number) =>
   c >= 80 ? "var(--ok)" : c >= 60 ? "var(--medio)" : c >= 40 ? "var(--bajo)" : "var(--critico)";
 
 /**
+ * Cómo llega un jugador, en una sola cifra de 0 a 1.
+ *
+ * Es la fracción de su ficha que está rindiendo hoy: junta las piernas, la
+ * cabeza, el puesto en el que lo ponés y lo que le pesa la cancha ajena. Un 1
+ * es un jugador entero y enchufado jugando de lo suyo; abajo de eso, algo le
+ * falta.
+ *
+ * Existe porque las dos canchas del juego dibujaban el mismo aro con dos
+ * cosas distintas adentro: en la pantalla principal se llenaba con el ánimo y
+ * en la de armar el once con la condición. Mismo dibujo, dos significados, y
+ * como el número de abajo pasó a ser la ficha, cada pantalla te escondía la
+ * mitad del estado. Este es el número que las dos muestran ahora.
+ */
+export function comoLlegaAlPartido(j: Jugador, puesto: Posicion, ctx: ContextoPartido): number {
+  if (!j.nivel) return 1;
+  return nivelEfectivo(j, puesto, ctx) / j.nivel;
+}
+
+/**
+ * Cuánto del aro se llena. Abajo de 0.72 no queda nada y arriba de 1.08 está
+ * lleno: ese es el rango en el que se mueve de verdad un jugador entre estar
+ * fundido y estar en llamas, y estirarlo a 0-100 dejaba todos los aros
+ * casi iguales.
+ */
+export const aroDe = (rinde: number) =>
+  Math.max(0, Math.min(1, (rinde - 0.72) / 0.36));
+
+/**
+ * El color de cómo llega, en la misma escala que todo lo demás. El verde
+ * arranca apenas abajo de 1 a propósito: un jugador entero con el ánimo normal
+ * rinde el 99% de lo suyo y no tiene nada de malo, así que no puede verse como
+ * una advertencia.
+ */
+export const colorComoLlega = (rinde: number) =>
+  rinde >= 0.97 ? "var(--ok)" : rinde >= 0.90 ? "var(--medio)"
+    : rinde >= 0.82 ? "var(--bajo)" : "var(--critico)";
+
+/**
  * Once inicial sugerido: el mejor posible respetando el cupo de extranjeros.
  *
  * El Sub-18 entra solo si hace falta para llegar a los 900 minutos. Antes

@@ -646,6 +646,13 @@ function pagarBonus(n: Partida, que: string) {
  * La distancia entre los dos es la historia de tu ciclo: un plantel de 68
  * rindiendo a 60 es un vestuario roto; rindiendo a 71, un equipo volando.
  */
+/** Un partido de referencia: en casa, sin viaje, para cuando no hay próximo. */
+const CTX_VACIO: ContextoPartido = {
+  fecha: DIA_INICIAL, competencia: "clausura", esLocal: true, neutral: false,
+  rivalFuerza: 66, rivalNombre: "—", viajeKm: 0, alturaM: 43,
+  diasDescanso: 6, esClasico: false,
+};
+
 export interface OvrDelClub {
   hoy: number;
   plantel: number;
@@ -656,6 +663,8 @@ export interface OvrDelClub {
   once: Jugador[];
   puestos: Map<string, Posicion>;
   formacion: string;
+  /** El partido contra el que se midió, para que la cancha use el mismo. */
+  ctx: ContextoPartido;
 }
 
 export function ovrDe(p: Partida): OvrDelClub {
@@ -673,7 +682,7 @@ export function ovrDe(p: Partida): OvrDelClub {
   const partido = partidoDe(p) ?? partidoDe({ ...p, fechaActual: 1, copa: { ...p.copa, ronda: "eliminado" } });
   if (!partido) {
     return { hoy: plantel, plantel, rival: null, partes: null,
-             once: [], puestos: new Map(), formacion: "4-3-3" };
+             once: [], puestos: new Map(), formacion: "4-3-3", ctx: CTX_VACIO };
   }
   const ctx: ContextoPartido = partidoDe(p) ? partido.ctx
     : { ...partido.ctx, esLocal: true, alturaM: 43, viajeKm: 0 };
@@ -695,7 +704,7 @@ export function ovrDe(p: Partida): OvrDelClub {
         ? 0
         : ctx.competencia === "sudamericana" ? P.localiaCopaRival : P.localiaLiga)
     : null;
-  return { hoy, plantel, rival, partes,
+  return { hoy, plantel, rival, partes, ctx,
            once: salida.once, puestos: salida.puestos, formacion: salida.formacion };
 }
 

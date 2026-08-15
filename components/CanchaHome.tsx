@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { repartirCancha } from "@/lib/formacion.ts";
 import Dorsal from "./Dorsal.tsx";
 import { factorPosicion } from "@/engine/motor.ts";
-import type { Jugador, Posicion } from "@/engine/tipos.ts";
+import { aroDe, colorComoLlega, comoLlegaAlPartido } from "@/lib/juego.ts";
+import type { ContextoPartido, Jugador, Posicion } from "@/engine/tipos.ts";
 
 /**
  * El once que va a salir, en la cancha, en la pantalla principal.
@@ -15,19 +16,14 @@ import type { Jugador, Posicion } from "@/engine/tipos.ts";
  * mismo jugador fuera un 74 en el mercado y un 76 en la cancha sin que nada lo
  * explicara.
  *
- * Cómo llega no desaparece: va en el aro, que es lo que se llena o se vacía.
+ * Cómo llega no desaparece: va en el aro, que se llena con la fracción de su
+ * ficha que está rindiendo hoy. Es el mismo aro y el mismo número que la
+ * pantalla de armar el once: antes uno se llenaba con el ánimo y el otro con
+ * la condición, así que el mismo jugador se veía distinto en cada pantalla.
  * Y el total con todo adentro sigue estando en la card de arriba, que es donde
  * corresponde: los once números de acá promedian exactamente el PLANTEL de la
  * card, y de ahí para arriba están el vestuario, la hinchada y el físico.
  */
-
-/** El color del ánimo, que es lo que se muestra por jugador. */
-export function colorAnimo(animo: number): string {
-  if (animo >= 82) return "#3fa76a";
-  if (animo >= 62) return "#8fa396";
-  if (animo >= 45) return "#e0902a";
-  return "#c0392b";
-}
 
 function useMedida() {
   const ref = useRef<HTMLDivElement>(null);
@@ -46,12 +42,12 @@ function useMedida() {
 }
 
 export default function CanchaHome({
-  once, puestos, formacion, animoDe, bajaDe, onTocar, onModificar,
+  once, puestos, formacion, ctx, bajaDe, onTocar, onModificar,
 }: {
   once: Jugador[];
   puestos: Map<string, Posicion>;
   formacion: string;
-  animoDe: (j: Jugador) => number;
+  ctx: ContextoPartido;
   /** Por qué no está disponible, si no lo está. */
   bajaDe: (j: Jugador) => "lesionado" | "suspendido" | null;
   onTocar: (j: Jugador) => void;
@@ -84,25 +80,22 @@ export default function CanchaHome({
         const puesto = puestos.get(j.id) ?? j.posicion;
         // solo se avisa si le cuesta: entre mediocampistas no le cuesta nada
         const adaptado = factorPosicion(j, puesto) < 0.995;
-        const animo = animoDe(j);
+        const rinde = comoLlegaAlPartido(j, puesto, ctx);
+        const lleno = aroDe(rinde);
         const baja = bajaDe(j);
-        const color = baja ? "#c0392b" : colorAnimo(animo);
+        const color = baja ? "#c0392b" : colorComoLlega(rinde);
         return (
           <button key={j.id} onClick={() => onTocar(j)}
             className="absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center"
             style={{ left: x, top: y, width: 62 * escala }}>
-            {/*
-              * El anillo alrededor del dorsal se llena con la confianza: lleno
-              * es 100, y lo que falta se ve como hueco. Un color solo decía si
-              * estaba bien o mal; el anillo dice además cuánto falta, que es lo
-              * que hace querer subirlo.
-              */}
+            {/* El aro se llena con cuánto de lo suyo está rindiendo: entero y
+                enchufado lo llena, fundido o dolido lo vacía. */}
             <span className="relative flex items-center justify-center"
                   style={{ width: tam + 10, height: tam + 10, opacity: baja ? 0.5 : 1 }}>
               <span className="absolute inset-0 rounded-full"
                     style={{
-                      background: `conic-gradient(from -90deg, ${color} ${animo * 3.6}deg,
-                        rgba(255,255,255,0.18) ${animo * 3.6}deg)`,
+                      background: `conic-gradient(from -90deg, ${color} ${lleno * 360}deg,
+                        rgba(255,255,255,0.18) ${lleno * 360}deg)`,
                       transition: "background 500ms ease-out",
                     }} />
               <span className="absolute rounded-full"
