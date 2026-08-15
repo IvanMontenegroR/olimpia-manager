@@ -20,12 +20,19 @@ export interface Salida {
 }
 
 export default function ArmarOnce({
-  partido, plantel, equipos, estadoSub18, onJugar, onVolver, onGuardarEquipo,
+  partido, plantel, equipos, estadoSub18, modo = "jugar",
+  onJugar, onVolver, onGuardarEquipo,
 }: {
   partido: PartidoUI;
   plantel: Jugador[];
   equipos: EquipoGuardado[];
   estadoSub18: { minutos: number; partidosRestantes: number };
+  /**
+   * "jugar" es el día del partido. "guardar" es cuando entrás desde la cancha
+   * de la pantalla principal a mover el equipo: el partido puede estar a una
+   * semana, así que ahí abajo va guardar el once y no salir a jugarlo.
+   */
+  modo?: "jugar" | "guardar";
   onJugar: (s: Salida) => void;
   onVolver: () => void;
   onGuardarEquipo: (e: EquipoGuardado) => void;
@@ -94,6 +101,20 @@ export default function ArmarOnce({
     onJugar({ once, suplentes, actitud, puestos });
   };
 
+  /*
+   * Fuera del día del partido, el botón de abajo guarda: pisa el equipo
+   * Titular, que es el que dibuja la cancha de la pantalla principal, y vuelve.
+   */
+  const guardarTitular = () => {
+    if (problema) return;
+    onGuardarEquipo({
+      nombre: equipos[0]?.nombre ?? "Titular",
+      formacion: estado.formacion,
+      jugadores: once.map((j) => j.id),
+    });
+    onVolver();
+  };
+
   return (
     <div className="app">
       {/* ---------- cabecera ---------- */}
@@ -150,7 +171,10 @@ export default function ArmarOnce({
       {/* ---------- decisiones ---------- */}
       <div className="border-t px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2"
            style={{ borderColor: "var(--linea)" }}>
-        <div className="mb-1.5 flex gap-1.5">
+        {/* Cómo salir a jugar se decide el día del partido: guardado con el
+            equipo no se persiste, así que fuera de ese día sería un botón que
+            no hace nada. */}
+        <div className="mb-1.5 flex gap-1.5" style={{ display: modo === "jugar" ? undefined : "none" }}>
           {(["defensivo", "equilibrado", "ofensivo"] as Actitud[]).map((a) => {
             const A = ACTITUD[a];
             return (
@@ -168,13 +192,13 @@ export default function ArmarOnce({
           })}
         </div>
 
-        <button onClick={jugar} disabled={!!problema}
+        <button onClick={modo === "jugar" ? jugar : guardarTitular} disabled={!!problema}
           className="w-full rounded-lg py-3 text-[14px] font-extrabold uppercase tracking-[0.14em]"
           style={{
             background: problema ? "var(--carbon)" : "var(--blanco)",
             color: problema ? "var(--apagado)" : "var(--negro)",
           }}>
-          {problema ?? "Jugar el partido"}
+          {problema ?? (modo === "jugar" ? "Jugar el partido" : "Guardar el once")}
         </button>
       </div>
 

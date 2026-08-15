@@ -11,19 +11,28 @@ const COLOR: Record<string, string> = {
   tiro_libre: "var(--medio)",
   jugador_caliente: "var(--bajo)",
   mano_a_mano: "var(--ok)",
+  festejo: "var(--medio)",
+  arquero_al_area: "var(--ok)",
 };
 
 /**
- * Cómo se llama cada tramo de la barra. Sin esto la bolilla frenaría sobre un
- * color y no sobre algo que se pueda leer.
+ * Cómo se llama cada tramo de la barra: lo que salió bien, lo que salió mal, y
+ * lo que puede salir peor todavía. Sin esto la bolilla frenaría sobre un color
+ * y no sobre algo que se pueda leer.
+ *
+ * El tercer rótulo es el de la franja oscura. Antes no existía: la barra
+ * avisaba "si la rechazan, contra con todos arriba", la bolilla frenaba justo
+ * ahí y el relato decía que no había pasado nada.
  */
-const TRAMOS: Partial<Record<string, [string, string]>> = {
+const TRAMOS: Partial<Record<string, [string, string, string?]>> = {
   penal_favor:      ["GOL", "AFUERA"],
   penal_ultima:     ["GOL", "AFUERA"],
-  tiro_libre:       ["GOL", "NO ENTRA"],
-  mano_a_mano:      ["GOL", "NO ENTRA"],
-  penal_contra:     ["LA ATAJA", "GOL RIVAL"],
+  tiro_libre:       ["GOL", "NO ENTRA", "CONTRA"],
+  mano_a_mano:      ["GOL", "NO ENTRA", "CONTRA"],
+  penal_contra:     ["LA ATAJA", "GOL RIVAL", "REBOTE Y GOL"],
   jugador_caliente: ["AGUANTA", "ROJA"],
+  festejo:          ["ZAFA", "AMARILLA"],
+  arquero_al_area:  ["GOL", "NADA", "ARCO VACÍO"],
 };
 
 /**
@@ -161,17 +170,26 @@ export default function MomentoOverlay({
                       <Sorteo
                         chance={chanceElegida!}
                         riesgo={riesgo?.contra ?? null}
+                        riesgoSobre={riesgo?.sobre}
                         exito={resuelto!.exito}
-                        bien={tramos[0]} mal={tramos[1]}
+                        enRiesgo={!!resuelto!.porElRiesgo}
+                        bien={tramos[0]} mal={tramos[1]} peor={tramos[2]}
                         semilla={momento.minuto * 7 + o.id.length}
                         onTermina={() => setListo(true)} />
                     ) : chance !== null && (
+                      // la franja oscura se recorta del tramo del que sale, que
+                      // no siempre es el del fallo
                       <span className="mt-1.5 flex h-1.5 overflow-hidden rounded-full"
                             style={{ background: "var(--linea)" }}>
-                        <span style={{ width: `${chance * 100}%`, background: color }} />
+                        <span style={{
+                          width: `${chance * 100 * (riesgo?.sobre === "exito" ? 1 - riesgo.contra : 1)}%`,
+                          background: color }} />
                         {riesgo && (
-                          <span style={{ width: `${(1 - chance) * riesgo.contra * 100}%`,
-                                         background: "#c0392b" }} />
+                          <span style={{
+                            width: `${(riesgo.sobre === "exito"
+                              ? chance * riesgo.contra
+                              : (1 - chance) * riesgo.contra) * 100}%`,
+                            background: "#7a1f16" }} />
                         )}
                       </span>
                     )}

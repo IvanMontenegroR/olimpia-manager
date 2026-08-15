@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import {
-  miles, plantelDe, salioBienLaApuesta, type Asunto, type Partida,
+  AFORO, miles, nivelConAclimatacion, ocupacionDe, ovrDe, plantelDe, salioBienLaApuesta,
+  type Asunto, type Partida,
 } from "@/lib/temporada.ts";
 import Efectos, { type EfectoVisible } from "./Efectos.tsx";
 import { DibujoEscena, ESCENAS, type TipoEscena } from "./Escena.tsx";
@@ -189,20 +190,34 @@ function opcionesDe(a: Asunto, p: Partida): {
   rango?: { min: number; max: number; valor: number; unidad: string };
 }[] {
   if (a.tipo === "marketing") {
+    /*
+     * Lo que deja el partido con cada precio. El texto decía "entra la mitad
+     * de plata" y "la mejor caja del año" sin un solo número, así que la
+     * decisión económica se tomaba a ciegas.
+     */
+    const caja = (precio: number) =>
+      Math.round(AFORO * ocupacionDe({ ...p, precioEntrada: precio }) * precio * 0.14);
     return [
       { id: "barato", etiqueta: "Popular a 35 mil",
-        detalle: "Se llena y el equipo lo siente, pero entra la mitad de plata",
-        efecto: { hinchada: 6 } },
+        detalle: "Se llena y el equipo lo siente",
+        efecto: { hinchada: 6, dineroUsd: caja(35) } },
       { id: "normal", etiqueta: "Precio habitual, 70 mil",
-        detalle: "Buena recaudación con el estadio a tres cuartos",
-        efecto: { hinchada: -1 } },
+        detalle: "El estadio a tres cuartos",
+        efecto: { hinchada: -1, dineroUsd: caja(70) } },
       { id: "caro", etiqueta: "Aprovechar, 150 mil",
-        detalle: "La mejor caja del año, pero se juega con medio Defensores",
-        efecto: { hinchada: -9 } },
+        detalle: "Se juega con medio Defensores",
+        efecto: { hinchada: -9, dineroUsd: caja(150) } },
     ];
   }
   if (a.tipo === "viaje") {
     const altura = !!a.datos?.altura;
+    /*
+     * Lo que se gana viajando antes, en nivel. La aclimatación es un número
+     * interno que el jugador no ve en ninguna parte, así que la decisión era
+     * "pagá 150 mil por algo": se veía el costo y no el beneficio.
+     */
+    const base = nivelConAclimatacion(p, 0);
+    const gana = (acl: number) => Math.round(nivelConAclimatacion(p, acl) - base);
     return [
       { id: "vispera", etiqueta: "Viajar la víspera",
         detalle: altura
@@ -212,12 +227,12 @@ function opcionesDe(a: Asunto, p: Partida): {
         detalle: altura
           ? "Media adaptación: la altura pega bastante menos"
           : "El plantel llega descansado",
-        efecto: { dineroUsd: -60_000 } },
+        efecto: { dineroUsd: -60_000, nivel: gana(0.55) } },
       { id: "semana", etiqueta: "Concentrar en destino",
         detalle: altura
           ? "Adaptación completa, pero una semana lejos de casa pesa adentro"
           : "Llegan enteros, aunque se hace largo",
-        efecto: { dineroUsd: -150_000, ambiente: -3 } },
+        efecto: { dineroUsd: -150_000, ambiente: -3, nivel: gana(1) } },
     ];
   }
 
@@ -239,14 +254,40 @@ function opcionesDe(a: Asunto, p: Partida): {
           ? `${j?.apellido ?? "El jugador"} quería irse: se queda dolido y rinde menos`
           : `${j?.apellido ?? "El jugador"} no pidió salir, así que no le cae mal`,
         efecto: {
-          ambiente: 2,
-          moralDe: { id: "", delta: oferta?.quiereIrse ? -10 : 3 },
+          // al grupo solo le suma cuando el jugador también se quería quedar
+          ambiente: oferta?.quiereIrse ? 0 : 2,
+          moralDe: { id: oferta?.jugadorId ?? "", delta: oferta?.quiereIrse ? -10 : 3 },
           moralTexto: j?.apellido,
         } },
     ];
   }
+  const enElOnce = new Set(ovrDe(p).once.map((j) => j.id));
   return (a.situacion?.opciones ?? []).map((o) => ({
     ...o,
-    efecto: a.efectos?.[o.id] as EfectoVisible | undefined,
+    efecto: paraMostrar(a.efectos?.[o.id] as EfectoVisible | undefined, p, enElOnce),
   }));
+}
+
+/**
+ * El efecto crudo pasado a lo que la pantalla puede prometer.
+ *
+ * Hace dos cosas. Le pone nombre al que se pierde la próxima, que en la tabla
+ * es un id. Y, sobre todo, tira el ánimo de los que no están en el once: el
+ * vestuario que se ve en la card principal es el promedio de los once que
+ * salen a la cancha, así que levantarle el ánimo a uno de la reserva no mueve
+ * ese número ni un poco. Prometer "+1 vestuario" por eso era prometer algo que
+ * el jugador no iba a ver pasar.
+ */
+function paraMostrar(
+  e: EfectoVisible | undefined, p: Partida, enElOnce: Set<string>,
+): EfectoVisible | undefined {
+  if (!e) return e;
+  const apellido = (id?: string) =>
+    id ? plantelDe(p).find((j) => j.id === id)?.apellido : undefined;
+  return {
+    ...e,
+    moralDe: e.moralDe && enElOnce.has(e.moralDe.id) ? e.moralDe : undefined,
+    suspendeTexto: apellido(e.suspendeA),
+    siSaleMal: paraMostrar(e.siSaleMal, p, enElOnce),
+  };
 }

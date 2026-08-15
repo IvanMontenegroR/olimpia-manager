@@ -5,7 +5,7 @@ import {
   repartirEnMolde, salidaAutomatica, type PartidoUI,
 } from "./juego.ts";
 import {
-  P, clamp, desgloseOvr, factorCondicion, recuperar, type DesgloseOvr,
+  P, clamp, desgloseOvr, factorCondicion, ovrDelOnce, recuperar, type DesgloseOvr,
 } from "@/engine/motor.ts";
 import { Rng } from "@/engine/rng.ts";
 import equiposJson from "@/data/equipos_2026.json";
@@ -1340,6 +1340,38 @@ export function salioBienLaApuesta(
   return new Rng(`apuesta-${asuntoId}-${opcionId}-${dia}`).chance(exito);
 }
 
+/**
+ * Con qué nivel se llegaría al próximo partido si la delegación viajara con
+ * tanta anticipación. Existe para que el plan de viaje muestre lo que se gana
+ * y no solo lo que se paga: la aclimatación es un número interno, el nivel es
+ * el de la card principal.
+ */
+export function nivelConAclimatacion(p: Partida, aclimatacion: number): number {
+  const partido = partidoDe(p);
+  if (!partido) return 0;
+  const ctx: ContextoPartido = { ...partido.ctx, aclimatacion };
+  const s = onceTitular(p, { ...partido, ctx }, plantelDe(p));
+  if (!s.once.length) return 0;
+  return ovrDelOnce(
+    { once: s.once, suplentes: s.suplentes, actitud: "equilibrado", puestos: s.puestos }, ctx);
+}
+
+/**
+ * Mover el clima del vestuario, que es lo único que el jugador ve.
+ *
+ * El clima es un número interno; lo que se muestra en la card principal es el
+ * ánimo medio del once. Si se toca uno sin el otro, la decisión promete un
+ * "+1 vestuario" que después no aparece en ninguna parte. Las ofertas y el
+ * viaje hacían justo eso, cada uno por su cuenta.
+ */
+function aplicarAmbiente(n: Partida, delta: number) {
+  if (!delta) return;
+  n.ambiente = clamp(n.ambiente + delta, 0, 100);
+  for (const id of Object.keys(n.plantel)) {
+    n.plantel[id].animo = clamp(n.plantel[id].animo + delta * P.ambienteEnAnimo, 0, 100);
+  }
+}
+
 export function resolverAsunto(p: Partida, asuntoId: string, opcionId: string): Partida {
   const n: Partida = estructurado(p);
   const a = n.pendientes.find((x) => x.id === asuntoId);
@@ -1357,7 +1389,7 @@ export function resolverAsunto(p: Partida, asuntoId: string, opcionId: string): 
     n.aclimatacion = plan.acl;
     n.dineroUsd -= plan.costo;
     // estar lejos de casa varios días desgasta la cabeza, no las piernas
-    if (opcionId === "semana") n.ambiente = clamp(n.ambiente - 3, 0, 100);
+    if (opcionId === "semana") aplicarAmbiente(n, -3);
     n.bitacora.push({ dia: n.dia, texto: plan.texto });
     return n;
   }
@@ -1385,11 +1417,17 @@ export function resolverAsunto(p: Partida, asuntoId: string, opcionId: string): 
         n.plantel[oferta.jugadorId].lesionadoHasta = "2099-01-01";
       }
       n.hinchada = clamp(n.hinchada - (j.nivel >= 68 ? 9 : 3), 0, 100);
-      n.ambiente = clamp(n.ambiente - 3, 0, 100);
+      aplicarAmbiente(n, -3);
       n.bitacora.push({ dia: n.dia, marca: "plata",
         texto: `${j.apellido} se va a ${oferta.club} por ${miles(oferta.montoUsd)}.` });
     } else {
-      n.ambiente = clamp(n.ambiente + 2, 0, 100);
+      /*
+       * Al grupo le suma que el club no venda... salvo cuando el que se quería
+       * ir se queda de mala gana: ahí no hay nada que festejar, y sumar clima
+       * por un lado mientras se lo bajabas por el otro dejaba la decisión con
+       * un "+1 vestuario" y un "−1 vestuario" al mismo tiempo.
+       */
+      aplicarAmbiente(n, oferta.quiereIrse ? 0 : 2);
       // solo se enoja el que se quería ir; al que está cómodo le suma quedarse
       const e = n.plantel[oferta.jugadorId];
       e.animo = clamp(e.animo + (oferta.quiereIrse ? -10 : 3), 0, 100);
@@ -1419,19 +1457,7 @@ export function resolverAsunto(p: Partida, asuntoId: string, opcionId: string): 
   }
 
   if (efecto) {
-    if (efecto.ambiente) {
-      n.ambiente = clamp(n.ambiente + efecto.ambiente, 0, 100);
-      /*
-       * El clima del vestuario también levanta o hunde al plantel en el
-       * momento, no solo con el correr de los días. Antes solo movía el clima
-       * y el ánimo lo seguía de a poco: una decisión de +12 tardaba dos
-       * semanas en verse en la confianza, así que en la pantalla parecía que
-       * no había pasado nada.
-       */
-      for (const id of Object.keys(n.plantel)) {
-        n.plantel[id].animo = clamp(n.plantel[id].animo + efecto.ambiente * P.ambienteEnAnimo, 0, 100);
-      }
-    }
+    if (efecto.ambiente) aplicarAmbiente(n, efecto.ambiente);
     if (efecto.hinchada) n.hinchada = clamp(n.hinchada + efecto.hinchada, 0, 100);
     if (efecto.dineroUsd) n.dineroUsd += efecto.dineroUsd;
     if (efecto.paciencia) n.paciencia = clamp(n.paciencia + efecto.paciencia, 0, 100);

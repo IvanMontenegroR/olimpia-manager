@@ -7,8 +7,8 @@ import PartidoEnVivo from "@/components/PartidoEnVivo.tsx";
 import Escritorio from "@/components/Escritorio.tsx";
 import { salidaAutomatica } from "@/lib/juego.ts";
 import {
-  avanzarUnDia, cargar, cerrarPartido, fichar, ficharEstrella, guardar, partidaNueva,
-  partidoDe, plantelDe, rechazarEstrella, resolverAsunto, TOTAL_FECHAS,
+  avanzarUnDia, cargar, cerrarPartido, fichar, ficharEstrella, guardar, hayPartidoHoy,
+  partidaNueva, partidoDe, plantelDe, rechazarEstrella, resolverAsunto, TOTAL_FECHAS,
   type CierrePartido, type Partida,
 } from "@/lib/temporada.ts";
 
@@ -57,6 +57,7 @@ export default function Page() {
           // guardar con un nombre ya usado lo pisa, no lo duplica
           equipos: [...p.equipos.filter((x) => x.nombre !== e.nombre), e],
         } : p))}
+        modo={hayPartidoHoy(partida) ? "jugar" : "guardar"}
         onVolver={() => setFase("escritorio")}
         onJugar={(s) => { setSalida(s); setFase("partido"); }} />
     );

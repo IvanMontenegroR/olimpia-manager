@@ -223,6 +223,9 @@ export default function Escritorio({
    */
   /** La misma vara para todo lo que se mida en nivel: rojo, amarillo, verde. */
   const colorEscala = (n: number) => (n >= 74 ? "#4fc07e" : n >= 66 ? "#e8c25a" : "#e0705f");
+  /* La dirigencia arranca en 70 y te echan en 0: su verde empieza mucho antes
+     que el del nivel, donde 70 ya es un plantel del montón. */
+  const colorDirigencia = (n: number) => (n >= 55 ? "#4fc07e" : n >= 35 ? "#e8c25a" : "#e0705f");
   const colorOvr = colorEscala(ovr.hoy);
 
   const bajas = plantel.filter((j) => j.suspendido || j.lesionado_hasta);
@@ -255,8 +258,24 @@ export default function Escritorio({
                    }} />
             </div>
           </div>
-          <Numero valor={partida.dineroUsd} formato={(n) => miles(Math.round(n))}
-                  className="num text-[13px]" style={{ color: "var(--cesped)" }} />
+          {/*
+            * La plata y la dirigencia, que son las dos cosas del club que no
+            * dependen del domingo. La dirigencia estaba escondida hasta que se
+            * ponía fea, así que las decisiones que prometían "+5 dirigencia"
+            * hablaban de un número que no existía en ninguna pantalla.
+            */}
+          <button onClick={() => setAyuda("dirigencia")} className="shrink-0 text-right">
+            <Numero valor={partida.dineroUsd} formato={(n) => miles(Math.round(n))}
+                    className="num block text-[13px]" style={{ color: "var(--cesped)" }} />
+            <span className="mt-0.5 flex items-center justify-end gap-1">
+              <span className="text-[8px] uppercase tracking-[0.14em]" style={{ color: "var(--apagado)" }}>
+                dirigencia
+              </span>
+              <Numero valor={partida.paciencia} formato={(n) => String(Math.round(n))}
+                      className="num text-[12px] font-extrabold"
+                      style={{ color: colorDirigencia(partida.paciencia) }} />
+            </span>
+          </button>
           {/* Empezar de nuevo estaba solo al terminar la temporada, así que si
               te ibas al descenso no había forma de arrancar otra vez. */}
           <button onClick={() => setReiniciar(true)}

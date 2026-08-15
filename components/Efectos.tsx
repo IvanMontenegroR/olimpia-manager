@@ -17,6 +17,12 @@ export interface EfectoVisible {
   moralDe?: { id: string; delta: number };
   moralTexto?: string;
   paciencia?: number;
+  /** Se pierde el próximo partido: es el costo más caro y no se veía. */
+  suspendeA?: string;
+  /** Apellido del que se pierde el partido, para poder nombrarlo. */
+  suspendeTexto?: string;
+  /** Lo que la decisión mueve del nivel con el que se llega al partido. */
+  nivel?: number;
   /** Los números del otro desenlace, si la opción era una apuesta. */
   siSaleMal?: EfectoVisible;
 }
@@ -34,14 +40,22 @@ export default function Efectos({ e }: { e: EfectoVisible }) {
       bueno: e.dineroUsd > 0,
     });
   }
+  if (e.nivel) chips.push({ texto: `${signo(e.nivel)} nivel`, bueno: e.nivel > 0 });
   /*
-   * El vestuario se muestra en la misma moneda que la card principal: lo que
-   * importa es cuánto va a subir o bajar la confianza del plantel, no un
-   * número de otra escala que después hay que traducir de cabeza.
+   * El vestuario es UN chip, siempre.
+   *
+   * Hay decisiones que mueven el clima del grupo para un lado y el ánimo de un
+   * jugador para el otro: multar al que llegó tarde le cae bien al plantel y
+   * mal a él. Como los dos terminan en el mismo número (el ánimo medio del
+   * once, que es lo que dice la card principal), mostrarlos por separado ponía
+   * un "+1 vestuario" al lado de un "−1 vestuario" en la misma opción. Se
+   * suman y se muestra el neto, que es lo que de verdad va a pasar.
    */
-  if (e.ambiente) {
-    const conf = Math.round(e.ambiente * AMBIENTE_EN_CONFIANZA);
-    if (conf !== 0) chips.push({ texto: `${signo(conf)} vestuario`, bueno: conf > 0 });
+  const vest = (e.ambiente ?? 0) * AMBIENTE_EN_CONFIANZA + (e.moralDe?.delta ?? 0) / ONCE;
+  // se redondea alejándose del cero: media unidad para arriba no es "0"
+  const vestEntero = Math.sign(vest) * Math.round(Math.abs(vest));
+  if (vestEntero !== 0) {
+    chips.push({ texto: `${signo(vestEntero)} vestuario`, bueno: vestEntero > 0 });
   }
   if (e.hinchada) chips.push({ texto: `${signo(e.hinchada)} hinchada`, bueno: e.hinchada > 0 });
   if (e.paciencia) chips.push({ texto: `${signo(e.paciencia)} dirigencia`, bueno: e.paciencia > 0 });
@@ -51,18 +65,12 @@ export default function Efectos({ e }: { e: EfectoVisible }) {
       bueno: e.condicionTodos > 0,
     });
   }
-  /*
-   * Levantarle el ánimo a uno solo mueve el promedio del once una fracción de
-   * lo que se le aplica a él. Se muestra esa fracción, que es lo que se va a
-   * ver en la card, y no el número grande que le toca a él y que después no
-   * aparece en ninguna parte.
-   */
-  if (e.moralDe) {
-    const d = e.moralDe.delta / ONCE;
-    const conf = d > 0 ? Math.max(1, Math.round(d)) : Math.min(-1, Math.round(d));
+  // perder al jugador para la fecha que viene es el costo más caro de varias
+  // apuestas y no aparecía por ningún lado
+  if (e.suspendeA) {
     chips.push({
-      texto: `${signo(conf)} vestuario`,
-      bueno: conf > 0,
+      texto: e.suspendeTexto ? `${e.suspendeTexto} se pierde la próxima` : "Se pierde la próxima",
+      bueno: false,
     });
   }
   if (!chips.length) return null;

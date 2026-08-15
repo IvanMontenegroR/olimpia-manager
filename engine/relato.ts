@@ -194,6 +194,12 @@ export function relatarTramo(
   /** Quiénes ya vieron amarilla: la segunda cuesta mucho más barata. */
   amonestados: Set<string> = new Set(),
   rival11: JugadorRival[] = [],
+  /**
+   * Los momentos que ya se jugaron y no se repiten en el mismo partido. El
+   * festejo salía en cada gol: en una goleada te frenaba el partido tres veces
+   * para decidir lo mismo, y lo que tiene que ser un premio se volvía trámite.
+   */
+  yaVistos: Set<string> = new Set(),
 ): EventoRelato[] {
   const f = fuerzas(a, ctx);
   const localiaRival = ctx.competencia === "sudamericana" ? P.localiaCopaRival : P.localiaLiga;
@@ -223,7 +229,7 @@ export function relatarTramo(
       push(m, "gol", "GOL. " + texto(rng, banco, j), { jugadorId: j.id });
       // El gol ya pasaba y vos mirabas. Adónde va a festejar sí es tuyo, y no
       // toca el resultado: mueve a la gente y puede costar una amarilla.
-      if (rng.chance(0.34)) {
+      if (!yaVistos.has("festejo") && rng.chance(0.2)) {
         const fest = generarMomento("festejo", m, a, ctx, rng, j.id);
         if (fest) push(m, "momento", fest.titulo, { pausa: true, momento: fest, jugadorId: j.id });
       }

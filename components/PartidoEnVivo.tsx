@@ -95,6 +95,8 @@ export default function PartidoEnVivo({
 
   const semilla = useRef(0);
   const cursor = useRef(0);
+  /** Los momentos que ya se jugaron, para que no se repitan en el partido. */
+  const yaVistos = useRef(new Set<string>());
   const scroller = useRef<HTMLDivElement>(null);
 
   const condAhora = (j: Jugador) =>
@@ -109,7 +111,7 @@ export default function PartidoEnVivo({
     relatarTramo(
       { once: salida.once, suplentes: salida.suplentes, actitud: salida.actitud, puestos: salida.puestos },
       ctx, new Rng(`${ctx.fecha}-${ctx.rivalNombre}-0`), 0, 90, 0, 0,
-      new Set(), onceRival(partido.rivalId, ctx.rivalFuerza)));
+      new Set(), onceRival(partido.rivalId, ctx.rivalFuerza), yaVistos.current));
 
   /** Vuelve a simular lo que queda con el equipo que hay ahora. */
   const resimular = (desdeMin: number, nueva: Alineacion) => {
@@ -117,7 +119,7 @@ export default function PartidoEnVivo({
     cursor.current = 0;
     setPendientes(relatarTramo(
       nueva, ctx, new Rng(`${ctx.fecha}-${ctx.rivalNombre}-${semilla.current}`),
-      desdeMin, 90, gO, gR, amonestados, rival11));
+      desdeMin, 90, gO, gR, amonestados, rival11, yaVistos.current));
   };
 
   useEffect(() => {
@@ -140,7 +142,12 @@ export default function PartidoEnVivo({
         setGR(ultimoEv.golesRival);
 
         const conMomento = ahora.find((e) => e.momento);
-        if (conMomento?.momento) setMomento(conMomento.momento);
+        if (conMomento?.momento) {
+          // se anota recién cuando de verdad apareció: si el tramo se vuelve a
+          // simular antes de llegar, el momento nunca pasó y sigue disponible
+          yaVistos.current.add(conMomento.momento.tipo);
+          setMomento(conMomento.momento);
+        }
 
         /*
          * Lo que obliga a mover el equipo frena el partido y se muestra. Antes
@@ -270,7 +277,7 @@ export default function PartidoEnVivo({
     setPendientes(relatarTramo(
       { once: nuevoOnce, suplentes: nuevoBanco, actitud: nuevaActitud, puestos: nuevosPuestos },
       ctx, new Rng(`${ctx.fecha}-${ctx.rivalNombre}-${semilla.current}`),
-      momento.minuto, 90, nuevoO, nuevoR, amonestados, rival11));
+      momento.minuto, 90, nuevoO, nuevoR, amonestados, rival11, yaVistos.current));
   };
 
   const seguirTrasMomento = () => {

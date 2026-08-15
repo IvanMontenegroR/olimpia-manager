@@ -1360,3 +1360,6 @@ export function sortearSituacion(c: Contexto, rng: Rng) {
 
 /** Cuántas hay en total, para saber cuándo se dio la vuelta al mazo. */
 export const TOTAL_SITUACIONES = PLANTILLAS.length;
+
+/** Todas, para los scripts que las revisan una por una. */
+export const TODAS = PLANTILLAS;

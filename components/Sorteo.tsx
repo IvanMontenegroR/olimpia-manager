@@ -34,17 +34,71 @@ export interface RangoSorteo {
   unidad: string;
 }
 
+/**
+ * Los tres tramos de la barra y dónde frena la bolilla, sin nada de React.
+ *
+ * Está afuera del componente para poder revisarlo sin navegador: que la bolilla
+ * caiga en la franja equivocada no se nota mirando una tirada, se nota
+ * probándolas todas.
+ */
+export function tramosDe({ chance, riesgo, riesgoSobre, exito, enRiesgo, semilla }: {
+  chance: number;
+  riesgo: number | null;
+  riesgoSobre: "exito" | "fallo";
+  exito: boolean;
+  enRiesgo: boolean;
+  semilla: number;
+}) {
+  const pct = Math.max(2, Math.min(98, chance * 100));
+  /*
+   * Si el riesgo se descuenta del fallo, la franja oscura empieza donde termina
+   * lo verde; si se descuenta del acierto (atajás el penal y te la empujan
+   * igual), se come el final de lo verde.
+   */
+  const desde = riesgo === null ? pct : riesgoSobre === "exito" ? pct * (1 - riesgo) : pct;
+  const hasta = riesgo === null ? pct
+    : riesgoSobre === "exito" ? pct : pct + (100 - pct) * riesgo;
+
+  const azar = ((semilla * 37) % 100) / 100;
+  /*
+   * Un punto cualquiera adentro del tramo, despegado de los bordes para que no
+   * quede pegada a la línea. El margen se achica con el tramo: la franja del
+   * rebote mide dos puntos y medio, y un margen fijo la hacía desbordar justo
+   * en el caso que este número existe para contar bien.
+   */
+  const entre = (a: number, b: number) => {
+    if (b <= a) return a;
+    const margen = Math.min(1, (b - a) / 4);
+    return a + margen + azar * (b - a - 2 * margen);
+  };
+  // frena adentro de la franja que cuenta lo que de verdad pasó
+  const donde = enRiesgo ? entre(desde, hasta)
+    : exito ? entre(0, desde)
+      : entre(hasta, 100);
+  return { pct, desde, hasta, donde };
+}
+
 export default function Sorteo({
-  chance, riesgo, exito, bien, mal, semilla, rango, onTermina,
+  chance, riesgo, riesgoSobre = "fallo", exito, enRiesgo = false,
+  bien, mal, peor, semilla, rango, onTermina,
 }: {
   /** Lo que decía la barra antes de elegir, 0 a 1. */
   chance: number;
   /** La franja de gol en contra, si esta opción la tenía. */
   riesgo: number | null;
+  /** De cuál de los dos tramos se recorta esa franja. */
+  riesgoSobre?: "exito" | "fallo";
   exito: boolean;
-  /** Cómo se llama cada tramo: "GOL", "NO ENTRA". */
+  /**
+   * Si además de fallar pasó lo que la franja oscura avisaba. Sin esto la
+   * bolilla frenaba en cualquier punto del rojo: caía justo sobre "si la
+   * rechazan, te matan de contra" y no pasaba nada, o al revés.
+   */
+  enRiesgo?: boolean;
+  /** Cómo se llama cada tramo: "GOL", "NO ENTRA", "GOL EN CONTRA". */
   bien: string;
   mal: string;
+  peor?: string;
   /** Cualquier número estable: mueve el punto exacto donde frena. */
   semilla: number;
   /** Si viene, la barra es una escala y no dos tramos. */
@@ -58,16 +112,15 @@ export default function Sorteo({
   const avisar = useRef(onTermina);
   avisar.current = onTermina;
 
-  const pct = Math.max(2, Math.min(98, chance * 100));
+  const t = tramosDe({ chance, riesgo, riesgoSobre, exito, enRiesgo, semilla });
+  const { pct, desde: desdeRiesgo, hasta: hastaRiesgo } = t;
 
   /** Dónde frena: en la escala, el número exacto; si no, adentro del tramo. */
   const destino = useRef(
     rango
       ? Math.max(2, Math.min(98,
           ((rango.valor - rango.min) / Math.max(1, rango.max - rango.min)) * 100))
-      : exito
-        ? 2 + ((semilla * 37) % 100) / 100 * Math.max(2, pct - 5)
-        : pct + 3 + ((semilla * 37) % 100) / 100 * Math.max(2, 100 - pct - 5),
+      : t.donde,
   ).current;
 
   useEffect(() => {
@@ -124,7 +177,7 @@ export default function Sorteo({
    */
   const color = rango
     ? `color-mix(in srgb, #3fa76a ${Math.round(destino)}%, #c0392b)`
-    : exito ? "#3fa76a" : "#c0392b";
+    : exito ? "#3fa76a" : enRiesgo ? "#8c2418" : "#c0392b";
   const rotulo = Math.max(13, Math.min(87, frenado ? destino : pos));
 
   return (
@@ -144,10 +197,11 @@ export default function Sorteo({
           <span className="absolute inset-y-0 left-0"
                 style={{ width: `${pct}%`, background: "#3fa76a" }} />
         )}
-        {/* de lo que falla, esta parte además termina en gol del rival */}
+        {/* la parte que además termina en gol del rival */}
         {riesgo !== null && (
           <span className="absolute inset-y-0"
-                style={{ left: `${pct}%`, width: `${(100 - pct) * riesgo}%`, background: "#7a1f16" }} />
+                style={{ left: `${desdeRiesgo}%`, width: `${hastaRiesgo - desdeRiesgo}%`,
+                         background: "#7a1f16" }} />
         )}
         {/* el rayado hace visible el movimiento sobre el color plano */}
         <span className="absolute inset-0" style={{
@@ -190,7 +244,8 @@ export default function Sorteo({
                 color: frenado ? "#0a120d" : "transparent",
                 transition: "background 160ms ease-out, color 160ms ease-out",
               }}>
-          {rango ? `${rango.unidad} ${rango.valor}` : exito ? bien : mal}
+          {rango ? `${rango.unidad} ${rango.valor}`
+            : exito ? bien : enRiesgo ? (peor ?? mal) : mal}
         </span>
       </span>
     </span>

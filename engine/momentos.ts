@@ -37,6 +37,12 @@ export interface RiesgoOpcion {
   /** Probabilidad de que además termine en gol del rival. */
   contra: number;
   texto: string;
+  /**
+   * De cuál de los dos desenlaces se descuenta. Casi siempre del fallo: si no
+   * entra, además te matan de contra. El penal en contra es al revés: el
+   * rebote sale de una atajada, no de un gol.
+   */
+  sobre: "exito" | "fallo";
 }
 
 export interface Momento {
@@ -62,6 +68,13 @@ export interface ResueltoMomento {
   gastaCambio?: string;
   /** Cambia cómo se para el equipo por lo que queda de partido. */
   cambiaActitud?: Actitud;
+  /**
+   * Pasó lo que avisaba la franja oscura de la barra, y no el fallo común.
+   * La pantalla lo necesita para frenar la bolilla en el tramo que
+   * corresponde: sin esto podía caer sobre "te matan de contra" y después
+   * contar que la pelota se fue larga y no pasó nada.
+   */
+  porElRiesgo?: boolean;
 }
 
 /*
@@ -190,16 +203,16 @@ export function chanceDe(
  */
 export function riesgoDe(m: Momento, opcionId: string): RiesgoOpcion | null {
   if (m.tipo === "mano_a_mano" && opcionId === "aguantar") {
-    return { contra: 0.24, texto: "si la pierde, sale de contra" };
+    return { contra: 0.24, texto: "si la pierde, sale de contra", sobre: "fallo" };
   }
   if (m.tipo === "tiro_libre" && opcionId === "centro") {
-    return { contra: 0.14, texto: "si la rechazan, contra con todos arriba" };
+    return { contra: 0.14, texto: "si la rechazan, contra con todos arriba", sobre: "fallo" };
   }
   if (m.tipo === "arquero_al_area" && opcionId === "arquero") {
-    return { contra: 0.3, texto: "el arco tuyo queda vacío" };
+    return { contra: 0.3, texto: "el arco tuyo queda vacío", sobre: "fallo" };
   }
   if (m.tipo === "penal_contra" && opcionId === "centro") {
-    return { contra: 0.10, texto: "si se tira a un palo, queda el rebote" };
+    return { contra: 0.10, texto: "aun atajándola, puede quedar el rebote", sobre: "exito" };
   }
   return null;
 }
@@ -457,7 +470,7 @@ export function resolverMomento(
       if (ataja && opcionId === "centro") {
         const r = riesgoDe(m, "centro");
         if (r && rng.chance(r.contra)) {
-          return { exito: false, golRival: true,
+          return { exito: false, golRival: true, porElRiesgo: true,
             texto: `${apellido(arq)} la sacó con el cuerpo pero quedó picando y la empujaron. Gol del rival.` };
         }
       }
@@ -493,7 +506,7 @@ export function resolverMomento(
         }
         const r = riesgoDe(m, "centro");
         if (r && rng.chance(r.contra)) {
-          return { exito: false, golRival: true,
+          return { exito: false, golRival: true, porElRiesgo: true,
             texto: "Rechazaron el centro y salieron de contra con todos arriba. Gol del rival." };
         }
         return { exito: false, texto: "El centro pasó largo y no llegó nadie." };
@@ -583,7 +596,7 @@ export function resolverMomento(
         }
         const r = riesgoDe(m, "arquero");
         if (r && rng.chance(r.contra)) {
-          return { exito: false, golRival: true,
+          return { exito: false, golRival: true, porElRiesgo: true,
             texto: `Rechazaron el córner y la mandaron al arco vacío. ${apellido(arq)} ` +
               "todavía estaba volviendo." };
         }
@@ -635,7 +648,7 @@ export function resolverMomento(
       // lo que se arriesgó al elegir: si salió mal, puede terminar en contra
       const r = riesgoDe(m, opcionId);
       if (r && rng.chance(r.contra)) {
-        return { exito: false, golRival: true,
+        return { exito: false, golRival: true, porElRiesgo: true,
           texto: `${mal} Y el rival salió de contra: gol en contra.` };
       }
       return { exito: false, texto: mal };
