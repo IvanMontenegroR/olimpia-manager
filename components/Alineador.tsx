@@ -65,14 +65,24 @@ export default function Alineador({
     // que la pantalla no se entendiera.
     const fuera = aptos.filter((j) => !dentro.has(j.id) && (verReserva ? j.reserva : !j.reserva));
     const base = filtro ? fuera.filter((j) => LINEA_DE[j.posicion] === filtro) : fuera;
+    /*
+     * Si hay un casillero marcado, el banco se ordena por lo que cada uno
+     * valdría EN ESE PUESTO, no en el suyo. Así arriba quedan los que entran
+     * derecho y no los que son mejores en ficha pero van a jugar corridos: un
+     * central de 68 puesto de lateral rinde menos que un lateral de 66, y
+     * ordenar por ficha lo ponía primero igual.
+     */
+    const destinoMarcado = marcado?.tipo === "cancha"
+      ? MOLDE_DE(formacion)[marcado.slot] : null;
+    const valor = (j: Jugador) =>
+      nivelEf(j, destinoMarcado ?? j.posicion, ctx);
     // Sin filtro conviene ver primero a los mejores: si ordenara por puesto,
     // los tres arqueros suplentes se comerían el arranque del banco.
     return [...base].sort((a, b) =>
-      !filtro
-        ? nivelEf(b, b.posicion, ctx) - nivelEf(a, a.posicion, ctx)
-        : orden(a.posicion) - orden(b.posicion) ||
-          nivelEf(b, b.posicion, ctx) - nivelEf(a, a.posicion, ctx));
-  }, [filtro, verReserva, alineado, ctx, aptos]);
+      destinoMarcado || !filtro
+        ? valor(b) - valor(a)
+        : orden(a.posicion) - orden(b.posicion) || valor(b) - valor(a));
+  }, [filtro, verReserva, alineado, ctx, aptos, marcado, formacion]);
 
   const enReserva = aptos.filter((j) => j.reserva).length;
 

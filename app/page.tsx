@@ -63,11 +63,20 @@ export default function Page() {
           minutos: partida.minutosSub18,
           partidosRestantes: Math.max(1, TOTAL_FECHAS - partida.fechaActual + 1),
         }}
-        onGuardarEquipo={(e) => setPartida((p) => (p ? {
-          ...p,
-          // guardar con un nombre ya usado lo pisa, no lo duplica
-          equipos: [...p.equipos.filter((x) => x.nombre !== e.nombre), e],
-        } : p))}
+        onGuardarEquipo={(e) => setPartida((p) => {
+          if (!p) return p;
+          /*
+           * Se pisa EN SU LUGAR. Antes se filtraba el viejo y se agregaba al
+           * final, así que guardar el Titular lo mandaba último y el primero
+           * pasaba a ser el Alternativo: editabas tu once, tocabas guardar, y
+           * la cancha de la pantalla principal te mostraba el otro equipo.
+           */
+          const i = p.equipos.findIndex((x) => x.nombre === e.nombre);
+          const equipos = i >= 0
+            ? p.equipos.map((x, k) => (k === i ? e : x))
+            : [...p.equipos, e];
+          return { ...p, equipos };
+        })}
         modo={hayPartidoHoy(partida) ? "jugar" : "guardar"}
         onVolver={() => setFase("escritorio")}
         onJugar={(s) => { setSalida(s); setFase("partido"); }} />
