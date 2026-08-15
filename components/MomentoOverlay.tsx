@@ -222,6 +222,14 @@ export default function MomentoOverlay({
                 no le decía nada a nadie: la hinchada es una escala interna que
                 no se muestra en ninguna pantalla, y lo que de verdad se lleva
                 el jugador de este momento es que la cancha se vino abajo. */}
+            {/* Lo que deja en el plantel, que es lo que de verdad se lleva. */}
+            {!!resuelto.enciendeAlEquipo && resuelto.enciendeAlEquipo >= 4 && (
+              <span className="mr-1 mt-1.5 inline-block rounded px-2 py-0.5 text-[11px] font-bold"
+                    style={{ background: "color-mix(in srgb, var(--ok) 22%, transparent)",
+                             color: "var(--ok)" }}>
+                El equipo se prendió
+              </span>
+            )}
             {!!resuelto.levantaHinchada && (
               <span className="mt-1.5 inline-block rounded px-2 py-0.5 text-[11px] font-bold"
                     style={{ background: "color-mix(in srgb, var(--ok) 22%, transparent)",

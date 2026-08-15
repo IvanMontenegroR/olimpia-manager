@@ -576,6 +576,23 @@ export function desgastePorPartido(j: Jugador, minutos: number, ctx: ContextoPar
   return d;
 }
 
+/**
+ * Lo que gasta correr, sin contar el viaje.
+ *
+ * Es la parte del desgaste que se acumula minuto a minuto adentro de la
+ * cancha. El viaje se paga entero por haber ido y no depende de cuánto jugues,
+ * así que no entra acá: esto es para saber cómo llega un jugador al minuto 70
+ * comparado con cómo arrancó.
+ */
+export function desgasteEnCancha(j: Jugador, minutos: number, actitud: Actitud): number {
+  const m = Math.max(0, minutos);
+  let d = P.desgaste90 * (m / 90);
+  if (j.posicion === "ARQ") d *= P.desgasteArquero;
+  d += P.desgasteActitud[actitud] * (m / 90);
+  if (j.edad >= 33) d += P.desgasteVeterano * (m / 90);
+  return Math.max(0, d);
+}
+
 export function recuperar(j: Jugador, dias: number): void {
   const utiles = dias - P.recuperacionDiaPerdido;
   if (utiles <= 0) return;

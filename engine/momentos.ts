@@ -81,6 +81,13 @@ export interface ResueltoMomento {
    * encima, y si era tu mejor jugador lo vas a pagar.
    */
   golpeAnimo?: { id: string; delta: number };
+  /**
+   * Lo que enciende a todo el once. El festejo pagaba solo en hinchada, que
+   * medida contra el nivel vale dos décimas por un partido de local: no había
+   * forma de que se notara y por eso no se entendía para qué servía. Un festejo
+   * que se pudre levanta al equipo, que es lo que sí se ve.
+   */
+  enciendeAlEquipo?: number;
 }
 
 /*
@@ -438,13 +445,13 @@ export function generarMomento(
         contexto: `Lo metió ${apellido(j)} y sale corriendo. ¿Adónde va?`,
         opciones: [
           { id: "tribuna", etiqueta: "A la tribuna",
-            detalle: "La gente se viene abajo, pero puede costarle la amarilla",
+            detalle: "La cancha se prende y el equipo con ella. Amarilla si el árbitro se pone duro",
             jugadorId: j.id },
           { id: "provocar", etiqueta: "Callarle la boca al rival",
-            detalle: "Enorme si zafa. Se la están buscando",
+            detalle: "Enciende al equipo como nada. Se la están buscando y esta suele costar amarilla",
             jugadorId: j.id },
           { id: "banco", etiqueta: "Correr al banco",
-            detalle: "Se lo dedica a los compañeros. Por esto no lo amonesta nadie",
+            detalle: "Se lo dedica a los compañeros. Levanta menos, pero por esto no lo amonesta nadie",
             jugadorId: j.id },
         ],
         porDefecto: "banco",
@@ -665,19 +672,22 @@ export function resolverMomento(
       const j = buscar(m.opciones[0].jugadorId);
       if (!j) return { exito: true, texto: "Lo festejó el equipo entero." };
       if (opcionId === "banco") {
-        return { exito: true, levantaHinchada: 4,
+        return { exito: true, levantaHinchada: 4, enciendeAlEquipo: 2,
           texto: `${apellido(j)} corrió al banco a abrazarse con los suplentes.` };
       }
       const zafa = rng.chance(opcionId === "tribuna" ? 0.82 : 0.62);
       const premio = opcionId === "tribuna" ? 10 : 16;
       if (zafa) {
         return { exito: true, levantaHinchada: premio,
+          enciendeAlEquipo: opcionId === "tribuna" ? 4 : 7,
           texto: opcionId === "tribuna"
             ? `${apellido(j)} se fue a la popular y el Defensores se vino abajo.`
             : `${apellido(j)} lo gritó de cara a la hinchada rival. Se pudrió todo, pero zafó.` };
       }
       return {
         exito: false, amarillaA: j.id, levantaHinchada: Math.round(premio * 0.6),
+        // la amarilla enfría lo que el festejo había prendido
+        enciendeAlEquipo: opcionId === "tribuna" ? 1 : 2,
         texto: opcionId === "tribuna"
           ? `${apellido(j)} se sacó la camiseta y vio la amarilla. Valió la pena igual.`
           : `Amarilla a ${apellido(j)} por provocar. Ahora juega condicionado.`,

@@ -1,5 +1,5 @@
 import { Rng } from "./rng.ts";
-import { P, clamp, fuerzas, nivelEfectivo } from "./motor.ts";
+import { P, clamp, desgasteEnCancha, fuerzas, nivelEfectivo } from "./motor.ts";
 import { generarMomento, type Momento } from "./momentos.ts";
 import type { JugadorRival } from "./rival.ts";
 import { LINEA_DE, type Alineacion, type ContextoPartido, type Jugador, type Posicion , aprieta } from "./tipos.ts";
@@ -238,8 +238,31 @@ export function relatarTramo(
    * para decidir lo mismo, y lo que tiene que ser un premio se volvía trámite.
    */
   yaVistos: Set<string> = new Set(),
+  /** En qué minuto entró cada uno, para saber cuánto lleva corrido. */
+  entradas: Map<string, number> = new Map(),
 ): EventoRelato[] {
-  const f = fuerzas(a, ctx);
+  /*
+   * Los once se cansan DENTRO del partido.
+   *
+   * La condición solo se usaba para dibujar la barrita de cada jugador: la
+   * simulación tomaba la del vestuario y no la bajaba nunca. Un titular con
+   * ochenta minutos encima rendía como si acabara de entrar, y por eso meter
+   * cambios te empeoraba el equipo en vez de mejorarlo: el suplente fresco
+   * entraba con su nivel crudo contra un titular que el motor creía entero.
+   *
+   * Se usa la condición del punto medio del tramo, que es la que representa
+   * cómo se juega ese rato. Los que entran de cambio llegan con la suya, que
+   * es justamente la ventaja de estar fresco.
+   */
+  const medio = (desde + Math.max(hasta, desde)) / 2;
+  const cansados: Alineacion = {
+    ...a,
+    once: a.once.map((j) => ({
+      ...j,
+      condicion: Math.max(5, j.condicion - desgasteEnCancha(j, medio - (entradas.get(j.id) ?? 0), a.actitud)),
+    })),
+  };
+  const f = fuerzas(cansados, ctx);
   const localiaRival = ctx.competencia === "sudamericana" ? P.localiaCopaRival : P.localiaLiga;
   const rival = ctx.rivalFuerza + (ctx.esLocal || ctx.neutral ? 0 : localiaRival);
   const parte = Math.max(hasta - desde, 0) / 90;
@@ -259,7 +282,7 @@ export function relatarTramo(
 
   for (const m of minutos(rng.poisson(xgO)))
     sucesos.push({ min: m, hacer: () => {
-      const j = elegirGoleador(a, ctx, rng);
+      const j = elegirGoleador(cansados, ctx, rng);
       gO++;
       const p = a.puestos.get(j.id) ?? j.posicion;
       const banco = LINEA_DE[p] === "DEF" ? GOL_DEF : LINEA_DE[p] === "MED" ? GOL_MED
@@ -286,7 +309,7 @@ export function relatarTramo(
   for (const m of minutos(rng.entero(0, Math.max(1, Math.round(3 * parte)))))
     sucesos.push({ min: m, hacer: () => push(m, "ocasion_rival", texto(rng, OCASION_RIVAL)) });
 
-  for (const j of a.once) {
+  for (const j of cansados.once) {
     const pAm = ((LINEA_DE[j.posicion] === "DEF" ? 0.16 : LINEA_DE[j.posicion] === "MED" ? 0.14 : 0.08)
       * (ctx.esClasico ? 1.5 : 1) * (aprieta(a.actitud) ? 1.25 : 1)) * parte;
     if (rng.chance(pAm)) {

@@ -130,7 +130,8 @@ export default function PartidoEnVivo({
     relatarTramo(
       { once: salida.once, suplentes: salida.suplentes, actitud: salida.actitud, puestos: salida.puestos },
       ctx, new Rng(`${ctx.fecha}-${ctx.rivalNombre}-0`), 0, 90, 0, 0,
-      new Set(), onceRival(partido.rivalId, ctx.rivalFuerza), yaVistos.current));
+      new Set(), onceRival(partido.rivalId, ctx.rivalFuerza), yaVistos.current,
+      entradas.current));
 
   /** Vuelve a simular lo que queda con el equipo que hay ahora. */
   const resimular = (desdeMin: number, nueva: Alineacion) => {
@@ -138,7 +139,7 @@ export default function PartidoEnVivo({
     cursor.current = 0;
     setPendientes(relatarTramo(
       nueva, ctx, new Rng(`${ctx.fecha}-${ctx.rivalNombre}-${semilla.current}`),
-      desdeMin, 90, gO, gR, amonestados, rival11, yaVistos.current));
+      desdeMin, 90, gO, gR, amonestados, rival11, yaVistos.current, entradas.current));
   };
 
   useEffect(() => {
@@ -256,6 +257,13 @@ export default function PartidoEnVivo({
       animoPorPenales.current[r.golpeAnimo.id] =
         (animoPorPenales.current[r.golpeAnimo.id] ?? 0) + r.golpeAnimo.delta;
     }
+    // un festejo que se pudre levanta a los once, no solo al que hizo el gol
+    if (r.enciendeAlEquipo) {
+      for (const j of once) {
+        animoPorPenales.current[j.id] =
+          (animoPorPenales.current[j.id] ?? 0) + r.enciendeAlEquipo;
+      }
+    }
 
     const nuevoO = gO + (r.golOlimpia ? 1 : 0);
     const nuevoR = gR + (r.golRival ? 1 : 0);
@@ -303,7 +311,8 @@ export default function PartidoEnVivo({
     setPendientes(relatarTramo(
       { once: nuevoOnce, suplentes: nuevoBanco, actitud: nuevaActitud, puestos: nuevosPuestos },
       ctx, new Rng(`${ctx.fecha}-${ctx.rivalNombre}-${semilla.current}`),
-      momento.minuto, 90, nuevoO, nuevoR, amonestados, rival11, yaVistos.current));
+      momento.minuto, 90, nuevoO, nuevoR, amonestados, rival11, yaVistos.current,
+      entradas.current));
   };
 
   const seguirTrasMomento = () => {

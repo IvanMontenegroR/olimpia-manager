@@ -8,7 +8,6 @@ import {
 import type { Actitud, Jugador, Posicion } from "@/engine/tipos.ts";
 import type { EquipoGuardado } from "@/lib/temporada.ts";
 import Escudo from "./Escudo.tsx";
-import { comoLlega, estadoRival } from "@/lib/rivales.ts";
 import Alineador, { Hoja, type EstadoAlineacion } from "./Alineador.tsx";
 import { ACTITUD } from "./PartidoEnVivo.tsx";
 
@@ -165,8 +164,9 @@ export default function ArmarOnce({
         </div>
       </header>
 
-      {/* ---------- cómo llega cada uno ---------- */}
-      <ComoLlegan partido={partido} />
+      {/* Cómo llega el rival ya está en el botón de la pantalla principal,
+          que es donde se decide entrar acá. Repetirlo comía una fila entera de
+          la cancha, que es lo único que esta pantalla necesita mostrar. */}
 
       {/* ---------- estado del once ----------
           Las dos reglas (cupo y Sub-18) solo se muestran cuando hay algo que
@@ -288,53 +288,6 @@ export default function ArmarOnce({
  * Lo que hay que saber antes de elegir: si el rival llega gastado conviene
  * apretarlo, y si el viaje o la altura pesan hay que ver con qué se llega.
  */
-function ComoLlegan({ partido }: { partido: PartidoUI }) {
-  const { ctx } = partido;
-  const rival = ctx.competencia === "clausura"
-    ? estadoRival(partido.rivalId, ctx.fecha) : null;
-  const lectura = rival ? comoLlega(rival) : null;
-  const altura = ctx.alturaM >= 1500 && !ctx.esLocal;
-  const viaje = ctx.viajeKm >= 800 && !ctx.esLocal;
-  const acl = ctx.aclimatacion ?? 0;
-  if (!lectura && !altura && !viaje) return null;
-
-  return (
-    <div className="scroll-x flex gap-1.5 px-3 pb-1.5 pt-0.5">
-      {lectura && rival && (
-        <Pastilla
-          color={lectura.bueno ? "var(--ok)" : "var(--tenue)"}
-          titulo={`${nombreCorto(partido.rivalId, partido.rivalNombre)}: ${lectura.texto.toLowerCase()}`}
-          pie={
-            rival.vieneDeCopa ? "jugó la copa el jueves · presionalo"
-            : rival.diasDescanso !== null
-              ? `${rival.diasDescanso} días de descanso${lectura.bueno ? " · presionalo" : ""}`
-              : "sin partidos previos"} />
-      )}
-      {altura && (
-        <Pastilla
-          color={acl >= 1 ? "var(--ok)" : acl > 0 ? "var(--medio)" : "var(--critico)"}
-          titulo={`${ctx.alturaM.toLocaleString("es")} m`}
-          pie={acl >= 1 ? "adaptados" : acl > 0 ? "media adaptación" : "sin adaptar"} />
-      )}
-      {viaje && (
-        <Pastilla
-          color={acl > 0 ? "var(--ok)" : "var(--tenue)"}
-          titulo={`${Math.round(ctx.viajeKm).toLocaleString("es")} km`}
-          pie={acl > 0 ? "se viajó antes" : "se viajó la víspera"} />
-      )}
-    </div>
-  );
-}
-
-function Pastilla({ color, titulo, pie }: { color: string; titulo: string; pie: string }) {
-  return (
-    <span className="shrink-0 rounded-md px-2 py-1" style={{ background: "var(--carbon)" }}>
-      <span className="block text-[10px] font-bold leading-tight" style={{ color }}>{titulo}</span>
-      <span className="block text-[9px] leading-tight" style={{ color: "var(--apagado)" }}>{pie}</span>
-    </span>
-  );
-}
-
 function Dato({ etiqueta, valor, alerta, fuerte }: {
   etiqueta: string; valor: string; alerta?: boolean; fuerte?: boolean;
 }) {
