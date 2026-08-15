@@ -78,11 +78,28 @@ console.log(`\n  Olimpia llega a la copa con OVR ${miOvr.toFixed(0)}\n`);
 
 console.log("  UN PARTIDO SUELTO, EQUILIBRADO");
 console.log("    rival   de local        de visitante");
+const deVisita: number[] = [];
 for (const rival of [66, 70, 74, 78, 82]) {
   const l = tasa(normal, ctxDe({ rivalFuerza: rival, esLocal: true }));
   const v = tasa(normal, ctxDe({ rivalFuerza: rival, esLocal: false }));
+  deVisita.push(v.gana);
   console.log(`     ${String(rival).padEnd(6)} gana ${pct(l.gana)} emp ${pct(l.empata)}` +
     `   gana ${pct(v.gana)} emp ${pct(v.empata)}`);
+}
+
+/*
+ * De visitante el rival tiene que seguir importando.
+ *
+ * Con la diferencia cortada en seco, un 74 y un 82 quedaban los dos del otro
+ * lado del corte y ganabas lo mismo contra los dos: el rival desaparecía justo
+ * en los partidos donde más tiene que pesar. Es un error que no se ve jugando,
+ * solo midiendo, así que queda medido acá.
+ */
+const caida = deVisita[2] - deVisita[4];   // del 74 al 82
+if (caida < 0.015) {
+  console.log(`\n  ⚠ de visitante el rival dejó de importar: contra un 74 se gana` +
+    ` ${pct(deVisita[2])} y contra un 82 ${pct(deVisita[4])}, o sea lo mismo`);
+  process.exitCode = 1;
 }
 
 console.log("\n  PASAR LA SERIE (ida y vuelta)\n");

@@ -108,7 +108,11 @@ export const P = {
   ajusteRival: -2,
 
   localiaLiga: 3.0,
-  localiaCopa: 9.0,      // el Defensores de noche en Conmebol sigue pesando el triple que un domingo
+  // El Defensores de noche en Conmebol pesa el triple que un domingo. Subió un
+  // punto cuando la visita se puso más dura de verdad: la copa se juega
+  // aguantando afuera y definiendo en casa, y si afuera cuesta más, casa tiene
+  // que valer más. Sin eso el título internacional caía a 7.8%.
+  localiaCopa: 10.0,
   localiaCopaRival: 4.0, // el rival de local en copa: pesa, pero no como el Defensores     // el Defensores de noche en Conmebol no es el Defensores de un domingo
   alturaUmbralM: 1500,
   // La altura es EL problema del fútbol sudamericano. Ir a La Paz o a Cusco
@@ -128,12 +132,29 @@ export const P = {
   xgBase: 1.22,
   xgK: 0.055,
   /**
-   * Tope de la ventaja que se traduce en goles. Sin esto, contra los equipos
-   * más flojos la diferencia de veinte puntos se convertía en cuatro goles
-   * esperados y salían goleadas de 5-0 todo el tiempo: había 13% de partidos
-   * con cuatro o más de diferencia cuando en el fútbol real son 3%.
+   * Dónde deja de contar entera la diferencia de nivel. Sin esto, contra los
+   * equipos más flojos la diferencia de veinte puntos se convertía en cuatro
+   * goles esperados y salían goleadas de 5-0 todo el tiempo: había 13% de
+   * partidos con cuatro o más de diferencia cuando en el fútbol real son 3%.
+   *
+   * Hasta acá no se toca nada, así que todo el Clausura, donde las diferencias
+   * son chicas, se juega con la diferencia real.
    */
   ventajaMaxima: 9,
+  /**
+   * Qué pasa más allá del codo. Antes se cortaba en seco y toda diferencia
+   * mayor valía lo mismo; ahora sigue creciendo, pero aplastada.
+   *
+   * Los dos lados no se aplastan igual, y es a propósito. Cuando la ventaja es
+   * de Olimpia se aplana del todo, que es lo que el tope vino a resolver.
+   * Cuando es del rival se deja respirar: con el corte en seco, de visitante
+   * un 74 y un 82 eran el mismo partido (ganabas 10% contra los dos), y peor
+   * todavía, contra el 82 aguantar y viajar aclimatado no cambiaba nada porque
+   * estabas cortado de los dos lados. O sea que el juego no te pagaba por
+   * hacer las cosas bien justo contra el rival donde más importaba.
+   */
+  aplastaAFavor: 0,
+  aplastaEnContra: 0.22,
   /**
    * Corrección de Dixon-Coles para los marcadores bajos. Dos Poisson
    * independientes dan pocos empates (salían 19% cuando en el fútbol real son
@@ -444,10 +465,32 @@ export function simularPartido(
     (ctx.esLocal || ctx.neutral ? 0 : localiaRival) +
     (ctx.competencia === "sudamericana" ? 0 : P.ajusteRival);
 
-  // la ventaja se topea: ser muy superior no puede significar cuatro goles
-  const ventaja = (d: number) => clamp(d, -P.ventajaMaxima, P.ventajaMaxima);
-  let xgOlimpia = P.xgBase * Math.exp(P.xgK * ventaja(f.ataque - rival));
-  let xgRival = P.xgBase * Math.exp(P.xgK * ventaja(rival - f.defensa));
+  /*
+   * La diferencia no se corta: se dobla.
+   *
+   * Antes cualquier ventaja de más de nueve puntos valía nueve, y como de
+   * visitante Olimpia arranca muy por debajo, un rival de 74 y uno de 82
+   * quedaban los dos del otro lado del corte: ganabas 10% contra los dos y el
+   * rival dejaba de importar. Ahora hasta el codo no cambia nada (o sea, todo
+   * el Clausura queda igual) y más allá la diferencia sigue creciendo, pero
+   * aplastada.
+   *
+   * Los dos lados no se aplastan igual, y es a propósito. Cuando la ventaja es
+   * de Olimpia se aplana del todo, que es lo que evita las goleadas de
+   * escándalo. Cuando es del rival se deja respirar, para que se note la
+   * diferencia entre pasar por Santa Fe y pasar por el Mineiro.
+   */
+  const doblar = (d: number, pendiente: number) => {
+    const k = P.ventajaMaxima;
+    if (Math.abs(d) <= k) return d;
+    return Math.sign(d) * (k + (Math.abs(d) - k) * pendiente);
+  };
+  const dOlimpia = f.ataque - rival;
+  const dRival = rival - f.defensa;
+  let xgOlimpia = P.xgBase * Math.exp(P.xgK *
+    doblar(dOlimpia, dOlimpia > 0 ? P.aplastaAFavor : P.aplastaEnContra));
+  let xgRival = P.xgBase * Math.exp(P.xgK *
+    doblar(dRival, dRival > 0 ? P.aplastaEnContra : P.aplastaAFavor));
   xgOlimpia *= bonoRasgos(a.once, rng);
 
   if (ctx.esClasico) {
