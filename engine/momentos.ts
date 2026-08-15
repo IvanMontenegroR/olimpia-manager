@@ -1,5 +1,5 @@
 import { Rng } from "./rng.ts";
-import { nivelEfectivo } from "./motor.ts";
+import { P, nivelEfectivo } from "./motor.ts";
 import { LINEA_DE, type Actitud, type Alineacion, type ContextoPartido, type Jugador } from "./tipos.ts";
 
 /**
@@ -274,24 +274,32 @@ export function candidatosAlPenal(a: Alineacion, ctx: ContextoPartido) {
   const libre = (j: Jugador) => !elegidos.some((e) => e.j.id === j.id);
 
   /*
-   * El costo va en el texto, con su número. Sin eso la única cifra a la vista
-   * era el porcentaje y volvías a elegir el más alto sin pensar: el precio de
-   * errarlo tiene que estar tan visible como la chance de meterlo.
+   * El costo va en el texto, con su número, y en NIVEL del equipo.
+   *
+   * Antes decía "−25 de ánimo", que es un número interno que no aparece en
+   * ninguna pantalla del juego. Ahora dice lo que va a bajar el nivel del
+   * equipo, que durante el partido está a la vista al lado del escudo: podés
+   * verlo caer cuando pasa.
    */
-  const cuesta = (j: Jugador) => Math.round(45 * pesoDeFallar(j, media));
-  meter(orden[0], `En él se apoya el equipo. Si la erra, −${cuesta(orden[0])} de ánimo`);
+  const cuestaEnNivel = (j: Jugador) => {
+    const golpe = 45 * pesoDeFallar(j, media);
+    // lo que ese ánimo perdido le saca al promedio de los once
+    return (j.nivel * golpe * P.animoPorPunto) / Math.max(1, a.once.length);
+  };
+  const bajada = (j: Jugador) => cuestaEnNivel(j).toFixed(1);
+  meter(orden[0], `En él se apoya el equipo. Si la erra, −${bajada(orden[0])} de nivel`);
   // el que menos lo sufre: uno que puede patear y no carga con el equipo encima
   const frio = [...orden].slice(0, 7).filter(libre)
     .sort((x, y) => pesoDeFallar(x, media) - pesoDeFallar(y, media))[0];
-  if (frio) meter(frio, `Patea peor, pero errarlo casi no le queda: −${cuesta(frio)}`);
+  if (frio) meter(frio, `Patea peor, pero errarlo casi no le queda: −${bajada(frio)} de nivel`);
   // el pibe: la peor chance y lo que más se lleva si la mete
   const pibe = [...orden].slice(0, 8).filter((j) => libre(j) && j.edad <= 23)
     .sort((x, y) => y.nivel - x.nivel)[0];
-  if (pibe) meter(pibe, `Se ofrece. Si la mete no se olvida más; si la erra, −${cuesta(pibe)}`);
+  if (pibe) meter(pibe, `Se ofrece. Si la mete no se olvida más; si la erra, −${bajada(pibe)} de nivel`);
   for (const j of orden) {
     if (elegidos.length >= 3) break;
     meter(j, `Nivel ${Math.round(nivelEfectivo(j, a.puestos.get(j.id) ?? j.posicion, ctx))}. ` +
-      `Si la erra, −${cuesta(j)} de ánimo`);
+      `Si la erra, −${bajada(j)} de nivel`);
   }
   return elegidos.slice(0, 3);
 }

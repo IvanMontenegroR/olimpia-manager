@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Rng } from "@/engine/rng.ts";
-import { desgastePorPartido, fuerzas, P } from "@/engine/motor.ts";
+import { desgastePorPartido, factorCondicion, fuerzas, ovrDelOnce, P } from "@/engine/motor.ts";
 import { ambienteDe, relatarTramo, type EventoRelato, type TipoEvento } from "@/engine/relato.ts";
 import { colorCondicion, nivelEf, nombreCorto, type PartidoUI } from "@/lib/juego.ts";
 import { LINEA_DE, type Actitud, type Alineacion, type Jugador, type Posicion } from "@/engine/tipos.ts";
@@ -335,6 +335,29 @@ export default function PartidoEnVivo({
     setPanel(null); setCorriendo(true);
   };
 
+  /**
+   * El nivel de los dos, ahora mismo, con todo lo que pasó adentro.
+   *
+   * Es la métrica que le faltaba al partido. Adentro de la cancha las
+   * consecuencias se contaban en ánimo, que es un número interno que no se
+   * muestra en ninguna pantalla: "si la erra, −25 de ánimo" no le decía nada a
+   * nadie. Con el nivel al lado de cada escudo, y bajando en vivo cuando el
+   * equipo se cae, eso ya se puede decir en la moneda que el jugador mira.
+   */
+  const nivelEnVivo = useMemo(() => {
+    const cansados = once.map((j) => ({
+      ...j,
+      condicion: condAhora(j),
+      animo: Math.max(0, Math.min(100, j.animo + (animoPorPenales.current[j.id] ?? 0))),
+    }));
+    const mio = ovrDelOnce({ once: cansados, suplentes: banco, actitud, puestos }, ctx);
+    const localiaRival = ctx.competencia === "sudamericana" ? P.localiaCopaRival : P.localiaLiga;
+    const suyo = ctx.rivalFuerza * factorCondicion(ctx.rivalCondicion ?? 100)
+      + (ctx.esLocal || ctx.neutral ? 0 : localiaRival)
+      + (ctx.competencia === "sudamericana" ? 0 : P.ajusteRival);
+    return { mio: Math.round(mio), suyo: Math.round(suyo) };
+  }, [once, banco, actitud, puestos, ctx, minuto, visibles.length]);
+
   // Cuánto mejor es Olimpia que el rival hoy, normalizado. Sesga el pulso para
   // que un partido contra Rubio Ñu no se vea igual que uno contra Cerro.
   const tendencia = useMemo(() => {
@@ -468,6 +491,7 @@ export default function PartidoEnVivo({
           <div className="flex flex-col items-center gap-1">
             <Escudo id="olimpia" nombre="Olimpia" tam={32} />
             <span className="apellido max-w-full truncate text-[12px] leading-none">Olimpia</span>
+            <NivelEnVivo valor={nivelEnVivo.mio} contra={nivelEnVivo.suyo} />
           </div>
 
           <div className="px-3 text-center">
@@ -487,6 +511,7 @@ export default function PartidoEnVivo({
             <span className="apellido max-w-full truncate text-[12px] leading-none">
               {nombreCorto(partido.rivalId, partido.rivalNombre)}
             </span>
+            <NivelEnVivo valor={nivelEnVivo.suyo} contra={nivelEnVivo.mio} />
           </div>
         </div>
         <div className="mt-1.5 h-0.5 w-full overflow-hidden rounded-full" style={{ background: "var(--linea)" }}>
@@ -766,5 +791,24 @@ function Panel({ titulo, onCerrar, children }: {
         <div className="scroll-y" style={{ maxHeight: "54vh" }}>{children}</div>
       </div>
     </div>
+  );
+}
+
+/**
+ * El nivel de un equipo durante el partido, al lado de su escudo.
+ *
+ * Se pinta contra el del otro: verde si estás por encima, rojo si estás por
+ * debajo. Es lo que convierte todo lo que pasa adentro de la cancha en algo que
+ * se puede leer, porque cuando alguien se cae este número baja a la vista.
+ */
+function NivelEnVivo({ valor, contra }: { valor: number; contra: number }) {
+  const color = valor > contra + 1 ? "var(--ok)"
+    : valor < contra - 1 ? "var(--critico)" : "var(--tenue)";
+  return (
+    <span className="num rounded px-1.5 text-[11px] font-extrabold leading-[1.4]"
+          style={{ background: `color-mix(in srgb, ${color} 18%, transparent)`, color,
+                   transition: "color 400ms ease-out, background 400ms ease-out" }}>
+      {valor}
+    </span>
   );
 }

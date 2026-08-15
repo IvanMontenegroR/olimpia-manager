@@ -17,8 +17,15 @@ import Dorsal from "./Dorsal.tsx";
  * se diferencian solo en lo que va arriba y abajo.
  */
 
-const FILTROS = ["TODOS", "ARQ", "DEF", "MED", "DEL", "RES"] as const;
-type Filtro = (typeof FILTROS)[number];
+/*
+ * Los filtros son las cuatro líneas y nada más.
+ *
+ * "Todos" no es un filtro, es no tener ninguno: ocupaba un botón para volver a
+ * lo que ya era el estado por defecto. Y la reserva no es una línea del banco
+ * sino otra cosa, así que se mira aparte con su propio botón.
+ */
+const FILTROS = ["ARQ", "DEF", "MED", "DEL"] as const;
+type Filtro = (typeof FILTROS)[number] | null;
 const ORDEN: Record<Linea, number> = { ARQ: 0, DEF: 1, MED: 2, DEL: 3 };
 const orden = (p: Posicion) => ORDEN[LINEA_DE[p]];
 
@@ -39,7 +46,8 @@ export default function Alineador({
   extra?: React.ReactNode;
 }) {
   const porId = useMemo(() => new Map(aptos.map((j) => [j.id, j])), [aptos]);
-  const [filtro, setFiltro] = useState<Filtro>("TODOS");
+  const [filtro, setFiltro] = useState<Filtro>(null);
+  const [verReserva, setVerReserva] = useState(false);
   const [marcado, setMarcado] = useState<Punta | null>(null);
   const [verFormaciones, setVerFormaciones] = useState(false);
 
@@ -55,18 +63,16 @@ export default function Alineador({
     // La reserva no aparece salvo que la pidas: el banco de un partido son
     // siete, no todo el club, y tener treinta nombres acá era lo que hacía
     // que la pantalla no se entendiera.
-    const fuera = aptos.filter((j) => !dentro.has(j.id) && (filtro === "RES" ? j.reserva : !j.reserva));
-    const base = filtro === "TODOS" || filtro === "RES"
-      ? fuera
-      : fuera.filter((j) => LINEA_DE[j.posicion] === filtro);
+    const fuera = aptos.filter((j) => !dentro.has(j.id) && (verReserva ? j.reserva : !j.reserva));
+    const base = filtro ? fuera.filter((j) => LINEA_DE[j.posicion] === filtro) : fuera;
     // Sin filtro conviene ver primero a los mejores: si ordenara por puesto,
     // los tres arqueros suplentes se comerían el arranque del banco.
     return [...base].sort((a, b) =>
-      filtro === "TODOS" || filtro === "RES"
+      !filtro
         ? nivelEf(b, b.posicion, ctx) - nivelEf(a, a.posicion, ctx)
         : orden(a.posicion) - orden(b.posicion) ||
           nivelEf(b, b.posicion, ctx) - nivelEf(a, a.posicion, ctx));
-  }, [filtro, alineado, ctx, aptos]);
+  }, [filtro, verReserva, alineado, ctx, aptos]);
 
   const enReserva = aptos.filter((j) => j.reserva).length;
 
@@ -88,7 +94,19 @@ export default function Alineador({
 
   /** Por toques: el primero marca, el segundo resuelve. */
   const tocar = (p: Punta) => {
-    if (!marcado) { setMarcado(p); return; }
+    if (!marcado) {
+      setMarcado(p);
+      /*
+       * Al marcar a alguien de la cancha, el banco se filtra por su línea. Si
+       * vas a sacar un defensor querés ver defensores, no scrollear catorce
+       * nombres hasta encontrarlos.
+       */
+      if (p.tipo === "cancha") {
+        const puesto = casilleros[p.slot]?.puesto;
+        if (puesto) setFiltro(LINEA_DE[puesto] as Filtro);
+      }
+      return;
+    }
     const esElMismo = marcado.tipo === "cancha" && p.tipo === "cancha"
       ? marcado.slot === p.slot
       : marcado.tipo === "banco" && p.tipo === "banco" && marcado.id === p.id;
@@ -159,26 +177,35 @@ export default function Alineador({
             {formacion} ▾
           </button>
           {extra}
+          {/* Tocar el filtro puesto lo saca: volver a "todos" no necesita botón. */}
           {FILTROS.map((p) => {
-            if (p === "RES" && !enReserva) return null;
             const activo = filtro === p;
             return (
-              <button key={p} onClick={() => setFiltro(p)}
+              <button key={p} onClick={() => setFiltro(activo ? null : p)}
                 className="flex-1 rounded py-1 text-[10px] font-bold uppercase tracking-wider"
                 style={{
                   background: activo ? "var(--blanco)" : "var(--carbon)",
-                  color: activo ? "var(--negro)"
-                    : p === "RES" ? "var(--apagado)" : "var(--tenue)",
+                  color: activo ? "var(--negro)" : "var(--tenue)",
                 }}>
-                {p === "TODOS" ? "Todos" : p}
+                {p}
               </button>
             );
           })}
+          {enReserva > 0 && (
+            <button onClick={() => setVerReserva((v) => !v)}
+              className="shrink-0 rounded px-2 py-1 text-[9px] font-bold uppercase tracking-wider"
+              style={{
+                background: verReserva ? "var(--medio)" : "var(--carbon)",
+                color: verReserva ? "var(--negro)" : "var(--apagado)",
+              }}>
+              Reserva
+            </button>
+          )}
         </div>
 
-        {filtro === "RES" && (
+        {verReserva && (
           <div className="px-3 pb-1 text-[9px]" style={{ color: "var(--apagado)" }}>
-            Reserva: entrenan aparte y no cuentan para el banco salvo que los pongas.
+            Entrenan aparte y no cuentan para el banco salvo que los pongas.
           </div>
         )}
 
