@@ -88,9 +88,32 @@ export default function Mercado({
                 )}
               </div>
             )}
+            {/*
+              * Lo que cuesta y lo que va a costar todos los meses, destacado.
+              * Iban como texto gris al lado del botón, del mismo tamaño que
+              * "34 años · Libertad": las dos cifras que deciden el fichaje se
+              * leían como un pie de foto. Y el sueldo pasó a importar de
+              * verdad desde que la planilla se paga.
+              */}
             <div className="mt-2 flex items-center gap-2">
-              <span className="flex-1 text-[11px]" style={{ color: "var(--tenue)" }}>
-                {miles(f.precioUsd)} · sueldo {miles(f.sueldoUsd)}
+              <span className="flex flex-1 gap-1.5">
+                <span className="rounded-md px-2 py-1"
+                      style={{ background: alcanza
+                        ? "color-mix(in srgb, #d9a832 16%, var(--carbon))" : "var(--carbon)" }}>
+                  <span className="block text-[8px] uppercase tracking-[0.14em]"
+                        style={{ color: "var(--apagado)" }}>pase</span>
+                  <span className="num block text-[13px] leading-tight"
+                        style={{ color: alcanza ? "#d9a832" : "var(--ladrillo)" }}>
+                    {miles(f.precioUsd)}
+                  </span>
+                </span>
+                <span className="rounded-md px-2 py-1" style={{ background: "var(--carbon)" }}>
+                  <span className="block text-[8px] uppercase tracking-[0.14em]"
+                        style={{ color: "var(--apagado)" }}>por mes</span>
+                  <span className="num block text-[13px] leading-tight" style={{ color: "var(--tenue)" }}>
+                    {miles(f.sueldoUsd)}
+                  </span>
+                </span>
               </span>
               <button onClick={() => onFichar(f.id)} disabled={!alcanza}
                 className="rounded-md px-3 py-1.5 text-[11px] font-extrabold uppercase tracking-wider"

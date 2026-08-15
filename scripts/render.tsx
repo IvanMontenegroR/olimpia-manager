@@ -153,8 +153,8 @@ for (const [que, p2] of escritorios) {
       <Escritorio partida={p2} onAvanzar={() => {}} onDirigir={() => {}}
                   onResolver={() => {}} onFichar={() => {}} onReiniciar={() => {}}
                   onGuardarEquipos={() => {}} onMoverReserva={() => {}}
-                  onFicharEstrella={() => {}} onRechazarEstrella={() => {}}
-                  onJugarDirecto={() => {}} />);
+                  onFicharEstrella={() => {}} onRechazarEstrella={() => {}} />,
+    );
   });
 }
 

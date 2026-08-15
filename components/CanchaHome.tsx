@@ -3,21 +3,22 @@
 import { useEffect, useRef, useState } from "react";
 import { repartirCancha } from "@/lib/formacion.ts";
 import Dorsal from "./Dorsal.tsx";
-import { nivelEf } from "@/lib/juego.ts";
 import { factorPosicion } from "@/engine/motor.ts";
-import type { ContextoPartido, Jugador, Posicion } from "@/engine/tipos.ts";
+import type { Jugador, Posicion } from "@/engine/tipos.ts";
 
 /**
  * El once que va a salir, en la cancha, en la pantalla principal.
  *
- * El número debajo de cada uno es lo que vale hoy, que es lo que cualquiera
- * espera leer ahí: el nivel con el ánimo, las piernas y el puesto ya metidos
- * adentro. Promediarlos da el OVR de la card, así que los dos números hablan
- * el mismo idioma.
+ * El número debajo de cada uno es SU NIVEL, el mismo que dice su ficha y el
+ * mismo con el que lo fichaste. Antes acá se mostraba el nivel efectivo, o sea
+ * el de hoy con el ánimo y las piernas metidos adentro, y eso hacía que el
+ * mismo jugador fuera un 74 en el mercado y un 76 en la cancha sin que nada lo
+ * explicara.
  *
- * El ánimo va en el color del aro, no en el número. Poner el ánimo como cifra
- * se confundía con el nivel del jugador, que es lo que ese lugar significa en
- * cualquier juego de fútbol.
+ * Cómo llega no desaparece: va en el aro, que es lo que se llena o se vacía.
+ * Y el total con todo adentro sigue estando en la card de arriba, que es donde
+ * corresponde: los once números de acá promedian exactamente el PLANTEL de la
+ * card, y de ahí para arriba están el vestuario, la hinchada y el físico.
  */
 
 /** El color del ánimo, que es lo que se muestra por jugador. */
@@ -45,12 +46,11 @@ function useMedida() {
 }
 
 export default function CanchaHome({
-  once, puestos, formacion, ctx, animoDe, bajaDe, onTocar, onModificar,
+  once, puestos, formacion, animoDe, bajaDe, onTocar, onModificar,
 }: {
   once: Jugador[];
   puestos: Map<string, Posicion>;
   formacion: string;
-  ctx: ContextoPartido;
   animoDe: (j: Jugador) => number;
   /** Por qué no está disponible, si no lo está. */
   bajaDe: (j: Jugador) => "lesionado" | "suspendido" | null;
@@ -120,12 +120,11 @@ export default function CanchaHome({
               {adaptado && !baja && (
                 <span className="font-bold" style={{ color: "var(--medio)" }}>{puesto}</span>
               )}
-              {/* lo que vale hoy, no el ánimo: el ánimo está en el aro */}
+              {/* su nivel, el mismo de la ficha; cómo llega está en el aro */}
               <span className="num font-bold"
                     style={{ color: baja ? "#c0392b" : "#e9e4d8",
                              textShadow: "0 1px 3px rgba(0,0,0,0.9)" }}>
-                {baja === "lesionado" ? "LESIÓN" : baja === "suspendido" ? "SUSP"
-                  : nivelEf(j, puesto, ctx)}
+                {baja === "lesionado" ? "LESIÓN" : baja === "suspendido" ? "SUSP" : j.nivel}
               </span>
             </span>
           </button>

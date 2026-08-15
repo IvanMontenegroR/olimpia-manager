@@ -91,7 +91,7 @@ const AYUDAS: Record<Ayuda, { titulo: string; texto: string; mueve: string[] }> 
 
 export default function Escritorio({
   partida, onAvanzar, onDirigir, onResolver, onFichar, onReiniciar, onGuardarEquipos,
-  onMoverReserva, onFicharEstrella, onRechazarEstrella, onJugarDirecto,
+  onMoverReserva, onFicharEstrella, onRechazarEstrella,
 }: {
   partida: Partida;
   onAvanzar: () => void;
@@ -101,7 +101,6 @@ export default function Escritorio({
   onMoverReserva: (id: string, aReserva: boolean) => void;
   onFicharEstrella: () => void;
   onRechazarEstrella: () => void;
-  onJugarDirecto: () => void;
   onFichar: (fichajeId: string) => void;
   onReiniciar: () => void;
 }) {
@@ -493,7 +492,6 @@ export default function Escritorio({
               once={ovr.once}
               puestos={ovr.puestos}
               formacion={ovr.formacion}
-              ctx={partido?.ctx ?? ({} as never)}
               animoDe={(j) => Math.round(partida.plantel[j.id]?.animo ?? 70)}
               bajaDe={(j) => j.lesionado_hasta ? "lesionado" : j.suspendido ? "suspendido" : null}
               onTocar={(j) => setFichaHome(j.id)}
@@ -506,11 +504,17 @@ export default function Escritorio({
       {!pendiente && (
         <div className="px-3 pt-2">
           {esHoy && partido ? (
-            /* Jugar directo es lo normal: el once sugerido ya es bueno y pasar
-               por la pantalla de armado veintidós veces era un trámite. El que
-               quiere tocar algo entra por "Armar". */
+            /*
+             * Un solo botón, y siempre pasa por armar el once.
+             *
+             * Había dos: "Jugar" saltaba directo al partido y "Armar el once"
+             * al costado. O sea que el camino principal salteaba la única
+             * pantalla donde se decide el equipo, y el que quería mirar quién
+             * llegaba cansado tenía que acordarse de entrar por el botón
+             * chico. Antes de un partido siempre se para a ver el equipo.
+             */
             <div className="flex gap-1.5">
-              <button onClick={onJugarDirecto}
+              <button onClick={onDirigir}
                 className="relieve-alto flex min-w-0 flex-1 items-center gap-3 rounded-lg px-3 py-2.5"
                 style={{ background: "var(--blanco)", color: "var(--negro)" }}>
                 <Escudo id={partido.rivalId} nombre={partido.rivalNombre} tam={30} />
@@ -538,13 +542,8 @@ export default function Escritorio({
                   })()}
                 </span>
                 <span className="shrink-0 text-[11px] font-extrabold uppercase tracking-wider">
-                  Jugar →
+                  Armar el once →
                 </span>
-              </button>
-              <button onClick={onDirigir}
-                className="relieve shrink-0 rounded-lg px-3 text-[10px] font-bold uppercase tracking-wider"
-                style={{ background: "var(--carbon)", color: "var(--tenue)" }}>
-                Armar<br />el once
               </button>
             </div>
           ) : partido ? (

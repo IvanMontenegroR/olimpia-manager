@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { colorCondicion, esSub18, nivelEf } from "@/lib/juego.ts";
+import { colorCondicion, esSub18 } from "@/lib/juego.ts";
 import { repartirCancha } from "@/lib/formacion.ts";
 import { factorPosicion } from "@/engine/motor.ts";
 import Dorsal from "./Dorsal.tsx";
-import type { ContextoPartido, Jugador, Posicion } from "@/engine/tipos.ts";
+import type { Jugador, Posicion } from "@/engine/tipos.ts";
 
 export interface Casillero {
   slot: number;
@@ -31,11 +31,10 @@ function useMedida() {
 }
 
 export default function CanchaArmado({
-  casilleros, formacion, ctx, seleccionado, destino, onTocar,
+  casilleros, formacion, seleccionado, destino, onTocar,
 }: {
   casilleros: Casillero[];
   formacion: string;
-  ctx: ContextoPartido;
   seleccionado: string | null;
   /** Casillero resaltado mientras se arrastra algo encima. */
   destino: number | null;
@@ -82,31 +81,47 @@ export default function CanchaArmado({
             }}>
             {j ? (
               <>
-                <span style={{
-                        borderRadius: 999,
-                        boxShadow: esDestino
-                          ? "0 0 0 3px var(--ok), 0 2px 10px rgba(0,0,0,0.6)"
-                          : adaptado
-                            ? "0 0 0 2px var(--medio), 0 2px 6px rgba(0,0,0,0.5)"
-                            : "0 2px 6px rgba(0,0,0,0.5)",
-                      }}>
-                  <Dorsal numero={j.numero} tam={tamDorsal} />
+                {/*
+                  * El mismo aro que la cancha de la pantalla principal: se
+                  * llena con cómo llega y se vacía con lo que le falta. Acá es
+                  * donde más falta hacía, porque es la pantalla donde elegís a
+                  * quién ponés: antes eso estaba escondido en el color de un
+                  * número de ocho píxeles.
+                  */}
+                <span className="relative flex items-center justify-center"
+                      style={{ width: tamDorsal + 10, height: tamDorsal + 10 }}>
+                  <span className="absolute inset-0 rounded-full"
+                        style={{
+                          background: `conic-gradient(from -90deg, ${colorCondicion(j.condicion)} ${
+                            j.condicion * 3.6}deg, rgba(255,255,255,0.16) ${j.condicion * 3.6}deg)`,
+                          transition: "background 400ms ease-out",
+                        }} />
+                  <span className="absolute rounded-full" style={{ inset: 4, background: "#10231a" }} />
+                  <span className="relative" style={{
+                          borderRadius: 999,
+                          boxShadow: esDestino
+                            ? "0 0 0 3px var(--ok), 0 2px 10px rgba(0,0,0,0.6)"
+                            : adaptado
+                              ? "0 0 0 2px var(--medio), 0 2px 6px rgba(0,0,0,0.5)"
+                              : "0 2px 6px rgba(0,0,0,0.5)",
+                        }}>
+                    <Dorsal numero={j.numero} tam={tamDorsal} />
+                  </span>
                 </span>
                 <span className="apellido mt-0.5 max-w-full truncate leading-tight"
                       style={{ fontSize: 9 * escala, textShadow: "0 1px 3px rgba(0,0,0,0.9)" }}>
                   {j.apellido}
                 </span>
-                {/* Un solo dato por jugador: el nivel con el que sale a la
-                    cancha, coloreado por cómo llega. El puesto solo aparece
-                    cuando no es el suyo, que es cuando hay algo que decidir. */}
+                {/* Su nivel, el mismo que dice la ficha y el mismo con el que
+                    lo fichaste. Cómo llega está en el aro. El puesto solo
+                    aparece cuando no es el suyo y le cuesta. */}
                 <span className="flex items-center gap-1 leading-tight" style={{ fontSize: 8 * escala }}>
                   {adaptado && (
                     <span className="font-bold" style={{ color: "var(--medio)" }}>{c.puesto}</span>
                   )}
-                  <span className="num"
-                        style={{ color: colorCondicion(j.condicion),
-                                 textShadow: "0 1px 3px rgba(0,0,0,0.9)" }}>
-                    {nivelEf(j, c.puesto, ctx)}
+                  <span className="num font-bold"
+                        style={{ color: "#e9e4d8", textShadow: "0 1px 3px rgba(0,0,0,0.9)" }}>
+                    {j.nivel}
                   </span>
                   {esSub18(j) && <span className="font-bold" style={{ color: "var(--ok)" }}>S18</span>}
                 </span>

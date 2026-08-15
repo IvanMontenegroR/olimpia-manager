@@ -44,12 +44,34 @@ export default function ArmarOnce({
 
   // El once vive como once casilleros, no como un conjunto: así se puede elegir
   // formación, arrastrar de un puesto a otro y guardar equipos armados.
+  /*
+   * Arranca con TU once guardado, no con uno inventado.
+   *
+   * La pantalla armaba siempre un equipo automático, así que el que veías en
+   * la cancha de la pantalla principal toda la semana no era el que aparecía
+   * acá el domingo: podías haber dejado a Romero de titular y encontrártelo en
+   * el banco. Solo se completa a mano lo que dejaron vacío los lesionados y
+   * los suspendidos, y si no hay equipo guardado se propone uno.
+   */
   const inicial = useMemo<EstadoAlineacion>(() => {
-    // el once sugerido sale del primer equipo; la reserva se sube a mano
+    const eq = equipos[0];
+    if (eq) {
+      const suyos = eq.jugadores.map((id) => porId.get(id)).filter(Boolean) as Jugador[];
+      if (suyos.length === MOLDE_DE(eq.formacion).length) {
+        return { formacion: eq.formacion, alineado: repartirEnMolde(suyos, MOLDE_DE(eq.formacion), ctx) };
+      }
+      // faltan por bajas: se rellena con los mejores que quedan libres
+      const dentro = new Set(suyos.map((j) => j.id));
+      const libres = aptos.filter((j) => !j.reserva && !dentro.has(j.id));
+      const completo = [...suyos,
+        ...autoOnce(ctx, libres, estadoSub18).map((id) => porId.get(id)!).filter(Boolean)]
+        .slice(0, MOLDE_DE(eq.formacion).length);
+      return { formacion: eq.formacion, alineado: repartirEnMolde(completo, MOLDE_DE(eq.formacion), ctx) };
+    }
     const once = autoOnce(ctx, aptos.filter((j) => !j.reserva), estadoSub18)
       .map((id) => porId.get(id)!).filter(Boolean);
     return mejorMolde(once, ctx);
-  }, [ctx, aptos, porId, estadoSub18]);
+  }, [ctx, aptos, porId, estadoSub18, equipos]);
 
   const [estado, setEstado] = useState<EstadoAlineacion>(inicial);
   const [actitud, setActitud] = useState<Actitud>(ctx.esLocal ? "ofensivo" : "equilibrado");
