@@ -79,6 +79,8 @@ export default function PartidoEnVivo({
   const [ventanas, setVentanas] = useState(3);
   /** Lo que sumó la gente por un golazo, para pasarlo al cierre. */
   const hinchadaPorGolazos = useRef(0);
+  /** Lo que le quedó a cada uno por hacerse cargo de un penal, o por errarlo. */
+  const animoPorPenales = useRef<Record<string, number>>({});
   const [actitudUsada, setActitudUsada] = useState(false);
   const [panel, setPanel] = useState<"cambio" | "actitud" | null>(null);
   const [terminado, setTerminado] = useState(false);
@@ -242,6 +244,10 @@ export default function PartidoEnVivo({
     setResuelto(r);
     // un golazo se paga aunque el partido ya estuviera resuelto
     if (r.levantaHinchada) hinchadaPorGolazos.current += r.levantaHinchada;
+    if (r.golpeAnimo) {
+      animoPorPenales.current[r.golpeAnimo.id] =
+        (animoPorPenales.current[r.golpeAnimo.id] ?? 0) + r.golpeAnimo.delta;
+    }
 
     const nuevoO = gO + (r.golOlimpia ? 1 : 0);
     const nuevoR = gR + (r.golRival ? 1 : 0);
@@ -407,6 +413,7 @@ export default function PartidoEnVivo({
       goleadores: visibles.filter((e) => e.tipo === "gol" && e.jugadorId).map((e) => e.jugadorId!),
       // los golazos de los momentos levantan a la gente más allá del resultado
       hinchadaExtra: hinchadaPorGolazos.current,
+      animoExtra: animoPorPenales.current,
     };
   };
 

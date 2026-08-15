@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import ArmarOnce, { type Salida } from "@/components/ArmarOnce.tsx";
 import PantallaHito from "@/components/PantallaHito.tsx";
+import Penales from "@/components/Penales.tsx";
 import PartidoEnVivo from "@/components/PartidoEnVivo.tsx";
 import Escritorio from "@/components/Escritorio.tsx";
 import { salidaAutomatica } from "@/lib/juego.ts";
@@ -31,6 +32,17 @@ export default function Page() {
   }
 
   const partido = partidoDe(partida);
+
+  /*
+   * La tanda va antes que el hito: primero mirás cómo se definió y recién
+   * después te dicen que saliste campeón o que quedaste afuera.
+   */
+  if (partida.tanda) {
+    return (
+      <Penales tanda={partida.tanda}
+        onCerrar={() => setPartida((p) => (p ? { ...p, tanda: null } : p))} />
+    );
+  }
 
   // Un hito tapa todo hasta que lo cierres: dar la vuelta no puede pasar
   // desapercibido entre dos líneas de la bitácora.

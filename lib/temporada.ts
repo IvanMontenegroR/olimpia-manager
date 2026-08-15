@@ -128,6 +128,23 @@ export type TipoHito =
   | "campeon_liga" | "campeon_copa" | "eliminado_copa" | "despedido"
   | "fin_temporada" | "fichaje" | "lesion" | "revelacion";
 
+/** Un penal de la tanda: quién pateó y si la metió. */
+export interface PenalTanda {
+  /** Apellido del que patea; vacío si es del rival. */
+  quien: string;
+  mio: boolean;
+  entro: boolean;
+}
+
+/** La tanda completa, para poder verla patada por patada. */
+export interface Tanda {
+  penales: PenalTanda[];
+  mios: number;
+  suyos: number;
+  gana: boolean;
+  rival: string;
+}
+
 export interface Hito {
   tipo: TipoHito;
   titulo: string;
@@ -168,6 +185,8 @@ export interface Partida {
   despedido: string | null;
   /** Lo que hay que mostrar a pantalla completa antes de seguir. */
   hito: Hito | null;
+  /** La tanda de penales recién jugada, hasta que la mirás. */
+  tanda?: Tanda | null;
 
   /**
    * La oportunidad de fichaje que está sobre la mesa, si hay alguna. Tiene
@@ -427,29 +446,31 @@ export function partidoCopaDe(p: Partida): PartidoUI | null {
   const r = (RIVALES as any[]).find((x) => x.id === c.rivalId);
   if (!r) return null;
   /*
-   * La final se juega en el Defensores. En la Conmebol de verdad la sede se
-   * sortea con años de anticipación, pero la fantasía del juego es esa noche
-   * en Asunción, y además es lo que le da sentido a haber trabajado la
-   * hinchada toda la temporada.
+   * La final es a partido único en cancha neutral, como la juega la Conmebol.
+   * Se había puesto en el Defensores para que la fantasía fuera esa noche en
+   * Asunción, pero eso regalaba el partido más importante del año: llegabas a
+   * la final con diez puntos de localía encima y dejaba de ser una final.
+   * Neutral significa que ninguno de los dos cobra su cancha.
    */
-  const esLocal = esFinal || c.jugadosEnRonda === 1;
+  const esLocal = !esFinal && c.jugadosEnRonda === 1;
   const nombreRonda = { octavos: "Octavos", cuartos: "Cuartos", semis: "Semifinal",
                         final: "FINAL" }[c.ronda as "octavos"];
   return {
     rivalId: c.rivalId,
     rivalNombre: r.nombre,
-    estadio: esLocal ? "Defensores del Chaco" : r.estadio,
-    ciudad: esLocal ? "Asunción" : r.ciudad,
+    estadio: esFinal ? "Cancha neutral" : esLocal ? "Defensores del Chaco" : r.estadio,
+    ciudad: esFinal ? "sede única" : esLocal ? "Asunción" : r.ciudad,
     etiqueta: `Sudamericana · ${nombreRonda}${esFinal ? "" : c.jugadosEnRonda === 0 ? " ida" : " vuelta"}`,
     ctx: {
       fecha: dia,
       competencia: "sudamericana",
       esLocal,
-      neutral: false,
+      neutral: esFinal,
       rivalFuerza: r.fuerza,
       rivalNombre: r.nombre,
-      viajeKm: esLocal ? 0 : r.km_desde_asuncion,
-      alturaM: esLocal ? 43 : r.altura_m,
+      // a la final se viaja, pero no a la casa del rival
+      viajeKm: esFinal ? 1200 : esLocal ? 0 : r.km_desde_asuncion,
+      alturaM: esFinal ? 200 : esLocal ? 43 : r.altura_m,
       diasDescanso: 3,
       esClasico: false,
     },
@@ -583,16 +604,35 @@ export interface CierrePartido {
   goleadores: string[];
   /** Lo que levantó la gente por los golazos del partido. */
   hinchadaExtra?: number;
+  /** Lo que le quedó a cada uno por hacerse cargo de un penal, o por errarlo. */
+  animoExtra?: Record<string, number>;
 }
 
 const AMARILLAS_PARA_SUSPENSION = 5;
 
 /** Lo que falta de Sub-18 y si el ritmo alcanza para llegar. */
+/**
+ * Lo que cobra por mes cada jugador.
+ *
+ * Es la misma fórmula que ya mostraba la pantalla de fichajes, que hasta ahora
+ * era decorativa: el sueldo figuraba al lado del precio y no se cobraba nunca.
+ * Un club sin costo de funcionamiento no tiene economía: la plata solo se
+ * acumula, y ganando la copa juntabas diez millones en una temporada sin
+ * vender a nadie, o sea que podías comprar a cualquiera.
+ */
+export const sueldoDe = (nivel: number) => Math.round((nivel - 40) * 900);
+
+/** Lo que cuesta el plantel entero por mes. */
+export function planillaDe(p: Partida): number {
+  return plantelDe(p).reduce((s, j) => s + sueldoDe(j.nivel), 0);
+}
+
 /** Lo que suelta el sponsor cuando el título llega de verdad. */
+const BONUS_TITULO = 1_200_000;
 function pagarBonus(n: Partida, que: string) {
-  n.dineroUsd += 2_500_000;
+  n.dineroUsd += BONUS_TITULO;
   n.bitacora.push({ dia: n.dia, marca: "plata",
-    texto: `El sponsor pagó el bonus por objetivos: ${miles(2_500_000)} por ganar ${que}.` });
+    texto: `El sponsor pagó el bonus por objetivos: ${miles(BONUS_TITULO)} por ganar ${que}.` });
 }
 
 /**
@@ -850,6 +890,9 @@ export function cerrarPartido(p: Partida, partido: PartidoUI, c: CierrePartido):
   }
 
   // La gente se enoja con los malos resultados y se enoja el doble en el clásico.
+  for (const [id, d] of Object.entries(c.animoExtra ?? {})) {
+    if (n.plantel[id]) n.plantel[id].animo = clamp(n.plantel[id].animo + d, 0, 100);
+  }
   n.hinchada = clamp(n.hinchada + (c.hinchadaExtra ?? 0) + (gano ? 5 : empate ? -2 : -8)
     + (partido.ctx.esClasico ? (gano ? 7 : empate ? -2 : -10) : 0), 0, 100);
 
@@ -924,6 +967,70 @@ const RIVALES_POR_RONDA: Record<string, string[]> = {
   final: ["atletico_mineiro", "botafogo", "santos", "bragantino", "lanus"],
 };
 
+/**
+ * La tanda, jugada de verdad.
+ *
+ * Patean los cinco de mejor pie que tenés disponibles, con la misma chance que
+ * usa el penal del partido: pesa el nivel, pesa ser definidor y pesan los
+ * partidos internacionales, porque en una tanda lo que más falla es la cabeza.
+ * Del otro lado el rival convierte según lo que vale.
+ */
+function tandaDePenales(n: Partida, rng: Rng): Omit<Tanda, "rival"> {
+  const disponibles = plantelDe(n)
+    .filter((j) => !j.suspendido && !j.lesionado_hasta && !j.reserva);
+  const valor = (j: Jugador) =>
+    j.nivel + (j.rasgos.includes("definidor") ? 8 : 0)
+    + Math.min(6, j.partidos_internacionales * 0.1)
+    - (j.posicion === "ARQ" ? 40 : 0);
+  const pateadores = [...disponibles].sort((a, b) => valor(b) - valor(a)).slice(0, 5);
+
+  /*
+   * En una tanda se convierte alrededor de tres de cada cuatro, de los dos
+   * lados. Las diferencias entre pateadores existen pero son chicas: por eso
+   * las tandas se parecen a una moneda aunque un equipo sea mejor. Con las
+   * pendientes de un penal común Olimpia pasaba el 76%, que no es una tanda,
+   * es un trámite.
+   */
+  const chanceMia = (j: Jugador) => {
+    let p = 0.705 + (j.nivel - 65) * 0.004;
+    if (j.rasgos.includes("definidor")) p += 0.05;
+    if (j.rasgos.includes("definicion_irregular")) p -= 0.05;
+    // la experiencia internacional es lo que sostiene en una tanda
+    p += Math.min(0.05, j.partidos_internacionales * 0.001);
+    if (j.edad <= 21) p -= 0.05;
+    return clamp(p, 0.55, 0.90);
+  };
+  const rival = (RIVALES as { id: string; fuerza: number }[])
+    .find((x) => x.id === n.copa.rivalId);
+  const chanceSuya = clamp(0.73 + ((rival?.fuerza ?? 72) - 70) * 0.004, 0.60, 0.88);
+
+  const penales: PenalTanda[] = [];
+  let mios = 0, suyos = 0;
+  for (let i = 0; i < 5; i++) {
+    const j = pateadores[i % Math.max(1, pateadores.length)];
+    const mia = j ? rng.chance(chanceMia(j)) : false;
+    if (mia) mios++;
+    penales.push({ quien: j?.apellido ?? "—", mio: true, entro: mia });
+
+    const suya = rng.chance(chanceSuya);
+    if (suya) suyos++;
+    penales.push({ quien: "", mio: false, entro: suya });
+  }
+  // muerte súbita hasta que uno falle y el otro no
+  let vuelta = 0;
+  while (mios === suyos && vuelta < 8) {
+    const j = pateadores[(5 + vuelta) % Math.max(1, pateadores.length)];
+    const mia = j ? rng.chance(chanceMia(j) * 0.92) : false;
+    if (mia) mios++;
+    penales.push({ quien: j?.apellido ?? "—", mio: true, entro: mia });
+    const suya = rng.chance(chanceSuya * 0.92);
+    if (suya) suyos++;
+    penales.push({ quien: "", mio: false, entro: suya });
+    vuelta++;
+  }
+  return { penales, mios, suyos, gana: mios > suyos };
+}
+
 function avanzarLlave(n: Partida, c: CierrePartido, partido: PartidoUI) {
   const copa = n.copa;
   copa.globalO += c.golesOlimpia;
@@ -940,9 +1047,27 @@ function avanzarLlave(n: Partida, c: CierrePartido, partido: PartidoUI) {
 
   const rng = new Rng(`copa-${copa.ronda}-${n.dia}`);
   const rondaJugada = copa.ronda;
-  // sin gol de visitante y sin alargue: el global empatado va a penales
-  const pasa = copa.globalO > copa.globalR
-    || (copa.globalO === copa.globalR && rng.chance(0.5));
+  /*
+   * Sin gol de visitante y sin alargue: el global empatado va a penales.
+   *
+   * La tanda se juega de verdad y se guarda para poder mostrarla. Antes era un
+   * rng.chance(0.5) que decidía la temporada adentro de una línea de bitácora:
+   * salías de la final empatado y te enterabas de que habías quedado afuera
+   * sin ver un solo penal.
+   */
+  const empatados = copa.globalO === copa.globalR;
+  /*
+   * La tanda tiene su propia semilla y lleva adentro cómo te fue la temporada.
+   * Con la semilla de la llave (ronda y día, iguales para todos) la final del
+   * 21 de noviembre daba siempre el mismo 3-4: cualquier partida que llegara
+   * empatada perdía la misma tanda, sin importar lo que hubieras hecho.
+   */
+  const rngTanda = new Rng(
+    `penales-${copa.ronda}-${n.dia}-${copa.rivalId}-${copa.globalO}-${copa.globalR}` +
+    `-${n.resultados.length}-${n.hinchada}-${n.ambiente}-${n.dineroUsd}`);
+  const tanda = empatados ? tandaDePenales(n, rngTanda) : null;
+  const pasa = copa.globalO > copa.globalR || (tanda ? tanda.gana : false);
+  if (tanda) n.tanda = { ...tanda, rival: partido.rivalNombre };
 
   n.bitacora.push({
     dia: n.dia,
@@ -968,9 +1093,15 @@ function avanzarLlave(n: Partida, c: CierrePartido, partido: PartidoUI) {
 
   n.hinchada = clamp(n.hinchada + 9, 0, 100);
   n.ambiente = clamp(n.ambiente + 5, 0, 100);
-  n.dineroUsd += copa.ronda === "octavos" ? 600_000
-    : copa.ronda === "cuartos" ? 900_000
-    : copa.ronda === "semis" ? 1_400_000 : 5_000_000;
+  /*
+   * Los premios de la copa se recortaron a la mitad larga. Sumaban 7.9 millones
+   * de octavos a campeón, más el bonus del sponsor: ganarla te dejaba con
+   * quince millones y podías comprar a cualquiera en la primera temporada. Que
+   * la copa deje plata está bien; que la deje resuelta para siempre, no.
+   */
+  n.dineroUsd += copa.ronda === "octavos" ? 300_000
+    : copa.ronda === "cuartos" ? 500_000
+    : copa.ronda === "semis" ? 800_000 : 2_200_000;
 
   const siguiente = SIGUIENTE[copa.ronda];
   if (siguiente === "campeon") {
@@ -1061,6 +1192,18 @@ export function avanzarUnDia(p: Partida): ResultadoAvance {
   const novedades: string[] = [];
   n.dia = sumarDias(p.dia, 1);
   const rng = new Rng(`dia-${n.dia}-${n.fechaActual}`);
+
+  /*
+   * El primero de cada mes se paga la planilla. Es lo único que hace que la
+   * plata sea una decisión y no un número que sube: traer un crack no se paga
+   * una vez, se paga todos los meses hasta que lo vendas.
+   */
+  if (n.dia.slice(-2) === "01") {
+    const planilla = planillaDe(n);
+    n.dineroUsd -= planilla;
+    n.bitacora.push({ dia: n.dia, marca: "plata",
+      texto: `Sueldos del mes: ${miles(planilla)} por ${plantelDe(n).length} jugadores.` });
+  }
 
   void novedades;
   // Los fichados también se recuperan, se cansan y se lesionan. Con PLANTEL a

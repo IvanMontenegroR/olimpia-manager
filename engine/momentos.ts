@@ -75,6 +75,12 @@ export interface ResueltoMomento {
    * contar que la pelota se fue larga y no pasó nada.
    */
   porElRiesgo?: boolean;
+  /**
+   * Lo que le queda al que se hizo cargo y falló. Errar un penal no es solo no
+   * hacer el gol: el que la manda afuera juega el resto del partido con eso
+   * encima, y si era tu mejor jugador lo vas a pagar.
+   */
+  golpeAnimo?: { id: string; delta: number };
 }
 
 /*
@@ -217,6 +223,72 @@ export function riesgoDe(m: Momento, opcionId: string): RiesgoOpcion | null {
   return null;
 }
 
+/**
+ * Cuánto le pesa a cada uno errar un penal, de 0 a 1.
+ *
+ * Es lo que rompe el empate: el que mejor patea suele ser el mejor jugador que
+ * tenés, y si la manda afuera lo arrastra por el resto del partido. Un
+ * veterano de mil partidos internacionales se lo sacude; un pibe de veinte
+ * años no.
+ */
+export function pesoDeFallar(j: Jugador, mediaDelOnce = 66): number {
+  /*
+   * Lo que pesa no es la experiencia sino cuánto se apoya el equipo en él.
+   *
+   * La primera versión descontaba por partidos internacionales, y como el que
+   * mejor patea en Olimpia es justo el veterano de mil partidos, terminaba
+   * teniendo la mejor chance Y el menor costo: seguía sin haber decisión. Al
+   * que la rompe todos los domingos, errar un penal le pega distinto que al
+   * quinto suplente, y al resto también.
+   */
+  let p = 0.45 + (j.nivel - mediaDelOnce) * 0.045;
+  if (j.edad <= 21) p += 0.22;             // al pibe le queda grande
+  p -= Math.min(0.12, j.partidos_internacionales * 0.002);
+  if (j.rasgos.includes("definidor")) p -= 0.08;
+  if (j.rasgos.includes("definicion_irregular")) p += 0.08;
+  return acotar(p, 0.15, 0.95);
+}
+
+/**
+ * Los tres que se pueden hacer cargo, y qué es cada uno.
+ *
+ * El de más chance, el que menos lo sufre si la erra, y el pibe. Si dos de
+ * esos son el mismo jugador se completa con el siguiente de la lista, así
+ * siempre hay tres caminos distintos.
+ */
+export function candidatosAlPenal(a: Alineacion, ctx: ContextoPartido) {
+  const orden = pateadores(a, ctx);
+  const media = a.once.reduce((s, j) => s + j.nivel, 0) / Math.max(1, a.once.length);
+  const elegidos: { j: Jugador; papel: string }[] = [];
+  const meter = (j: Jugador | undefined, papel: string) => {
+    if (!j || elegidos.some((e) => e.j.id === j.id)) return;
+    elegidos.push({ j, papel });
+  };
+  const libre = (j: Jugador) => !elegidos.some((e) => e.j.id === j.id);
+
+  /*
+   * El costo va en el texto, con su número. Sin eso la única cifra a la vista
+   * era el porcentaje y volvías a elegir el más alto sin pensar: el precio de
+   * errarlo tiene que estar tan visible como la chance de meterlo.
+   */
+  const cuesta = (j: Jugador) => Math.round(45 * pesoDeFallar(j, media));
+  meter(orden[0], `En él se apoya el equipo. Si la erra, −${cuesta(orden[0])} de ánimo`);
+  // el que menos lo sufre: uno que puede patear y no carga con el equipo encima
+  const frio = [...orden].slice(0, 7).filter(libre)
+    .sort((x, y) => pesoDeFallar(x, media) - pesoDeFallar(y, media))[0];
+  if (frio) meter(frio, `Patea peor, pero errarlo casi no le queda: −${cuesta(frio)}`);
+  // el pibe: la peor chance y lo que más se lleva si la mete
+  const pibe = [...orden].slice(0, 8).filter((j) => libre(j) && j.edad <= 23)
+    .sort((x, y) => y.nivel - x.nivel)[0];
+  if (pibe) meter(pibe, `Se ofrece. Si la mete no se olvida más; si la erra, −${cuesta(pibe)}`);
+  for (const j of orden) {
+    if (elegidos.length >= 3) break;
+    meter(j, `Nivel ${Math.round(nivelEfectivo(j, a.puestos.get(j.id) ?? j.posicion, ctx))}. ` +
+      `Si la erra, −${cuesta(j)} de ánimo`);
+  }
+  return elegidos.slice(0, 3);
+}
+
 /** Ordena a los del once por lo bien que patearían. */
 function pateadores(a: Alineacion, ctx: ContextoPartido): Jugador[] {
   const valor = (j: Jugador) => {
@@ -243,21 +315,29 @@ export function generarMomento(
 ): Momento | null {
   switch (tipo) {
     case "penal_favor": {
-      const tres = pateadores(a, ctx).slice(0, 3);
+      /*
+       * Los tres candidatos no son los tres de más nivel.
+       *
+       * Elegir al mejor pateador no era una decisión: mirabas el porcentaje más
+       * alto y tocabas. Ahora se ofrece el que mejor patea, el que mejor se
+       * banca fallarlo, y el pibe. Y lo que cambia entre ellos no es solo la
+       * chance sino lo que cuesta errarlo: al que se hace cargo y la manda
+       * afuera le queda, y si es tu mejor jugador lo vas a pagar el resto del
+       * partido.
+       */
+      const tres = candidatosAlPenal(a, ctx);
       if (tres.length < 2) return null;
       return {
         tipo, minuto, segundos: 9,
         titulo: "PENAL A FAVOR",
-        contexto: "Lo derribaron en el área. ¿Quién lo patea?",
-        opciones: tres.map((j) => ({
+        contexto: "Lo derribaron en el área. ¿Quién se hace cargo?",
+        opciones: tres.map(({ j, papel }) => ({
           id: j.id,
           etiqueta: `${j.numero} ${apellido(j)}`,
-          detalle: j.rasgos.includes("definidor") ? "Definidor, no falla estas"
-            : j.rasgos.includes("definicion_irregular") ? "Habilidoso, pero irregular"
-            : `Nivel ${Math.round(nivelEfectivo(j, a.puestos.get(j.id) ?? j.posicion, ctx))}`,
+          detalle: papel,
           jugadorId: j.id,
         })),
-        porDefecto: tres[0].id,
+        porDefecto: tres[0].j.id,
       };
     }
 
@@ -286,7 +366,7 @@ export function generarMomento(
         contexto: "Al borde del área, de frente al arco.",
         opciones: [
           { id: "arco", etiqueta: "Al arco",
-            detalle: `La pega ${apellido(tirador)}. Si entra es un golazo (+8 hinchada)`,
+            detalle: `La pega ${apellido(tirador)}. Si entra es un golazo`,
             jugadorId: tirador.id },
           { id: "centro", etiqueta: "Centro al área",
             detalle: (aereo.length ? `${apellido(aereo[0])} gana arriba` : "Sin nadie fuerte de cabeza")
@@ -306,7 +386,7 @@ export function generarMomento(
         opciones: [
           { id: "sacar", etiqueta: "Sacarlo", detalle: "Te gasta un cambio", jugadorId: j.id },
           { id: "hablar", etiqueta: "Hablarle", detalle: "Puede que se calme", jugadorId: j.id },
-          { id: "dejar", etiqueta: "Dejarlo", detalle: "Riesgo de roja, pero si aguanta la cancha se prende (+10 hinchada)", jugadorId: j.id },
+          { id: "dejar", etiqueta: "Dejarlo", detalle: "Riesgo de roja, pero si aguanta la cancha se prende", jugadorId: j.id },
         ],
         porDefecto: "hablar",
       };
@@ -358,10 +438,10 @@ export function generarMomento(
         contexto: `Lo metió ${apellido(j)} y sale corriendo. ¿Adónde va?`,
         opciones: [
           { id: "tribuna", etiqueta: "A la tribuna",
-            detalle: "La gente se viene abajo (+10 hinchada), pero puede costarle la amarilla",
+            detalle: "La gente se viene abajo, pero puede costarle la amarilla",
             jugadorId: j.id },
           { id: "provocar", etiqueta: "Callarle la boca al rival",
-            detalle: "Enorme si zafa (+16 hinchada). Se la están buscando",
+            detalle: "Enorme si zafa. Se la están buscando",
             jugadorId: j.id },
           { id: "banco", etiqueta: "Correr al banco",
             detalle: "Se lo dedica a los compañeros. Por esto no lo amonesta nadie",
@@ -421,7 +501,7 @@ export function generarMomento(
           { id: "cruzar", etiqueta: "Cruzarla",
             detalle: "Definición segura. Si falla, no pasa nada", jugadorId: del.id },
           { id: "picar", etiqueta: "Picarla",
-            detalle: "Difícil. Si entra, el Defensores se viene abajo (+9 hinchada)",
+            detalle: "Difícil. Si entra, el Defensores se viene abajo",
             jugadorId: del.id },
           { id: "aguantar", etiqueta: "Aguantar y asistir",
             detalle: "El que llega la tiene más fácil, pero si la pierde te matan de contra",
@@ -450,12 +530,31 @@ export function resolverMomento(
       if (j.rasgos.includes("definicion_irregular")) p += rng.entre(-0.16, 0.10);
       if (j.condicion < 50) p -= 0.07;
       const mete = rng.chance(Math.max(0.32, Math.min(0.93, p)));
+      const media = a.once.reduce((s, x) => s + x.nivel, 0) / Math.max(1, a.once.length);
+      if (mete) {
+        return {
+          exito: true, golOlimpia: true,
+          // al que se hacía cargo y la mete le queda para bien, y al pibe más
+          golpeAnimo: { id: j.id, delta: Math.round(14 * pesoDeFallar(j, media)) },
+          texto: j.edad <= 23
+            ? `GOL. Se hizo cargo ${apellido(j)}, con todo el estadio mirándolo. No se olvida más.`
+            : `GOL. ${apellido(j)} lo cambió por gol sin dudarlo.`,
+        };
+      }
+      const peso = pesoDeFallar(j, media);
       return {
-        exito: mete,
-        golOlimpia: mete,
-        texto: mete
-          ? `GOL. ${apellido(j)} lo cambió por gol sin dudarlo.`
-          : `${apellido(j)} lo tiró afuera. Se agarra la cabeza.`,
+        exito: false,
+        /*
+         * Errarlo pega fuerte y a propósito. Con un castigo chico el mejor
+         * pateador seguía siendo la respuesta obvia siempre; así, el que la
+         * manda afuera baja su propio nivel efectivo y la próxima vez que haya
+         * un penal ya no es el de más chance. La decisión no está solo en este
+         * penal: está en lo que le dejás encima al resto de la temporada.
+         */
+        golpeAnimo: { id: j.id, delta: -Math.round(45 * peso) },
+        texto: peso >= 0.6
+          ? `${apellido(j)} lo tiró afuera y se quedó mirando el piso. No se va a reponer hoy.`
+          : `${apellido(j)} lo tiró afuera. Levanta la mano y sigue como si nada.`,
       };
     }
 

@@ -218,10 +218,17 @@ export default function MomentoOverlay({
                style={{ color: resuelto.exito ? "var(--ok)" : "var(--critico)" }}>
               {resuelto.texto}
             </p>
+            {/* Lo que deja en la gente, dicho y no numerado. "+10 hinchada"
+                no le decía nada a nadie: la hinchada es una escala interna que
+                no se muestra en ninguna pantalla, y lo que de verdad se lleva
+                el jugador de este momento es que la cancha se vino abajo. */}
             {!!resuelto.levantaHinchada && (
-              <span className="num mt-1.5 inline-block rounded px-1.5 py-0.5 text-[11px] font-extrabold"
-                    style={{ background: "var(--ok)", color: "#0a120d" }}>
-                +{resuelto.levantaHinchada} hinchada
+              <span className="mt-1.5 inline-block rounded px-2 py-0.5 text-[11px] font-bold"
+                    style={{ background: "color-mix(in srgb, var(--ok) 22%, transparent)",
+                             color: "var(--ok)" }}>
+                {resuelto.levantaHinchada >= 15 ? "El Defensores no se lo va a olvidar más"
+                  : resuelto.levantaHinchada >= 9 ? "La cancha se vino abajo"
+                  : "La gente lo festejó"}
               </span>
             )}
             <button onClick={onSeguir} disabled={!listo}

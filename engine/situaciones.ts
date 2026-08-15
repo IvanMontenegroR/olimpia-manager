@@ -84,6 +84,15 @@ type Plantilla = {
   armar: (c: Contexto, rng: Rng) => { s: Situacion; efectos: Record<string, Efecto> };
 };
 
+/*
+ * Acá NO van cosas que pasan adentro de un partido.
+ *
+ * Había una situación de un amonestado que iba a buscar todas, con el texto
+ * "quedan treinta minutos", y salía como decisión del día a día: te preguntaba
+ * qué hacer con un partido que no se estaba jugando. Eso ya existe como
+ * momento del partido (jugador_caliente), que es donde tiene sentido. Estas
+ * son decisiones de club: prensa, vestuario, dirigencia, mercado y la gente.
+ */
 const PLANTILLAS: Plantilla[] = [
   {
     id: "suplente_caliente",
@@ -846,42 +855,7 @@ const PLANTILLAS: Plantilla[] = [
       },
     }),
   },
-  // ------------------------------------------------- decisiones que son apuestas
-  {
-    id: "amonestado_caliente",
-    cuando: (c) => c.plantel.some((j) => j.tarjetas_amarillas > 0),
-    armar: (c, rng) => {
-      const j = rng.elegir(c.plantel.filter((x) => x.tarjetas_amarillas > 0));
-      return {
-        s: {
-          id: "amonestado_caliente",
-          escena: "cancha",
-          titulo: `${j.apellido} está caliente`,
-          contexto: `Lleva amarilla y va a buscar todas. El banco dice que en cualquier ` +
-            "momento se hace expulsar. Quedan treinta minutos.",
-          opciones: [
-            { id: "hablar", etiqueta: "Ir a hablarle",
-              detalle: "No gastás cambio, pero puede no entender",
-              apuesta: { exito: 0.7, bien: "Se calma y termina el partido", mal: "Se hace expulsar igual" } },
-            { id: "cambiar", etiqueta: "Sacarlo ya",
-              detalle: "Seguro, pero gastás un cambio y sale caliente" },
-          ],
-        },
-        efectos: {
-          hablar: {
-            moralDe: { id: j.id, delta: 4 },
-            texto: `${j.apellido} entendió el mensaje y bajó un cambio.`,
-            siSaleMal: {
-              ambiente: -6, moralDe: { id: j.id, delta: -12 }, suspendeA: j.id,
-              texto: `${j.apellido} se hizo expulsar. Se pierde la próxima fecha.`,
-            },
-          },
-          cambiar: { moralDe: { id: j.id, delta: -8 },
-            texto: `Salió ${j.apellido} antes de tiempo. No le gustó nada.` },
-        },
-      };
-    },
-  },
+  // ------------------------------------------------- decisiones que son apuestas,
   {
     id: "tocado_juega",
     cuando: (c) => c.plantel.some((j) => j.nivel >= 66 && j.condicion < 72),
@@ -1008,14 +982,14 @@ const PLANTILLAS: Plantilla[] = [
         },
         efectos: {
           adelantarse: {
-            hinchada: 6, ambiente: 3,
+            hinchada: 8, ambiente: 6,
             texto: "Lo contaste vos primero y el tema se apagó en un día.",
             siSaleMal: { hinchada: -8, ambiente: -5, moralDe: { id: j.id, delta: -8 },
               texto: `Se habló del video toda la semana. ${j.apellido} quedó marcado.` },
           },
           multar: { ambiente: 1, dineroUsd: 15_000, moralDe: { id: j.id, delta: -22 },
             texto: `Se multó a ${j.apellido}. Quedó claro el límite y él quedó dolido.` },
-          nada: { ambiente: 5, moralDe: { id: j.id, delta: 12 }, hinchada: -7,
+          nada: { ambiente: 2, moralDe: { id: j.id, delta: 12 }, hinchada: -7,
             texto: "Puertas adentro no se dijo nada. El plantel vio que los bancás; afuera, que no hacés nada." },
         },
       };
