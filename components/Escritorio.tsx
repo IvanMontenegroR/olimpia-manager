@@ -16,6 +16,7 @@ import {
   diasEntre, estadoSub18, formatoDia, hayPartidoHoy, miles, ocupacionDe, ovrDe, partidoDe, plantelDe,
   posicionDe, sumarDias,
   tablaDe, type EquipoGuardado, type Partida,
+  comoLoDejaste, guardarEquipo,
 } from "@/lib/temporada.ts";
 import Alineador, { type EstadoAlineacion } from "./Alineador.tsx";
 import FichaJugador from "./FichaJugador.tsx";
@@ -1392,13 +1393,11 @@ function VistaEquipos({ partida, plantel, onGuardar, onVolver }: {
   }, [partida]);
 
   const equipo = partida.equipos.find((e) => e.nombre === editando);
-  const [estado, setEstado] = useState<EstadoAlineacion>(() => {
-    if (equipo) {
-      const vivos = equipo.jugadores.map((id) => porId.get(id)!).filter(Boolean);
-      return { formacion: equipo.formacion, alineado: repartirEnMolde(vivos, MOLDE_DE(equipo.formacion), ctx) };
-    }
-    return { formacion: "4-3-3", alineado: new Array(11).fill(null) };
-  });
+  const [estado, setEstado] = useState<EstadoAlineacion>(() =>
+    equipo
+      ? { formacion: equipo.formacion,
+          alineado: comoLoDejaste(equipo, (id) => porId.has(id)) }
+      : { formacion: "4-3-3", alineado: new Array(11).fill(null) });
 
   if (editando !== null) {
     const once = estado.alineado.filter(Boolean).length;
@@ -1424,10 +1423,8 @@ function VistaEquipos({ partida, plantel, onGuardar, onVolver }: {
             disabled={once !== 11}
             onClick={() => {
               const jugadores = estado.alineado.filter(Boolean) as string[];
-              onGuardar([
-                ...partida.equipos.filter((e) => e.nombre !== editando),
-                { nombre: editando, formacion: estado.formacion, jugadores },
-              ]);
+              onGuardar(guardarEquipo(partida.equipos,
+                { nombre: editando, formacion: estado.formacion, jugadores }));
               setEditando(null);
             }}
             className="flex-1 rounded-lg py-2.5 text-[11px] font-extrabold uppercase tracking-wider"
@@ -1445,8 +1442,8 @@ function VistaEquipos({ partida, plantel, onGuardar, onVolver }: {
   const abrir = (nombre: string) => {
     const e = partida.equipos.find((x) => x.nombre === nombre);
     if (e) {
-      const vivos = e.jugadores.map((id) => porId.get(id)!).filter(Boolean);
-      setEstado({ formacion: e.formacion, alineado: repartirEnMolde(vivos, MOLDE_DE(e.formacion), ctx) });
+      // exactamente como lo dejaste, casillero por casillero
+      setEstado({ formacion: e.formacion, alineado: comoLoDejaste(e, (id) => porId.has(id)) });
     } else {
       // arranca con el mejor once posible, que es más útil que once huecos
       const mejores = [...plantel].sort((a, b) => b.nivel - a.nivel).slice(0, 11);

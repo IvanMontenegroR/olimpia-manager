@@ -27,7 +27,7 @@ const fallas: string[] = [];
 
 for (const S of TODAS) {
   const rng = new Rng(`prom-${S.id}`);
-  const base = partidaNueva();
+  const base = partidaNueva("fijo");
   const ctx = {
     plantel: plantelDe(base), ambiente: base.ambiente, hinchada: base.hinchada,
     racha: [] as ("G" | "E" | "P")[], posicion: 5, esSemanaDeClasico: true,

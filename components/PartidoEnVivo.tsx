@@ -140,7 +140,7 @@ export default function PartidoEnVivo({
   const [pendientes, setPendientes] = useState<EventoRelato[]>(() =>
     relatarTramo(
       { once: salida.once, suplentes: salida.suplentes, actitud: salida.actitud, puestos: salida.puestos },
-      ctx, new Rng(`${ctx.fecha}-${ctx.rivalNombre}-0`), 0, 90, 0, 0,
+      ctx, new Rng(`${ctx.semilla ?? ""}-${ctx.fecha}-${ctx.rivalNombre}-0`), 0, 90, 0, 0,
       new Set(), onceRival(partido.rivalId, ctx.rivalFuerza), yaVistos.current,
       entradas.current));
 
@@ -165,7 +165,7 @@ export default function PartidoEnVivo({
     semilla.current++;
     cursor.current = 0;
     setPendientes(relatarTramo(
-      conLoDelPartido(nueva), ctx, new Rng(`${ctx.fecha}-${ctx.rivalNombre}-${semilla.current}`),
+      conLoDelPartido(nueva), ctx, new Rng(`${ctx.semilla ?? ""}-${ctx.fecha}-${ctx.rivalNombre}-${semilla.current}`),
       desdeMin, 90, gO, gR, amonestados, rival11, yaVistos.current, entradas.current));
   };
 
@@ -276,7 +276,7 @@ export default function PartidoEnVivo({
   const elegirEnMomento = (opcionId: string) => {
     if (!momento) return;
     const r = resolverMomento(momento, opcionId, alineacion, ctx,
-                              new Rng(`${ctx.fecha}-${momento.minuto}-${opcionId}`));
+                              new Rng(`${ctx.semilla ?? ""}-${ctx.fecha}-${momento.minuto}-${opcionId}`));
     setResuelto(r);
     // un golazo se paga aunque el partido ya estuviera resuelto
     if (r.levantaHinchada) hinchadaPorGolazos.current += r.levantaHinchada;
@@ -339,7 +339,7 @@ export default function PartidoEnVivo({
     setPendientes(relatarTramo(
       conLoDelPartido(
         { once: nuevoOnce, suplentes: nuevoBanco, actitud: nuevaActitud, puestos: nuevosPuestos }),
-      ctx, new Rng(`${ctx.fecha}-${ctx.rivalNombre}-${semilla.current}`),
+      ctx, new Rng(`${ctx.semilla ?? ""}-${ctx.fecha}-${ctx.rivalNombre}-${semilla.current}`),
       momento.minuto, 90, nuevoO, nuevoR, amonestados, rival11, yaVistos.current,
       entradas.current));
   };

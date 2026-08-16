@@ -19,7 +19,7 @@ let conApuesta = 0, totalSituaciones = 0;
 
 for (let s = 0; s < temporadas; s++) {
   const rng = new Rng(`ev-${s}`);
-  let p: Partida = partidaNueva();
+  let p: Partida = partidaNueva("fijo");
   for (let d = 0; d < 200 && !p.despedido; d++) {
     if (p.pendientes.length) {
       const a = p.pendientes[0];

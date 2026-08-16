@@ -202,6 +202,23 @@ export interface Partida {
   /** Las situaciones que ya te tocaron, para no repetirlas hasta agotarlas. */
   situacionesVistas?: string[];
 
+  /**
+   * La semilla de ESTA partida.
+   *
+   * Todo el azar del juego colgaba del día del calendario, así que dos
+   * personas distintas jugaban exactamente la misma temporada: los mismos
+   * eventos el mismo día, la misma tanda de penales, el mismo pibe del
+   * interior. Y volver a empezar te devolvía lo mismo otra vez. Ahora cada
+   * partida arranca con una semilla propia y todas las tiradas la llevan
+   * adentro, así que reiniciar es una temporada nueva de verdad.
+   */
+  semilla: string;
+  /**
+   * Si el DT ya pasó por la pantalla de armar los equipos. Mientras esté en
+   * false se entra ahí y no al escritorio.
+   */
+  arrancada: boolean;
+
   /** Alineaciones guardadas por el DT: el titular, el equipo de copa, etc. */
   equipos: EquipoGuardado[];
   /**
@@ -289,9 +306,56 @@ function equiposIniciales(): EquipoGuardado[] {
   return equipos;
 }
 
-export function partidaNueva(): Partida {
+/**
+ * Una semilla nueva, distinta en cada arranque.
+ *
+ * `Math.random` sola alcanza; el reloj se suma porque dos pestañas abiertas en
+ * el mismo instante pueden salir con el mismo primer número.
+ */
+export const semillaNueva = () =>
+  `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+
+/**
+ * Pisa un equipo guardado EN SU LUGAR, o lo agrega si es nuevo.
+ *
+ * Las dos pantallas que guardan equipos hacían esto por su cuenta y una de las
+ * dos lo hacía mal: filtraba el viejo y ponía el nuevo al final, así que
+ * guardar el Titular lo mandaba último y el Alternativo pasaba a ser el
+ * primero. El primero es el que dibuja la cancha de la pantalla principal y el
+ * que sale a jugar, o sea que editabas tu once y salía a la cancha el otro.
+ */
+export function guardarEquipo(
+  equipos: EquipoGuardado[], nuevo: EquipoGuardado,
+): EquipoGuardado[] {
+  const i = equipos.findIndex((x) => x.nombre === nuevo.nombre);
+  return i >= 0 ? equipos.map((x, k) => (k === i ? nuevo : x)) : [...equipos, nuevo];
+}
+
+/**
+ * Un equipo guardado, de vuelta en los casilleros donde lo dejaste.
+ *
+ * Este es el bug que se sentía como "no se guarda": al reabrirlo se pasaba la
+ * lista por `repartirEnMolde`, que reparte a los once por dónde rinde mejor
+ * cada uno. O sea que el orden que guardaste no volvía nunca: ponías a Cáceres
+ * de lateral derecho, guardabas, abrías otra vez y estaba en otro lado. Y como
+ * después se guardaba lo que había en pantalla, el equipo se iba corriendo
+ * solo cada vez que lo mirabas. `jugadores[i]` YA es el casillero `i`.
+ */
+export function comoLoDejaste(
+  eq: EquipoGuardado, hay: (id: string) => boolean,
+): (string | null)[] {
+  const slots = MOLDE_DE(eq.formacion);
+  return slots.map((_, i) => {
+    const id = eq.jugadores[i];
+    return id && hay(id) ? id : null;
+  });
+}
+
+export function partidaNueva(semilla: string = semillaNueva()): Partida {
   return {
     version: VERSION,
+    semilla,
+    arrancada: false,
     incorporados: [],
     dia: DIA_INICIAL,
     fechaActual: 1,
@@ -384,6 +448,10 @@ export function cargar(): Partida {
     p.pendientes ??= [];
     p.bitacora ??= [];
     p.equipos ??= [];
+    // las partidas de antes no tenían semilla: se les da una ahora, así que
+    // siguen su temporada pero lo que venga de acá en adelante ya es propio
+    p.semilla ??= semillaNueva();
+    p.arrancada ??= true;
     p.enReserva ??= PLANTEL.filter((j) => j.reserva).map((j) => j.id);
     p.aclimatacion ??= 0;
     p.hito ??= null;
@@ -507,6 +575,7 @@ export function partidoDe(p: Partida): PartidoUI | null {
     ...elegido,
     ctx: {
       ...elegido.ctx,
+      semilla: p.semilla,
       hinchada: p.hinchada,
       ocupacion: ocupacionDe(p, elegido.ctx.esClasico),
       aclimatacion: elegido.ctx.esLocal ? 0 : p.aclimatacion,
@@ -588,7 +657,7 @@ export function tablaDe(p: Partida): FilaTabla[] {
     const gv = r.esLocal ? r.golesRival : r.golesOlimpia;
     anotar(local, gl, gv); anotar(visita, gv, gl);
   }
-  const rng = new Rng("liga-clausura-2026");
+  const rng = new Rng(`liga-${p.semilla}`);
   for (const m of FIXTURE) {
     if (m.fecha_numero >= p.fechaActual) continue;
     if (m.local === "olimpia" || m.visitante === "olimpia") continue;
@@ -1073,7 +1142,7 @@ function avanzarLlave(n: Partida, c: CierrePartido, partido: PartidoUI) {
     return;
   }
 
-  const rng = new Rng(`copa-${copa.ronda}-${n.dia}`);
+  const rng = new Rng(`copa-${n.semilla}-${copa.ronda}-${n.dia}`);
   const rondaJugada = copa.ronda;
   /*
    * Sin gol de visitante y sin alargue: el global empatado va a penales.
@@ -1091,7 +1160,7 @@ function avanzarLlave(n: Partida, c: CierrePartido, partido: PartidoUI) {
    * empatada perdía la misma tanda, sin importar lo que hubieras hecho.
    */
   const rngTanda = new Rng(
-    `penales-${copa.ronda}-${n.dia}-${copa.rivalId}-${copa.globalO}-${copa.globalR}` +
+    `penales-${n.semilla}-${copa.ronda}-${n.dia}-${copa.rivalId}-${copa.globalO}-${copa.globalR}` +
     `-${n.resultados.length}-${n.hinchada}-${n.ambiente}-${n.dineroUsd}`);
   const tanda = empatados ? tandaDePenales(n, rngTanda) : null;
   const pasa = copa.globalO > copa.globalR || (tanda ? tanda.gana : false);
@@ -1219,7 +1288,7 @@ export function avanzarUnDia(p: Partida): ResultadoAvance {
   const n: Partida = estructurado(p);
   const novedades: string[] = [];
   n.dia = sumarDias(p.dia, 1);
-  const rng = new Rng(`dia-${n.dia}-${n.fechaActual}`);
+  const rng = new Rng(`dia-${n.semilla}-${n.dia}-${n.fechaActual}`);
 
   /*
    * El mercado se renueva cada quince días y se arma contra el plantel que
@@ -1465,7 +1534,7 @@ function ofrecerBrasileno(n: Partida): void {
   const dentro = new Set([...plantelDe(n).map((j) => j.id), ...n.fichajes.map((f) => f.id)]);
   const libres = CATALOGO.filter((f) => f.nacionalidad === "BRA" && !dentro.has(f.id));
   if (!libres.length) return;
-  const f = libres[new Rng(`brasileno-${n.dia}`).entero(0, libres.length - 1)];
+  const f = libres[new Rng(`brasileno-${n.semilla}-${n.dia}`).entero(0, libres.length - 1)];
   const [nuevo] = generarMercado(`carpeta-${n.dia}`, 1, [
     ...CATALOGO.filter((x) => x.id !== f.id).map((x) => x.id),
   ]);
@@ -1476,7 +1545,7 @@ function ofrecerBrasileno(n: Partida): void {
 }
 
 function sumarPibe(n: Partida, pueblo: string, nivel: number): void {
-  const rng = new Rng(`pibe-${pueblo}-${n.dia}`);
+  const rng = new Rng(`pibe-${n.semilla}-${pueblo}-${n.dia}`);
   const NOMBRES = [["Aldo", "Ayala"], ["Blas", "Cristaldo"], ["Rodrigo", "Ferreira"],
                    ["Juan", "Ozuna"], ["Marcelo", "Bogado"], ["Diego", "Villalba"]];
   const [nombre, apellido] = rng.elegir(NOMBRES);
@@ -1626,7 +1695,8 @@ export function nivelSi(p: Partida, efecto: Efecto, seVa?: string): number {
 export function nivelConAclimatacion(p: Partida, aclimatacion: number): number {
   const partido = partidoDe(p);
   if (!partido) return 0;
-  const ctx: ContextoPartido = { ...partido.ctx, aclimatacion };
+  const ctx: ContextoPartido = {
+    semilla: p.semilla, ...partido.ctx, aclimatacion };
   const s = onceTitular(p, { ...partido, ctx }, plantelDe(p));
   if (!s.once.length) return 0;
   return ovrDelOnce(

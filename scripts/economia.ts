@@ -34,7 +34,7 @@ let vecesQueAlcanzo = 0, vecesQueAparecio = 0;
 
 for (let s = 0; s < temporadas; s++) {
   const rng = new Rng(`eco-${s}`);
-  let p: Partida = partidaNueva();
+  let p: Partida = partidaNueva(`eco-${s}`);
   let pico = p.dineroUsd;
   let antes = p.dineroUsd;
 
@@ -102,7 +102,7 @@ for (let s = 0; s < temporadas; s++) {
 const n = (x: number) => x / temporadas;
 
 console.log(`\n  LA PLATA, media de ${temporadas} temporadas\n`);
-console.log(`    arranca con              ${M(partidaNueva().dineroUsd)}`);
+console.log(`    arranca con              ${M(partidaNueva("eco").dineroUsd)}`);
 console.log(`    lo máximo que llega a tener  ${M(n(picoMedio))}`);
 console.log(`    termina con              ${M(n(finalMedio))}`);
 

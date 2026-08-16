@@ -60,7 +60,7 @@ function verDe(p: Partida, s: Situacion, id: string, efectos: Record<string, Efe
   return { bien, mal, esApuesta: !!ap };
 }
 
-const p = partidaNueva();
+const p = partidaNueva("fijo");
 const plantel = plantelDe(p);
 const problemas: string[] = [];
 const sanas: string[] = [];

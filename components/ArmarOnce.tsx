@@ -6,7 +6,7 @@ import {
   nivelEf, nombreCorto, type PartidoUI, repartirEnMolde,
 } from "@/lib/juego.ts";
 import type { Actitud, Jugador, Posicion } from "@/engine/tipos.ts";
-import type { EquipoGuardado } from "@/lib/temporada.ts";
+import { comoLoDejaste, type EquipoGuardado } from "@/lib/temporada.ts";
 import Escudo from "./Escudo.tsx";
 import Alineador, { Hoja, type EstadoAlineacion } from "./Alineador.tsx";
 import { ACTITUD } from "./PartidoEnVivo.tsx";
@@ -55,17 +55,17 @@ export default function ArmarOnce({
   const inicial = useMemo<EstadoAlineacion>(() => {
     const eq = equipos[0];
     if (eq) {
-      const suyos = eq.jugadores.map((id) => porId.get(id)).filter(Boolean) as Jugador[];
-      if (suyos.length === MOLDE_DE(eq.formacion).length) {
-        return { formacion: eq.formacion, alineado: repartirEnMolde(suyos, MOLDE_DE(eq.formacion), ctx) };
-      }
-      // faltan por bajas: se rellena con los mejores que quedan libres
-      const dentro = new Set(suyos.map((j) => j.id));
+      // tal cual lo guardaste: cada uno en su casillero, sin reordenar
+      const alineado = comoLoDejaste(eq, (id) => porId.has(id));
+      const huecos = alineado.map((x, i) => (x ? -1 : i)).filter((i) => i >= 0);
+      if (!huecos.length) return { formacion: eq.formacion, alineado };
+      // los que faltan son bajas: se rellena SOLO ese casillero
+      const dentro = new Set(alineado.filter(Boolean) as string[]);
       const libres = aptos.filter((j) => !j.reserva && !dentro.has(j.id));
-      const completo = [...suyos,
-        ...autoOnce(ctx, libres, estadoSub18).map((id) => porId.get(id)!).filter(Boolean)]
-        .slice(0, MOLDE_DE(eq.formacion).length);
-      return { formacion: eq.formacion, alineado: repartirEnMolde(completo, MOLDE_DE(eq.formacion), ctx) };
+      const slots = MOLDE_DE(eq.formacion);
+      const relleno = repartirEnMolde(libres, huecos.map((i) => slots[i]), ctx);
+      huecos.forEach((slot, k) => { alineado[slot] = relleno[k] ?? null; });
+      return { formacion: eq.formacion, alineado };
     }
     const once = autoOnce(ctx, aptos.filter((j) => !j.reserva), estadoSub18)
       .map((id) => porId.get(id)!).filter(Boolean);

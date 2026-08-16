@@ -39,7 +39,7 @@ const probar = (que: string, hacer: () => void) => {
   }
 };
 
-const base = partidaNueva();
+const base = partidaNueva("fijo");
 const plantel = plantelDe(base);
 
 // ---------------------------------------------------------------- situaciones
@@ -169,7 +169,7 @@ for (const [que, p2] of escritorios) {
  * arco entero del penal en contra.
  */
 {
-  const p0 = partidaNueva();
+  const p0 = partidaNueva("fijo");
   const m0 = partidoDe(p0)!;
   const sal = salidaAutomatica(m0, plantelDe(p0), { minutos: 0, partidosRestantes: 22 });
   const ali = { once: sal.once, suplentes: sal.suplentes,

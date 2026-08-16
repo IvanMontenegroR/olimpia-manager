@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from "react";
 import ArmarOnce, { type Salida } from "@/components/ArmarOnce.tsx";
+import Arranque from "@/components/Arranque.tsx";
 import PantallaHito from "@/components/PantallaHito.tsx";
 import Penales from "@/components/Penales.tsx";
 import PartidoEnVivo from "@/components/PartidoEnVivo.tsx";
 import Escritorio from "@/components/Escritorio.tsx";
 import {
-  avanzarUnDia, cargar, cerrarPartido, fichar, ficharEstrella, guardar, hayPartidoHoy,
+  avanzarUnDia, cargar, cerrarPartido, fichar, ficharEstrella, guardar, guardarEquipo,
+  hayPartidoHoy,
   partidaNueva, partidoDe, plantelDe, rechazarEstrella, resolverAsunto, TOTAL_FECHAS,
   type CierrePartido, type Partida,
 } from "@/lib/temporada.ts";
@@ -27,6 +29,17 @@ export default function Page() {
       <div className="app items-center justify-center">
         <span className="apellido text-[16px]" style={{ color: "var(--tenue)" }}>Cargando</span>
       </div>
+    );
+  }
+
+  /*
+   * Antes que nada: los dos equipos. Se entra una sola vez, cuando la partida
+   * es nueva, y de ahí en adelante `arrancada` queda en true.
+   */
+  if (!partida.arrancada) {
+    return (
+      <Arranque partida={partida}
+        onListo={(equipos) => setPartida((p) => (p ? { ...p, equipos, arrancada: true } : p))} />
     );
   }
 
@@ -63,20 +76,8 @@ export default function Page() {
           minutos: partida.minutosSub18,
           partidosRestantes: Math.max(1, TOTAL_FECHAS - partida.fechaActual + 1),
         }}
-        onGuardarEquipo={(e) => setPartida((p) => {
-          if (!p) return p;
-          /*
-           * Se pisa EN SU LUGAR. Antes se filtraba el viejo y se agregaba al
-           * final, así que guardar el Titular lo mandaba último y el primero
-           * pasaba a ser el Alternativo: editabas tu once, tocabas guardar, y
-           * la cancha de la pantalla principal te mostraba el otro equipo.
-           */
-          const i = p.equipos.findIndex((x) => x.nombre === e.nombre);
-          const equipos = i >= 0
-            ? p.equipos.map((x, k) => (k === i ? e : x))
-            : [...p.equipos, e];
-          return { ...p, equipos };
-        })}
+        onGuardarEquipo={(e) => setPartida((p) =>
+          (p ? { ...p, equipos: guardarEquipo(p.equipos, e) } : p))}
         modo={hayPartidoHoy(partida) ? "jugar" : "guardar"}
         onVolver={() => setFase("escritorio")}
         onJugar={(s) => { setSalida(s); setFase("partido"); }} />

@@ -20,7 +20,7 @@ import { Rng } from "../engine/rng.ts";
 import { partidaNueva, partidoDe, plantelDe } from "../lib/temporada.ts";
 import { salidaAutomatica } from "../lib/juego.ts";
 
-const p = partidaNueva();
+const p = partidaNueva("fijo");
 const m = partidoDe(p)!;
 const s = salidaAutomatica(m, plantelDe(p), { minutos: 0, partidosRestantes: 22 });
 const a = { once: s.once, suplentes: s.suplentes, actitud: "equilibrado" as const, puestos: s.puestos };

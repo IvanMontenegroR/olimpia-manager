@@ -16,7 +16,7 @@ import type { Actitud, Alineacion, ContextoPartido, Jugador } from "../engine/ti
 
 const N = 4000;
 
-const base = partidaNueva();
+const base = partidaNueva("fijo");
 const partido = partidoDe(base)!;
 const sal = salidaAutomatica(partido, plantelDe(base), { minutos: 0, partidosRestantes: 22 });
 

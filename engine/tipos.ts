@@ -139,6 +139,12 @@ export interface Jugador {
 }
 
 export interface ContextoPartido {
+  /**
+   * La semilla de la partida. Viaja en el contexto porque el partido en vivo
+   * sortea sus propios momentos y sin esto todas las partidas veían el mismo
+   * penal en el mismo minuto contra el mismo rival.
+   */
+  semilla?: string;
   fecha: string;
   competencia: "clausura" | "sudamericana";
   esLocal: boolean;

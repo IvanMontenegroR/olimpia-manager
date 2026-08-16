@@ -28,7 +28,14 @@ const fallas: string[] = [];
 
 for (let s = 0; s < temporadas; s++) {
   const rng = new Rng(`humo-${s}`);
-  let p: Partida = partidaNueva();
+  /*
+   * Cada vuelta es una temporada DISTINTA, no la misma con otras decisiones.
+   * Antes todo el azar colgaba del día del calendario, así que las cuarenta
+   * corridas veían los mismos eventos el mismo día: lo único que cambiaba era
+   * qué opción elegía el bot. Con la semilla propia esto pasó a probar
+   * cuarenta temporadas de verdad.
+   */
+  let p: Partida = partidaNueva(`humo-${s}`);
   let dias = 0;
 
   try {
@@ -94,7 +101,7 @@ for (let s = 0; s < temporadas; s++) {
  */
 function comoSiRecargara(p: Partida): Partida {
   const guardada = JSON.parse(JSON.stringify(p)) as Partida;
-  const base = partidaNueva();
+  const base = partidaNueva("humo-base");
   const n: Partida = { ...base, ...guardada };
   n.plantel = { ...base.plantel };
   for (const j of n.incorporados ?? []) {
