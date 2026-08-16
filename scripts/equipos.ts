@@ -101,6 +101,34 @@ probar("y el hueco se llena sin mover a nadie de puesto",
     .every((id, ) => salidaBaja.puestos.get(id) === slots[mio.jugadores.indexOf(id)]));
 probar("el once sigue completo", salidaBaja.once.length === slots.length);
 
+// -------------------------------------------------- el banco es el otro equipo
+/*
+ * Si salís con el Titular, el Alternativo entero se tiene que poder sentar
+ * atrás. Antes el banco eran siete elegidos por nivel, así que a cuatro de los
+ * once que vos habías armado no los podías poner nunca en todo el partido.
+ */
+const dosEquipos: EquipoGuardado[] = [
+  mio,
+  {
+    nombre: "Alternativo", formacion: "4-3-3",
+    jugadores: [
+      plantel.find((j) => j.posicion === "ARQ" && j.id !== arquero.id)!.id,
+      ...plantel.filter((j) => j.posicion !== "ARQ" && libre(j) &&
+        !mio.jugadores.includes(j.id)).slice(0, 10).map((j) => j.id),
+    ],
+  },
+];
+const conDos = onceTitular({ ...p, equipos: dosEquipos }, partido, plantel);
+const enBanco = new Set(conDos.suplentes.map((j) => j.id));
+const afuera = dosEquipos[1].jugadores.filter((id) => !enBanco.has(id));
+
+probar(`el alternativo entero llega al banco (${dosEquipos[1].jugadores.length - afuera.length}/11)`,
+  afuera.length === 0);
+probar("hay arquero suplente",
+  conDos.suplentes.some((j) => j.posicion === "ARQ"));
+probar("nadie está en el once y en el banco a la vez",
+  !conDos.suplentes.some((j) => conDos.once.some((x) => x.id === j.id)));
+
 console.log();
 if (fallas.length) {
   console.log(`  ${fallas.length} fallan\n`);

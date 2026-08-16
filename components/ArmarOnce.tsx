@@ -113,17 +113,15 @@ export default function ArmarOnce({
 
   const jugar = () => {
     if (problema) return;
+    /*
+     * Al banco van, con preferencia, los de tus otros equipos guardados. Antes
+     * se llenaba por nivel a secas y entraban solo siete, así que a cuatro del
+     * Alternativo que habías armado no los podías poner nunca.
+     */
     const dentro = new Set(once.map((j) => j.id));
-    // al banco van los del primer equipo, salvo que hayas subido a alguien
-    const libres = aptos.filter((j) => !dentro.has(j.id) && !j.reserva);
-    const porNivel = (a: Jugador, b: Jugador) =>
-      nivelEf(b, b.posicion, ctx) - nivelEf(a, a.posicion, ctx);
-    const arquero = libres.filter((j) => j.posicion === "ARQ").sort(porNivel)[0];
-    const suplentes = [
-      ...(arquero ? [arquero] : []),
-      ...libres.filter((j) => j.posicion !== "ARQ").sort(porNivel).slice(0, 6),
-    ];
-    onJugar({ once, suplentes, actitud, puestos });
+    const otros = equipos.filter((e) => !e.jugadores.every((id) => dentro.has(id)))
+      .flatMap((e) => e.jugadores);
+    onJugar({ once, suplentes: bancoSugerido(aptos, once, ctx, otros), actitud, puestos });
   };
 
   /*

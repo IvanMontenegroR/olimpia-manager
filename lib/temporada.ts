@@ -834,7 +834,13 @@ export function onceTitular(p: Partida, partido: PartidoUI, jugadores: Jugador[]
   return {
     once: completo,
     formacion: eq.formacion,
-    suplentes: bancoSugerido([...porId.values()], completo, partido.ctx),
+    /*
+     * Al banco van, con preferencia, los del OTRO equipo que dejaste guardado.
+     * Si sacás el Titular, tu Alternativo entero se sienta atrás: para eso lo
+     * armaste. Lo que sobre se completa por nivel.
+     */
+    suplentes: bancoSugerido([...porId.values()], completo, partido.ctx,
+      (p.equipos ?? []).filter((e) => e.nombre !== eq.nombre).flatMap((e) => e.jugadores)),
     actitud: (partido.ctx.esLocal ? "ofensivo" : "equilibrado") as Actitud,
     puestos,
   };

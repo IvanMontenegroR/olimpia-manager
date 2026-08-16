@@ -351,17 +351,41 @@ export function autoOnce(
  * Los siete del banco: primero un arquero, después los mejores que queden. La
  * reserva no cuenta salvo que la hayas subido a mano.
  */
+/**
+ * Cuántos van al banco.
+ *
+ * Eran siete, y eso rompía la promesa de los dos equipos guardados: armabas un
+ * Alternativo de once y en el partido solo llegabas a los siete mejores, así
+ * que a cuatro de los que habías elegido no los podías poner nunca. Doce es lo
+ * que hace falta para que un alternativo completo entre entero, y es del orden
+ * de lo que se lleva en las copas. Los cambios siguen siendo cinco: esto no
+ * agranda el equipo, agranda de dónde podés elegir.
+ */
+export const BANCO = 12;
+
 export function bancoSugerido(
   aptos: Jugador[], once: Jugador[], ctx: ContextoPartido,
+  /**
+   * Los que tienen preferencia para el banco, en general el otro equipo que
+   * dejaste guardado. Sin esto el banco se llenaba con los de más nivel a
+   * secas, y un jugador que vos pusiste en el Alternativo podía quedar afuera
+   * por alguien que ni figura en tus equipos.
+   */
+  prioridad?: Iterable<string>,
 ): Jugador[] {
   const dentro = new Set(once.map((j) => j.id));
   const libres = aptos.filter((j) => !dentro.has(j.id) && !j.reserva);
   const porNivel = (a: Jugador, b: Jugador) =>
     nivelEf(b, b.posicion, ctx) - nivelEf(a, a.posicion, ctx);
+  const prefe = new Set(prioridad ?? []);
+  // el arquero suplente va sí o sí: si se lesiona el titular no hay reemplazo
   const arquero = libres.filter((j) => j.posicion === "ARQ").sort(porNivel)[0];
+  const resto = libres
+    .filter((j) => j.id !== arquero?.id)
+    .sort((a, b) => (prefe.has(b.id) ? 1 : 0) - (prefe.has(a.id) ? 1 : 0) || porNivel(a, b));
   return [
     ...(arquero ? [arquero] : []),
-    ...libres.filter((j) => j.posicion !== "ARQ").sort(porNivel).slice(0, 6),
+    ...resto.slice(0, BANCO - (arquero ? 1 : 0)),
   ];
 }
 
