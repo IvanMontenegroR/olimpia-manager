@@ -250,9 +250,16 @@ export default function Escritorio({
    */
   /** La misma vara para todo lo que se mida en nivel: rojo, amarillo, verde. */
   const colorEscala = (n: number) => (n >= 74 ? "#4fc07e" : n >= 66 ? "#e8c25a" : "#e0705f");
-  /* La dirigencia arranca en 70 y te echan en 0: su verde empieza mucho antes
-     que el del nivel, donde 70 ya es un plantel del montón. */
-  const colorDirigencia = (n: number) => (n >= 55 ? "#4fc07e" : n >= 35 ? "#e8c25a" : "#e0705f");
+  /*
+   * El color cambia EXACTAMENTE donde cambia el juego.
+   *
+   * Estaba en 55 y 35, que no eran nada: los umbrales de verdad son 40 (abajo
+   * de ahí aparece el aviso de que arriba esperan más) y 25 (abajo de ahí te
+   * dicen que están evaluando tu continuidad). Así el amarillo empieza el día
+   * que aparece el aviso y el rojo el día que te avisan, y las dos rayitas de
+   * la barra caen justo donde el color cambia en vez de en otro lado.
+   */
+  const colorDirigencia = (n: number) => (n >= 40 ? "#4fc07e" : n >= 25 ? "#e8c25a" : "#e0705f");
   const colorOvr = colorEscala(ovr.hoy);
 
   const bajas = plantel.filter((j) => j.suspendido || j.lesionado_hasta);
@@ -288,13 +295,32 @@ export default function Escritorio({
             <div className="text-[10px]" style={{ color: "var(--tenue)" }}>
               {formatoDia(partida.dia)} · fecha {Math.min(partida.fechaActual, TOTAL_FECHAS)} de {TOTAL_FECHAS}
             </div>
-            <div className="mt-1 h-[3px] overflow-hidden rounded-full" style={{ background: "var(--linea)" }}>
-              <div className="barra-llena h-full rounded-full"
-                   style={{
-                     width: `${(Math.min(partida.fechaActual - 1, TOTAL_FECHAS) / TOTAL_FECHAS) * 100}%`,
-                     background: "linear-gradient(90deg, var(--cesped-hondo), var(--cesped))",
-                   }} />
-            </div>
+            {/*
+              * La barra es la dirigencia, no el avance del torneo.
+              *
+              * Acá había una regla de progreso del Clausura, y como el bloque
+              * termina pegado al número de la dirigencia todo el mundo la leía
+              * como si fuera suya. En vez de separarlos, se le dio la razón a
+              * la lectura: la barra pasó a ser lo que parecía. El avance del
+              * torneo no se pierde, sigue escrito arriba en "fecha 8 de 22",
+              * que además es más preciso que una barrita de tres píxeles.
+              *
+              * Las dos rayitas son los umbrales que el juego ya usa: abajo de
+              * 40 aparece el aviso, abajo de 25 evalúan tu continuidad. Están
+              * para que se vea cuánto margen queda sin una línea de texto más.
+              */}
+            <button onClick={() => setAyuda("dirigencia")}
+                    className="relative mt-1 block h-[3px] w-full overflow-hidden rounded-full"
+                    style={{ background: "var(--linea)" }}
+                    aria-label="Dirigencia">
+              <span className="barra-llena absolute inset-y-0 left-0 rounded-full"
+                    style={{ width: `${Math.max(0, Math.min(100, partida.paciencia))}%`,
+                             background: colorDirigencia(partida.paciencia) }} />
+              {[25, 40].map((x) => (
+                <span key={x} className="absolute inset-y-0"
+                      style={{ left: `${x}%`, width: 1, background: "var(--negro)" }} />
+              ))}
+            </button>
           </div>
           {/*
             * La plata y la dirigencia, que son las dos cosas del club que no
