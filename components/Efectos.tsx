@@ -47,7 +47,15 @@ export interface EfectoVisible {
   siSaleMal?: EfectoVisible;
 }
 
-export default function Efectos({ e }: { e: EfectoVisible }) {
+/**
+ * Los chips de un efecto, como lista.
+ *
+ * Sale de adentro del componente porque quien lo dibuja a veces necesita saber
+ * CUÁNTOS son antes de dibujarlos: las dos ramas de una apuesta se reparten el
+ * ancho según cuánto tiene cada una, y la que no tiene nada necesita decirlo
+ * en vez de quedar como un hueco.
+ */
+export function chipsDe(e: EfectoVisible): { texto: string; bueno: boolean }[] {
   const chips: { texto: string; bueno: boolean }[] = [];
 
   /*
@@ -78,21 +86,30 @@ export default function Efectos({ e }: { e: EfectoVisible }) {
       bueno: false,
     });
   }
-  if (!chips.length) return null;
+  return chips;
+}
 
+/** Un chip suelto, del color que le toca. */
+export function Chip({ texto, bueno }: { texto: string; bueno: boolean }) {
+  return (
+    <span className="num rounded px-1.5 py-0.5 text-[9px] font-extrabold"
+          style={{
+            background: bueno
+              ? "color-mix(in srgb, var(--cesped) 24%, transparent)"
+              : "color-mix(in srgb, var(--ladrillo) 24%, transparent)",
+            color: bueno ? "var(--cesped)" : "var(--ladrillo)",
+          }}>
+      {texto}
+    </span>
+  );
+}
+
+export default function Efectos({ e }: { e: EfectoVisible }) {
+  const chips = chipsDe(e);
+  if (!chips.length) return null;
   return (
     <span className="mt-1.5 flex flex-wrap gap-1">
-      {chips.map((c, i) => (
-        <span key={i} className="num rounded px-1.5 py-0.5 text-[9px] font-extrabold"
-              style={{
-                background: c.bueno
-                  ? "color-mix(in srgb, var(--cesped) 24%, transparent)"
-                  : "color-mix(in srgb, var(--ladrillo) 24%, transparent)",
-                color: c.bueno ? "var(--cesped)" : "var(--ladrillo)",
-              }}>
-          {c.texto}
-        </span>
-      ))}
+      {chips.map((c, i) => <Chip key={i} {...c} />)}
     </span>
   );
 }

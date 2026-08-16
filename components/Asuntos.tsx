@@ -6,7 +6,7 @@ import {
   type Asunto, type Partida,
 } from "@/lib/temporada.ts";
 import type { Efecto } from "@/engine/situaciones.ts";
-import Efectos, { type EfectoVisible } from "./Efectos.tsx";
+import Efectos, { Chip, chipsDe, type EfectoVisible } from "./Efectos.tsx";
 import { DibujoEscena, ESCENAS, type TipoEscena } from "./Escena.tsx";
 import Sorteo from "./Sorteo.tsx";
 
@@ -172,9 +172,9 @@ export default function Asuntos({
                    * opciones no entrara en la pantalla del teléfono. Al lado
                    * también se comparan mejor, que es para lo que están.
                    */
-                  <span className="mt-1.5 flex items-start gap-2">
-                    <Rama color="var(--cesped)" efecto={o.efecto} />
-                    <Rama color="var(--ladrillo)" efecto={o.efecto.siSaleMal} />
+                  <span className="mt-1.5 flex items-stretch gap-1.5">
+                    <Rama color="var(--cesped)" titulo="Sale bien" efecto={o.efecto} />
+                    <Rama color="var(--ladrillo)" titulo="Sale mal" efecto={o.efecto.siSaleMal} />
                   </span>
                 ) : (
                   <Efectos e={o.efecto} />
@@ -218,20 +218,40 @@ interface OpcionUI {
  */
 /** Uno de los dos desenlaces de una apuesta, con lo que se gana o se pierde. */
 /**
- * Un desenlace: la barrita de color y los chips, sin frase.
+ * Un desenlace: qué pasa si sale bien y qué pasa si sale mal.
  *
  * Antes cada rama traía "Sale bien: se pone la camiseta y el grupo lo termina
  * aceptando". Es lindo de leer una vez y estorba las veinte siguientes: lo que
- * se mira para decidir son los números, y el color ya dice cuál es cuál. El
- * relato de lo que pasó sigue estando, pero después de elegir, que es cuando
- * sirve.
+ * se mira para decidir son los números. Pero quitar la frase dejó dos rayitas
+ * de color sin nombre, y una rayita verde no dice "si sale bien". Ahora cada
+ * lado se anuncia con la palabra, en su color.
+ *
+ * Y se reparten el ancho según cuánto tiene cada uno. Cuando salía bien no
+ * pasaba nada, el lado verde quedaba vacío ocupando media tarjeta y el rojo
+ * apretado en la otra mitad. Ahora el que no tiene nada dice justamente eso
+ * ("no pasa nada") y se hace chiquito.
  */
-function Rama({ color, efecto }: { color: string; efecto: EfectoVisible }) {
+function Rama({ color, titulo, efecto }: {
+  color: string; titulo: string; efecto: EfectoVisible;
+}) {
+  const chips = chipsDe(efecto);
   return (
-    <span className="flex min-w-0 flex-1 items-start gap-1.5">
-      <span className="mt-[5px] h-[13px] w-[2px] shrink-0 rounded-full"
-            style={{ background: color }} />
-      <span className="min-w-0 flex-1"><Efectos e={efecto} /></span>
+    <span className="min-w-0 rounded-md px-1.5 py-1"
+          style={{
+            // el peso es la cantidad de chips: el lado con más ocupa más
+            flexGrow: Math.max(1, chips.length), flexBasis: 0,
+            background: `color-mix(in srgb, ${color} 9%, transparent)`,
+            boxShadow: `inset 2px 0 0 ${color}`,
+          }}>
+      <span className="block text-[8px] font-extrabold uppercase tracking-[0.14em]"
+            style={{ color }}>
+        {titulo}
+      </span>
+      <span className="mt-1 flex flex-wrap gap-1">
+        {chips.length
+          ? chips.map((c, i) => <Chip key={i} {...c} />)
+          : <span className="text-[9px]" style={{ color: "var(--apagado)" }}>no pasa nada</span>}
+      </span>
     </span>
   );
 }
