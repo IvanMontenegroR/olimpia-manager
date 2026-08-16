@@ -277,7 +277,7 @@ export default function Alineador({
                 <div className="num text-[18px] leading-none">{m.nombre}</div>
                 <div className="mt-1 text-[9px] uppercase tracking-wider"
                      style={{ color: m.nombre === formacion ? "var(--negro)" : "var(--tenue)" }}>
-                  {DESCRIPCION[m.nombre]}
+                  {m.descripcion}
                 </div>
               </button>
             ))}
@@ -292,17 +292,6 @@ export default function Alineador({
     </div>
   );
 }
-
-export const DESCRIPCION: Record<string, string> = {
-  "4-3-3": "Ancho y ofensivo",
-  "4-4-2": "Dos puntas, clásico",
-  "4-2-3-1": "Doble cinco y enganche",
-  "4-3-1-2": "Enganche entre líneas",
-  "4-5-1": "Poblar el medio",
-  "3-5-2": "Carrileros largos",
-  "5-3-2": "Aguantar y salir",
-  "3-4-3": "Todo al ataque",
-};
 
 export function Hoja({ titulo, onCerrar, children }: {
   titulo: string; onCerrar: () => void; children: React.ReactNode;

@@ -122,8 +122,14 @@ export const P = {
    * que se le devolvió ese medio punto al resto del torneo. Sin eso el título
    * local saltaba de 21% a 24% por un cambio que era de datos y no de
    * dificultad.
+   *
+   * Y otro punto más ahora, por lo mismo. Los niveles del plantel dejaron de
+   * ser una opinión: salen de los minutos y el rendimiento de 2026 más las
+   * correcciones del DT. Cuando el equipo queda mejor, lo que hay que mover es
+   * la vara del torneo y no volver a tocar a los jugadores, porque eso
+   * desharía justamente lo que se acaba de ajustar con datos.
    */
-  ajusteRival: -1.5,
+  ajusteRival: -0.4,
 
   localiaLiga: 3.0,
   // El Defensores de noche en Conmebol pesa el triple que un domingo. Subió un
@@ -174,6 +180,19 @@ export const P = {
   aplastaAFavor: 0,
   aplastaEnContra: 0.22,
   /**
+   * Lo mismo pero del lado de tu arco, y va aparte a propósito.
+   *
+   * `aplastaAFavor` estaba haciendo dos trabajos con el mismo número: aplanar
+   * los goles que METÉS cuando sos muy superior (para que no haya 7-0) y
+   * aplanar los que RECIBÍS cuando defendés muy bien. Lo primero está bien.
+   * Lo segundo hacía que defender de más no valiera nada justo cuando más
+   * querés defender: con "aguantar" puesto, un 5-3-2 y un 3-4-3 recibían lo
+   * mismo (0.73 los dos), porque los dos ya estaban del otro lado del codo y
+   * ahí la pendiente era cero. O sea que la formación se apagaba sola en el
+   * único momento en que de verdad la ibas a usar.
+   */
+  aplastaDefensa: 0.26,
+  /**
    * Corrección de Dixon-Coles para los marcadores bajos. Dos Poisson
    * independientes dan pocos empates (salían 19% cuando en el fútbol real son
    * 26%), porque en un partido real los equipos se condicionan: si está 0-0 a
@@ -189,6 +208,8 @@ export const P = {
    */
   formacionPorDefensor: 3.5,
   formacionPorDelantero: 2.2,
+  /** Lo que suma de ataque cada defensor que sacás, por jugar más arriba. */
+  formacionPorAvance: 1.1,
   actitudAtaque: { defensivo: -7, equilibrado: 0, ofensivo: 5 } as Record<Actitud, number>,
   actitudDefensa: { defensivo: 9, equilibrado: 0, ofensivo: -6 } as Record<Actitud, number>,
   presionAtaque: 2.5,
@@ -446,10 +467,20 @@ function estructura(a: Alineacion) {
    * ayuda en las dos áreas, pero menos que un cuerpo puesto ahí.
    */
   const M = 0.35;
+  /*
+   * Y sacar un defensor no solo te desprotege: te adelanta.
+   *
+   * Sin este término, ir de 4-3-3 a 3-4-3 restaba 2.3 de defensa y sumaba 0.77
+   * de ataque, o sea que era estrictamente peor y nadie lo iba a elegir nunca.
+   * Y en la cancha no es así: el que deja tres atrás juega veinte metros más
+   * arriba, con los laterales convertidos en carrileros. Lo que se gana yendo
+   * a buscarlo no está en quién ataca sino en dónde está parado el equipo.
+   */
   // el 4-3-3 es el cero: cuatro atrás, tres en el medio y tres arriba
   return {
     defensa: (atras + medio * M - (4 + 3 * M)) * P.formacionPorDefensor,
-    ataque: (adelante + medio * M - (3 + 3 * M)) * P.formacionPorDelantero,
+    ataque: (adelante + medio * M - (3 + 3 * M)) * P.formacionPorDelantero
+      + (4 - atras) * P.formacionPorAvance,
   };
 }
 
@@ -569,7 +600,7 @@ export function simularPartido(
   let xgOlimpia = P.xgBase * Math.exp(P.xgK *
     doblar(dOlimpia, dOlimpia > 0 ? P.aplastaAFavor : P.aplastaEnContra));
   let xgRival = P.xgBase * Math.exp(P.xgK *
-    doblar(dRival, dRival > 0 ? P.aplastaEnContra : P.aplastaAFavor));
+    doblar(dRival, dRival > 0 ? P.aplastaEnContra : P.aplastaDefensa));
   xgOlimpia *= bonoRasgos(a.once, rng);
 
   if (ctx.esClasico) {

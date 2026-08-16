@@ -10,7 +10,7 @@
 
 import { simularPartido, ovrDelOnce } from "../engine/motor.ts";
 import { Rng } from "../engine/rng.ts";
-import { MOLDE_DE, repartirEnMolde } from "../lib/juego.ts";
+import { MOLDE_DE, MOLDES, repartirEnMolde } from "../lib/juego.ts";
 import { partidaNueva, partidoDe, plantelDe } from "../lib/temporada.ts";
 import type { Actitud, Alineacion, Jugador, Posicion } from "../engine/tipos.ts";
 
@@ -49,9 +49,7 @@ function correr(a: Alineacion, etiqueta: string) {
 
 // ---------------------------------------------------------------- formación
 console.log(`\n  === LA FORMACIÓN, con los mismos once y actitud pareja ===\n`);
-for (const f of ["3-4-3", "4-3-3", "4-4-2", "4-2-3-1", "4-5-1", "5-3-2"]) {
-  correr(armar(f), f);
-}
+for (const f of MOLDES.map((m) => m.nombre)) correr(armar(f), f);
 
 /*
  * Y lo mismo de visitante contra un equipo mejor. Una formación defensiva no
@@ -61,7 +59,7 @@ for (const f of ["3-4-3", "4-3-3", "4-4-2", "4-2-3-1", "4-5-1", "5-3-2"]) {
 console.log(`\n  === LA FORMACIÓN, de visitante contra uno mejor ===\n`);
 const duro = { ...ctx, esLocal: false, rivalFuerza: 78, viajeKm: 2200, alturaM: 2600,
                diasDescanso: 3, hinchada: undefined, ocupacion: undefined };
-for (const f of ["3-4-3", "4-3-3", "4-4-2", "4-5-1", "5-3-2"]) {
+for (const f of MOLDES.map((m) => m.nombre)) {
   const a = armar(f);
   let gf = 0, gc = 0, gana = 0, empata = 0;
   for (let i = 0; i < N; i++) {
@@ -80,6 +78,33 @@ console.log(`\n  === LA ACTITUD, con 4-3-3 fijo ===\n`);
 for (const act of ["defensivo", "equilibrado", "ofensivo"] as Actitud[]) {
   correr(armar("4-3-3", act), act);
 }
+
+// ------------------------------------------------- las dos perillas juntas
+/*
+ * La pregunta de fondo: ¿la formación y la actitud hacen lo mismo?
+ *
+ * Si hicieran lo mismo, la grilla tendría filas repetidas y una de las dos
+ * sobraría. Lo que hay que ver es que se multipliquen: que el extremo de
+ * arriba a la izquierda y el de abajo a la derecha estén MÁS lejos que
+ * cualquiera de las dos perillas por separado.
+ */
+console.log(`\n  === FORMACIÓN × ACTITUD ===\n`);
+console.log(`  ${"".padEnd(9)}${["aguantar", "parejo", "ir al frente"]
+  .map((x) => x.padEnd(20)).join("")}`);
+for (const f of ["5-3-2", "4-3-3", "3-4-3"]) {
+  const celdas: string[] = [];
+  for (const act of ["defensivo", "equilibrado", "ofensivo"] as Actitud[]) {
+    const a = armar(f, act);
+    let gf = 0, gc = 0;
+    for (let i = 0; i < N; i++) {
+      const r = simularPartido(a, ctx, new Rng(`g-${i}`));
+      gf += r.golesOlimpia; gc += r.golesRival;
+    }
+    celdas.push(`${(gf / N).toFixed(2)} · ${(gc / N).toFixed(2)}`.padEnd(20));
+  }
+  console.log(`  ${f.padEnd(9)}${celdas.join("")}`);
+}
+console.log(`\n  (mete · recibe)`);
 
 // ------------------------------------------------------------ fuera de puesto
 console.log(`\n  === PONER A ALGUIEN FUERA DE PUESTO ===\n`);

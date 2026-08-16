@@ -39,62 +39,43 @@ export interface Formacion {
 
 const ARQUERO: Linea = { x: 4, puestos: ["ARQ"] };
 
+/**
+ * Tres formaciones, no nueve.
+ *
+ * Había ocho y solo seis eran distintas para el motor: un 4-2-3-1 es un 4-3-3
+ * (cuatro atrás, tres en el medio, tres arriba) y un 4-3-1-2 es un 4-4-2. Los
+ * dibujos cambiaban, los números no, así que elegir entre ellos era elegir
+ * entre dos nombres.
+ *
+ * De las seis que quedaban, estas tres son las que abren el abanico entero: se
+ * diferencian en lo único que el motor lee, que es cuántos cuerpos ponés atrás.
+ * Cinco, cuatro o tres. Cada una es una manera distinta de jugar el partido y
+ * ninguna gana siempre:
+ *
+ *   5-3-2   mete 1.22   recibe 0.77
+ *   4-3-3   mete 1.56   recibe 0.92
+ *   3-4-3   mete 1.72   recibe 1.05
+ *
+ * El 4-4-2 y el 4-5-1 quedaban en el medio del 5-3-2 y el 4-3-3, aportando un
+ * matiz que no se siente jugando. Mejor tres que se entienden de un vistazo.
+ */
 export const MOLDES: Formacion[] = [
   {
-    nombre: "4-3-3", descripcion: "Ancho y ofensivo",
+    nombre: "4-3-3", descripcion: "El equilibrio",
     lineas: [ARQUERO,
       { x: 25, puestos: ["LI", "DFC", "DFC", "LD"] },
       { x: 53, puestos: ["MC", "MCD", "MC"] },
       { x: 83, puestos: ["EI", "DC", "ED"] }],
   },
   {
-    nombre: "4-4-2", descripcion: "Dos puntas, clásico",
-    lineas: [ARQUERO,
-      { x: 25, puestos: ["LI", "DFC", "DFC", "LD"] },
-      { x: 54, puestos: ["MI", "MC", "MC", "MD"] },
-      { x: 84, puestos: ["DC", "DC"] }],
-  },
-  {
-    nombre: "4-2-3-1", descripcion: "Doble cinco y enganche",
-    lineas: [ARQUERO,
-      { x: 23, puestos: ["LI", "DFC", "DFC", "LD"] },
-      { x: 45, puestos: ["MCD", "MCD"] },
-      { x: 69, puestos: ["EI", "MCO", "ED"] },
-      { x: 89, puestos: ["DC"] }],
-  },
-  {
-    nombre: "4-3-1-2", descripcion: "Enganche entre líneas",
-    lineas: [ARQUERO,
-      { x: 23, puestos: ["LI", "DFC", "DFC", "LD"] },
-      { x: 46, puestos: ["MC", "MCD", "MC"] },
-      { x: 68, puestos: ["MCO"] },
-      { x: 89, puestos: ["DC", "DC"] }],
-  },
-  {
-    nombre: "4-5-1", descripcion: "Poblar el medio",
-    lineas: [ARQUERO,
-      { x: 25, puestos: ["LI", "DFC", "DFC", "LD"] },
-      { x: 55, puestos: ["MI", "MC", "MCD", "MC", "MD"] },
-      { x: 87, puestos: ["DC"] }],
-  },
-  {
-    // tres centrales, dos carrileros y tres por el medio: la línea de cinco va
-    // plana, sin enganche descentrado entre medio
-    nombre: "3-5-2", descripcion: "Carrileros largos",
-    lineas: [ARQUERO,
-      { x: 23, puestos: ["DFC", "DFC", "DFC"] },
-      { x: 53, puestos: ["MI", "MC", "MCD", "MC", "MD"] },
-      { x: 85, puestos: ["DC", "DC"] }],
-  },
-  {
-    nombre: "5-3-2", descripcion: "Aguantar y salir",
+    nombre: "5-3-2", descripcion: "Cinco atrás: aguantar y salir",
     lineas: [ARQUERO,
       { x: 23, puestos: ["LI", "DFC", "DFC", "DFC", "LD"] },
       { x: 53, puestos: ["MC", "MCD", "MC"] },
       { x: 85, puestos: ["DC", "DC"] }],
   },
   {
-    nombre: "3-4-3", descripcion: "Todo al ataque",
+    nombre: "3-4-3", descripcion: "Tres atrás: ir a buscarlo",
     lineas: [ARQUERO,
       { x: 23, puestos: ["DFC", "DFC", "DFC"] },
       { x: 51, puestos: ["MI", "MC", "MC", "MD"] },
@@ -102,11 +83,22 @@ export const MOLDES: Formacion[] = [
   },
 ];
 
+/**
+ * Las que se sacaron, cada una a la que más se le parece.
+ *
+ * Una partida guardada de antes puede tener un equipo en 4-4-2. Sin esto caía
+ * en el molde por defecto y te encontrabas el once desarmado al abrirlo.
+ */
+const VIEJAS: Record<string, string> = {
+  "4-2-3-1": "4-3-3", "4-3-1-2": "4-3-3",
+  "4-4-2": "4-3-3", "4-5-1": "5-3-2", "3-5-2": "3-4-3",
+};
+
 /** Los once casilleros de una formación, de atrás hacia adelante. */
 export interface Casilla { puesto: Posicion; x: number; y: number }
 
 export function casillasDe(nombre: string): Casilla[] {
-  const f = MOLDES.find((m) => m.nombre === nombre) ?? MOLDES[0];
+  const f = MOLDES.find((m) => m.nombre === (VIEJAS[nombre] ?? nombre)) ?? MOLDES[0];
   const casillas: Casilla[] = [];
   for (const linea of f.lineas) {
     const n = linea.puestos.length;
