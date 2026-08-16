@@ -135,7 +135,7 @@ export default function MomentoOverlay({
             /* En el penal en contra la barra no es una probabilidad: es el
                arco, y lo verde es lo que el arquero alcanza a tapar. */
             const z = momento.tipo === "penal_contra"
-              ? zonaDelArquero(alineacion, ctx, o.id) : null;
+              ? zonaDelArquero(alineacion, ctx, o.id, momento.minuto) : null;
             const esta = resuelto !== null && o.id === idElegida;
             /* Las descartadas se achican pero no se van: parte de la gracia es
                ver la barra que dejaste pasar. */
@@ -166,9 +166,29 @@ export default function MomentoOverlay({
 
                 {!descartada && (
                   <>
-                    <span className="block text-[11px]" style={{ color: "var(--tenue)" }}>
-                      {o.detalle}
-                    </span>
+                    {!!o.detalle && (
+                      <span className="block text-[11px]" style={{ color: "var(--tenue)" }}>
+                        {o.detalle}
+                      </span>
+                    )}
+                    {/* Lo que la opción deja, en chips como el resto del juego.
+                        Enterrado en una frase, el número no se leía en los
+                        siete segundos que hay para elegir. */}
+                    {!!o.chips?.length && (
+                      <span className="mt-1 flex flex-wrap gap-1">
+                        {o.chips.map((c, i) => (
+                          <span key={i} className="num rounded px-1.5 py-0.5 text-[9px] font-extrabold"
+                                style={{
+                                  background: c.bueno
+                                    ? "color-mix(in srgb, var(--cesped) 24%, transparent)"
+                                    : "color-mix(in srgb, var(--ladrillo) 24%, transparent)",
+                                  color: c.bueno ? "var(--cesped)" : "var(--ladrillo)",
+                                }}>
+                            {c.texto}
+                          </span>
+                        ))}
+                      </span>
+                    )}
 
                     {/* Antes de elegir: la apuesta. Después: la misma barra,
                         con la bolilla cayendo adentro. */}
@@ -197,9 +217,6 @@ export default function MomentoOverlay({
                             <span key={x} className="absolute inset-y-0"
                                   style={{ left: `${x}%`, width: 1, background: "#ffffff22" }} />
                           ))}
-                        </span>
-                        <span className="mt-0.5 block text-[9px]" style={{ color: "var(--apagado)" }}>
-                          el arco de palo a palo · lo verde es lo que llega a tapar
                         </span>
                       </span>
                     ) : chance !== null && (

@@ -33,7 +33,14 @@ const TIPOS: TipoMomento[] = [
 
 const fallas: string[] = [];
 /** Un número en el texto es la señal de que la opción dice lo que da. */
-const dicheNumero = (t: string) => /[+\-−]?\d/.test(t);
+const tieneNumero = (t: string) => /[+\-−]?\d/.test(t);
+/**
+ * Lo que la opción muestra escrito: los chips y, si queda, la línea de texto.
+ * Los chips son la forma buena; el detalle sigue valiendo para las que solo
+ * necesitan una aclaración corta.
+ */
+const loQueDice = (o: { detalle: string; chips?: { texto: string }[] }) =>
+  [...(o.chips ?? []).map((c) => c.texto), o.detalle].join(" ");
 
 for (const tipo of TIPOS) {
   const mom: Momento | null = generarMomento(
@@ -67,7 +74,8 @@ for (const tipo of TIPOS) {
 
     console.log(`    ${o.etiqueta.slice(0, 26).padEnd(28)} ` +
       `${(chance === null ? "—" : Math.round(chance * 100) + "%").padStart(4)}  ${efectos}`);
-    console.log(`      ${o.detalle}`);
+    console.log(`      ${(o.chips ?? []).map((c) => `[${c.texto}]`).join(" ")}${
+      o.chips?.length && o.detalle ? "  " : ""}${o.detalle}`);
 
     /*
      * Si la opción produce algo bueno y medible, el detalle tiene que decirlo
@@ -80,15 +88,22 @@ for (const tipo of TIPOS) {
      * que hay que saber. Lo que sí hay que decir con un número es lo que no se
      * ve, que es lo que le queda al equipo después.
      */
-    if (prende / N >= 1 && !dicheNumero(o.detalle)) {
+    if (prende / N >= 1 && !tieneNumero(loQueDice(o))) {
       fallas.push(`${tipo}/${o.id}: enciende al equipo (${(prende / N).toFixed(1)}) ` +
         `y el detalle no dice cuánto`);
     }
     // las que solo cambian cómo te parás no producen nada que el script vea:
     // ahí el detalle es lo ÚNICO que informa, así que tiene que traer números
     const soloActitud = chance === null && !gol && !golContra && !roja && !cambio && !prende;
-    if (soloActitud && !dicheNumero(o.detalle)) {
+    if (soloActitud && !tieneNumero(loQueDice(o))) {
       fallas.push(`${tipo}/${o.id}: no muestra ni porcentaje ni número, solo texto`);
+    }
+    /*
+     * Y lo que mueve el nivel tiene que ir en un chip, no adentro de una
+     * frase. Es la misma cifra pero no se lee igual con el reloj corriendo.
+     */
+    if (/[+\-−]\s?\d+([.,]\d+)?\s*(de\s+)?nivel/i.test(o.detalle)) {
+      fallas.push(`${tipo}/${o.id}: dice nivel en texto plano, tiene que ser un chip`);
     }
     void riesgo;
   }

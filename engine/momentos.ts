@@ -17,10 +17,21 @@ export type TipoMomento =
   // los que aprovechan lo que hasta ahora pasaba solo en el relato
   | "festejo" | "arquero_al_area" | "cerrar_o_seguir";
 
+/**
+ * Lo que una opción deja, dicho como los chips del resto del juego.
+ *
+ * Antes esto viajaba adentro del `detalle`: una frase larga con un número
+ * enterrado al final. Es la misma información pero no se lee igual, y las
+ * decisiones del partido se toman en siete segundos.
+ */
+export interface ChipMomento { texto: string; bueno: boolean }
+
 export interface OpcionMomento {
   id: string;
   etiqueta: string;
+  /** Una línea corta, o nada: lo que se mide va en los chips. */
   detalle: string;
+  chips?: ChipMomento[];
   jugadorId?: string;
 }
 
@@ -114,6 +125,9 @@ const apellido = (j: Jugador) => j.apellido;
 
 const acotar = (p: number, min: number, max: number) => Math.max(min, Math.min(max, p));
 
+const bien = (texto: string): ChipMomento => ({ texto, bueno: true });
+const mal = (texto: string): ChipMomento => ({ texto, bueno: false });
+
 /**
  * La chance de que salga bien cada opción, sin tirar el dado.
  *
@@ -171,7 +185,7 @@ export function chanceDe(
       return acotar(p, 0.25, 0.92);
     }
     case "penal_contra": {
-      const z = zonaDelArquero(a, ctx, opcionId);
+      const z = zonaDelArquero(a, ctx, opcionId, m.minuto);
       // la chance ES el pedazo de arco que tapás: la barra no miente
       return z ? z.hasta - z.desde : null;
     }
@@ -226,7 +240,9 @@ export function chanceDe(
  * palo era elegir un número abstracto. Así el arquero se ve: un 78 tapa una
  * franja ancha y un 60 una rendija, sobre el mismo arco.
  */
-export function zonaDelArquero(a: Alineacion, ctx: ContextoPartido, opcionId: string) {
+export function zonaDelArquero(
+  a: Alineacion, ctx: ContextoPartido, opcionId: string, minuto: number,
+) {
   const arq = a.once.find((j) => (a.puestos.get(j.id) ?? j.posicion) === "ARQ");
   if (!arq) return null;
   const nivel = nivelEfectivo(arq, "ARQ", ctx);
@@ -234,11 +250,29 @@ export function zonaDelArquero(a: Alineacion, ctx: ContextoPartido, opcionId: st
    * Cuánto del arco alcanza a cubrir. Un arquero del montón llega a poco más
    * de una quinta parte; uno de selección, a un tercio largo. Quedarse en el
    * medio cubre menos superficie pero no hay que adivinar hacia dónde va: por
-   * eso su zona es más angosta y la de los palos más ancha.
+   * eso su zona es más angosta.
    */
-  const alcance = acotar(0.20 + (nivel - 60) * 0.009, 0.10, 0.42);
-  const ancho = opcionId === "centro" ? alcance * 0.72 : alcance;
-  const centroDe = opcionId === "izq" ? 0.17 : opcionId === "der" ? 0.83 : 0.5;
+  /*
+   * Cuánto del arco alcanza a cubrir tirándose a su lado bueno. La escala está
+   * puesta para que ese máximo dé lo mismo que daba cuando los dos palos
+   * valían igual (un 71 tapa 30%, un 82 tapa 40%): lo que cambió es que ahora
+   * hay algo que leer, no cuántos penales se atajan.
+   */
+  const alcance = acotar(0.166 + (nivel - 60) * 0.0075, 0.083, 0.35);
+  /*
+   * Los dos palos no valen lo mismo en este penal.
+   *
+   * Cuando valían igual las dos barras salían idénticas y elegir palo era
+   * tirar una moneda: no había nada que leer. Ahora el arquero llega mejor de
+   * un lado según cómo viene la carrera, cambia de penal en penal, y eso se ve
+   * en el ancho de cada barra sin que haya que explicarlo con una frase.
+   */
+  const revoltijo = ((minuto * 2654435761 + arq.numero * 40503) >>> 0) >>> 9;
+  const derechaEsFuerte = (revoltijo & 1) === 0;
+  const factor = opcionId === "centro" ? 0.62
+    : (opcionId === "der") === derechaEsFuerte ? 1.20 : 0.80;
+  const ancho = alcance * factor;
+  const centroDe = opcionId === "izq" ? 0.19 : opcionId === "der" ? 0.81 : 0.5;
   return {
     desde: Math.max(0, centroDe - ancho / 2),
     hasta: Math.min(1, centroDe + ancho / 2),
@@ -323,21 +357,23 @@ export function candidatosAlPenal(a: Alineacion, ctx: ContextoPartido) {
     return (j.nivel * golpe * P.animoPorPunto) / Math.max(1, a.once.length);
   };
   const bajada = (j: Jugador) => cuestaEnNivel(j).toFixed(1);
-  meter(orden[0], `En él se apoya el equipo. Si la erra, −${bajada(orden[0])} de nivel`);
+  meter(orden[0], "En él se apoya el equipo");
   // el que menos lo sufre: uno que puede patear y no carga con el equipo encima
   const frio = [...orden].slice(0, 7).filter(libre)
     .sort((x, y) => pesoDeFallar(x, media) - pesoDeFallar(y, media))[0];
-  if (frio) meter(frio, `Patea peor, pero errarlo casi no le queda: −${bajada(frio)} de nivel`);
+  if (frio) meter(frio, "Patea peor, pero errarlo casi no le queda");
   // el pibe: la peor chance y lo que más se lleva si la mete
   const pibe = [...orden].slice(0, 8).filter((j) => libre(j) && j.edad <= 23)
     .sort((x, y) => y.nivel - x.nivel)[0];
-  if (pibe) meter(pibe, `Se ofrece. Si la mete no se olvida más; si la erra, −${bajada(pibe)} de nivel`);
+  if (pibe) meter(pibe, "Se ofrece. Si la mete no se olvida más");
   for (const j of orden) {
     if (elegidos.length >= 3) break;
-    meter(j, `Nivel ${Math.round(nivelEfectivo(j, a.puestos.get(j.id) ?? j.posicion, ctx))}. ` +
-      `Si la erra, −${bajada(j)} de nivel`);
+    meter(j, `Nivel ${Math.round(nivelEfectivo(j, a.puestos.get(j.id) ?? j.posicion, ctx))}`);
   }
-  return elegidos.slice(0, 3);
+  // el costo de errarlo va como chip, en la misma moneda que el resto del juego
+  return elegidos.slice(0, 3).map((e) => ({
+    ...e, chips: [mal(`−${bajada(e.j)} nivel si la erra`)],
+  }));
 }
 
 /**
@@ -405,10 +441,11 @@ export function generarMomento(
         tipo, minuto, segundos: 9,
         titulo: "PENAL A FAVOR",
         contexto: "Lo derribaron en el área. ¿Quién se hace cargo?",
-        opciones: tres.map(({ j, papel }) => ({
+        opciones: tres.map(({ j, papel, chips }) => ({
           id: j.id,
           etiqueta: `${j.numero} ${apellido(j)}`,
           detalle: papel,
+          chips,
           jugadorId: j.id,
         })),
         porDefecto: tres[0].j.id,
@@ -422,13 +459,15 @@ export function generarMomento(
         tipo, minuto, segundos: 7,
         titulo: "PENAL EN CONTRA",
         contexto: `${apellido(arq)} espera. ¿Para qué lado se tira?`,
+        /*
+         * Sin una línea de texto: la barra es el arco y lo verde es lo que
+         * tapás. Explicarlo con palabras al lado era decir dos veces lo mismo
+         * en los siete segundos que hay para elegir.
+         */
         opciones: [
-          { id: "izq", etiqueta: "Al palo izquierdo",
-            detalle: "Tapa más arco, pero hay que acertar el lado" },
-          { id: "centro", etiqueta: "Quedarse parado",
-            detalle: "Menos arco, pero no hay que adivinar nada" },
-          { id: "der", etiqueta: "Al palo derecho",
-            detalle: "Tapa más arco, pero hay que acertar el lado" },
+          { id: "izq", etiqueta: "Al palo izquierdo", detalle: "" },
+          { id: "centro", etiqueta: "Quedarse parado", detalle: "" },
+          { id: "der", etiqueta: "Al palo derecho", detalle: "" },
         ],
         porDefecto: "centro",
       };
@@ -460,20 +499,15 @@ export function generarMomento(
         tipo, minuto, segundos: 8,
         titulo: "VA CALIENTE",
         contexto: `${apellido(j)} ya tiene amarilla y sigue yendo fuerte. Te lo van a echar.`,
-        /*
-         * Las tres dicen su número. "Si aguanta la cancha se prende" no decía
-         * nada: la única cifra a la vista era el porcentaje de zafar, así que
-         * dejarlo parecía todo riesgo y ninguna ganancia.
-         */
         opciones: [
-          { id: "sacar", etiqueta: "Sacarlo",
-            detalle: `Te gasta un cambio y perdés a ${apellido(j)} el resto del partido`,
+          { id: "sacar", etiqueta: "Sacarlo", detalle: "",
+            chips: [mal("Gasta un cambio"), mal(`Sale ${apellido(j)}`)],
             jugadorId: j.id },
-          { id: "hablar", etiqueta: "Hablarle",
-            detalle: `Puede que se calme. Si responde, +${enciende(a, 6)} de nivel`,
+          { id: "hablar", etiqueta: "Hablarle", detalle: "",
+            chips: [bien(`+${enciende(a, 6)} nivel si responde`)],
             jugadorId: j.id },
-          { id: "dejar", etiqueta: "Dejarlo",
-            detalle: `Si la aguanta, +${enciende(a, 12)} de nivel. Si no, te quedás con diez`,
+          { id: "dejar", etiqueta: "Dejarlo", detalle: "",
+            chips: [bien(`+${enciende(a, 12)} nivel si la aguanta`), mal("Roja: te quedás con diez")],
             jugadorId: j.id },
         ],
         porDefecto: "hablar",
@@ -506,19 +540,20 @@ export function generarMomento(
         titulo: "EL RIVAL SE QUEDÓ CON DIEZ",
         contexto: "Hay un hombre de más. ¿Qué hacés con la ventaja?",
         /*
-         * Las tres cambian cómo te parás y nada más, así que el detalle es lo
-         * único que informa: sin números eran tres frases bonitas y elegías por
-         * intuición.
+         * Las tres cambian cómo te parás y nada más: no hay porcentaje de que
+         * salgan bien, así que los chips son lo único que informa.
          */
         opciones: [
-          { id: "ahogar", etiqueta: "Ahogarlo arriba",
-            detalle: `Llegás ${cuantoMenos(P.actitudAtaque.ofensivo)}% más y le sacás 8 de ` +
-              `condición. Te dejás abierto: te llegan ${cuantoMenos(P.actitudDefensa.ofensivo)}% más` },
-          { id: "abrir", etiqueta: "Abrir la cancha",
-            detalle: "Sin exponerte, pero corriendo con diez se funden: le sacás 16 de condición" },
-          { id: "sostener", etiqueta: "No cambiar nada",
-            detalle: `Administrás con el hombre de más: te llegan ` +
-              `${cuantoMenos(P.actitudDefensa.defensivo)}% menos` },
+          { id: "ahogar", etiqueta: "Ahogarlo arriba", detalle: "",
+            chips: [
+              bien(`Llegás ${cuantoMenos(P.actitudAtaque.ofensivo)}% más`),
+              bien("−8 condición del rival"),
+              mal(`Te llegan ${cuantoMenos(P.actitudDefensa.ofensivo)}% más`),
+            ] },
+          { id: "abrir", etiqueta: "Abrir la cancha", detalle: "",
+            chips: [bien("−16 condición del rival")] },
+          { id: "sostener", etiqueta: "No cambiar nada", detalle: "",
+            chips: [bien(`Te llegan ${cuantoMenos(P.actitudDefensa.defensivo)}% menos`)] },
         ],
         porDefecto: "sostener",
       };
@@ -532,14 +567,14 @@ export function generarMomento(
         titulo: "EL FESTEJO",
         contexto: `Lo metió ${apellido(j)} y sale corriendo. ¿Adónde va?`,
         opciones: [
-          { id: "tribuna", etiqueta: "A la tribuna",
-            detalle: `La cancha se prende: +${enciende(a, 4)} de nivel. Amarilla si el árbitro se pone duro`,
+          { id: "tribuna", etiqueta: "A la tribuna", detalle: "La cancha se prende",
+            chips: [bien(`+${enciende(a, 4)} nivel`), mal("Amarilla")],
             jugadorId: j.id },
-          { id: "provocar", etiqueta: "Callarle la boca al rival",
-            detalle: `Enciende al equipo como nada: +${enciende(a, 7)} de nivel. Y esta suele costar amarilla`,
+          { id: "provocar", etiqueta: "Callarle la boca al rival", detalle: "",
+            chips: [bien(`+${enciende(a, 7)} nivel`), mal("Amarilla")],
             jugadorId: j.id },
-          { id: "banco", etiqueta: "Correr al banco",
-            detalle: `Se lo dedica a los compañeros: +${enciende(a, 2)} de nivel, y no lo amonesta nadie`,
+          { id: "banco", etiqueta: "Correr al banco", detalle: "Se lo dedica a los compañeros",
+            chips: [bien(`+${enciende(a, 2)} nivel`)],
             jugadorId: j.id },
         ],
         porDefecto: "banco",
@@ -573,14 +608,19 @@ export function generarMomento(
             "vale para todo lo que viene."
           : "Quedan veinte minutos y estás uno abajo. Hay tiempo, pero no tanto.",
         opciones: [
-          { id: "cerrar", etiqueta: "Meterse atrás",
-            detalle: `Te llegan ${cuantoMenos(P.actitudDefensa.defensivo)}% menos, ` +
-              `y llegás ${cuantoMenos(P.actitudAtaque.defensivo)}% menos` },
+          { id: "cerrar", etiqueta: "Meterse atrás", detalle: "",
+            chips: [
+              bien(`Te llegan ${cuantoMenos(P.actitudDefensa.defensivo)}% menos`),
+              mal(`Llegás ${cuantoMenos(P.actitudAtaque.defensivo)}% menos`),
+            ] },
           { id: "seguir", etiqueta: "No cambiar nada",
-            detalle: "Se sigue jugando igual que hasta acá: 0% para los dos lados" },
-          { id: "matarlo", etiqueta: arriba ? "Ir por el segundo" : "Tirarse encima",
-            detalle: `Llegás ${cuantoMenos(P.actitudAtaque.ofensivo)}% más, pero te llegan ` +
-              `${cuantoMenos(P.actitudDefensa.ofensivo)}% más y gastás piernas` },
+            detalle: "Se sigue jugando igual: 0% para los dos lados" },
+          { id: "matarlo", etiqueta: arriba ? "Ir por el segundo" : "Tirarse encima", detalle: "",
+            chips: [
+              bien(`Llegás ${cuantoMenos(P.actitudAtaque.ofensivo)}% más`),
+              mal(`Te llegan ${cuantoMenos(P.actitudDefensa.ofensivo)}% más`),
+              mal("Gastás piernas"),
+            ] },
         ],
         porDefecto: "seguir",
       };
@@ -654,7 +694,7 @@ export function resolverMomento(
     }
 
     case "penal_contra": {
-      const z = zonaDelArquero(a, ctx, opcionId);
+      const z = zonaDelArquero(a, ctx, opcionId, m.minuto);
       if (!z) return { exito: false, golRival: true, texto: "Gol del rival." };
       /*
        * Adónde va la pelota, de palo a palo. No se sortea si la ataja: se
