@@ -172,9 +172,9 @@ export default function Asuntos({
                    * opciones no entrara en la pantalla del teléfono. Al lado
                    * también se comparan mejor, que es para lo que están.
                    */
-                  <span className="mt-1 block">
-                    <Rama color="var(--cesped)" titulo="Sale bien" efecto={o.efecto} />
-                    <Rama color="var(--ladrillo)" titulo="Sale mal" efecto={o.efecto.siSaleMal} />
+                  <span className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <Rama color="var(--cesped)" titulo="Bien" efecto={o.efecto} />
+                    <Rama color="var(--ladrillo)" titulo="Mal" efecto={o.efecto.siSaleMal} />
                   </span>
                 ) : (
                   <Efectos e={o.efecto} />
@@ -226,9 +226,10 @@ interface OpcionUI {
  * de color sin nombre, y una rayita verde no dice "si sale bien". Ahora cada
  * lado se anuncia con la palabra, en su color.
  *
- * Son dos renglones y nada más: el rótulo a la izquierda y lo que pasa a la
- * derecha. Antes de esto fueron dos tarjetas lado a lado con su fondo y su
- * borde, y ocupaban una barbaridad para decir dos cosas cortas.
+ * Los dos desenlaces en una sola fila, cada uno con su rótulo del color que le
+ * toca. Pasó por dos tarjetas lado a lado con fondo y borde, y después por dos
+ * renglones con el rótulo en una columna fija: las dos versiones gastaban
+ * mucho alto para decir dos cosas cortas. Esto es lo mínimo que se entiende.
  *
  * El que no tiene nada dice "no pasa nada", que además es la información: si
  * aguanta el partido no pasa nada, lo tenés y listo. Un hueco no dice eso,
@@ -239,16 +240,16 @@ function Rama({ color, titulo, efecto }: {
 }) {
   const chips = chipsDe(efecto);
   return (
-    <span className="mt-1 flex items-center gap-2">
-      <span className="w-[56px] shrink-0 whitespace-nowrap text-[8px] font-extrabold uppercase tracking-[0.06em]"
+    <span className="flex items-center gap-1">
+      <span className="shrink-0 whitespace-nowrap text-[8px] font-extrabold uppercase tracking-[0.06em]"
             style={{ color }}>
         {titulo}
       </span>
-      <span className="flex min-w-0 flex-1 flex-wrap gap-1">
-        {chips.length
-          ? chips.map((c, i) => <Chip key={i} {...c} />)
-          : <span className="text-[9px]" style={{ color: "var(--apagado)" }}>no pasa nada</span>}
-      </span>
+      {chips.length
+        ? chips.map((c, i) => <Chip key={i} {...c} />)
+        : <span className="whitespace-nowrap text-[9px]" style={{ color: "var(--apagado)" }}>
+            no pasa nada
+          </span>}
     </span>
   );
 }

@@ -21,6 +21,10 @@ export interface Efecto {
   siSaleMal?: Omit<Efecto, "siSaleMal">;
   /** Deja al jugador afuera del próximo partido (expulsión, lesión). */
   suspendeA?: string;
+  /** Cuántas fechas se pierde. Por ahora siempre una. */
+  fechasFuera?: number;
+  /** Si se rompió (lesión) o si lo echaron (suspensión): no es lo mismo. */
+  porLesion?: boolean;
   /** Suma al plantel un juvenil del pueblo que diga, con el nivel ya sorteado. */
   traerPibe?: { pueblo: string; nivel: number };
   /** Le abre la puerta del mercado a un brasileño del catálogo. */
@@ -890,7 +894,8 @@ const PLANTILLAS: Plantilla[] = [
             moralDe: { id: j.id, delta: 8 },
             texto: `${j.apellido} aguantó los noventa.`,
             siSaleMal: {
-              ambiente: -8, moralDe: { id: j.id, delta: -14 }, suspendeA: j.id,
+              ambiente: -8, moralDe: { id: j.id, delta: -14 },
+              suspendeA: j.id, porLesion: true,
               texto: `${j.apellido} se rompió. Se pierde lo que viene.`,
             },
           },

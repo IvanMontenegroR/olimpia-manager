@@ -32,6 +32,10 @@ export interface EfectoVisible {
   paciencia?: number;
   /** Se pierde el próximo partido: no es un número, es quién falta. */
   suspendeA?: string;
+  /** Cuántas fechas se pierde. */
+  fechasFuera?: number;
+  /** Roto o echado. */
+  porLesion?: boolean;
   /** Apellido del que se pierde el partido, para poder nombrarlo. */
   suspendeTexto?: string;
   /**
@@ -78,11 +82,16 @@ export function chipsDe(e: EfectoVisible): { texto: string; bueno: boolean }[] {
   if (e.paciencia) {
     chips.push({ texto: `${signo(e.paciencia)} dirigencia`, bueno: e.paciencia > 0 });
   }
-  // perder al jugador para la fecha que viene ya está adentro del nivel; esto
-  // dice quién es, que es lo que el número solo no cuenta
+  /*
+   * Perder al jugador ya está adentro del nivel; esto dice CUÁNTO tiempo, que
+   * es lo que el número de un partido no cuenta. Sin el apellido: quién es ya
+   * lo dice el título de la situación arriba, y repetirlo hacía un chip largo
+   * que no entraba al lado del otro.
+   */
   if (e.suspendeA) {
+    const n = e.fechasFuera ?? 1;
     chips.push({
-      texto: e.suspendeTexto ? `${e.suspendeTexto} se pierde la próxima` : "Se pierde la próxima",
+      texto: `${e.porLesion ? "Lesionado" : "Suspendido"} ${n} partido${n > 1 ? "s" : ""}`,
       bueno: false,
     });
   }
