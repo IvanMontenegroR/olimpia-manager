@@ -172,7 +172,7 @@ export default function Asuntos({
                    * opciones no entrara en la pantalla del teléfono. Al lado
                    * también se comparan mejor, que es para lo que están.
                    */
-                  <span className="mt-1.5 flex items-stretch gap-1.5">
+                  <span className="mt-1 block">
                     <Rama color="var(--cesped)" titulo="Sale bien" efecto={o.efecto} />
                     <Rama color="var(--ladrillo)" titulo="Sale mal" efecto={o.efecto.siSaleMal} />
                   </span>
@@ -226,28 +226,25 @@ interface OpcionUI {
  * de color sin nombre, y una rayita verde no dice "si sale bien". Ahora cada
  * lado se anuncia con la palabra, en su color.
  *
- * Y se reparten el ancho según cuánto tiene cada uno. Cuando salía bien no
- * pasaba nada, el lado verde quedaba vacío ocupando media tarjeta y el rojo
- * apretado en la otra mitad. Ahora el que no tiene nada dice justamente eso
- * ("no pasa nada") y se hace chiquito.
+ * Son dos renglones y nada más: el rótulo a la izquierda y lo que pasa a la
+ * derecha. Antes de esto fueron dos tarjetas lado a lado con su fondo y su
+ * borde, y ocupaban una barbaridad para decir dos cosas cortas.
+ *
+ * El que no tiene nada dice "no pasa nada", que además es la información: si
+ * aguanta el partido no pasa nada, lo tenés y listo. Un hueco no dice eso,
+ * parece que se rompió la pantalla.
  */
 function Rama({ color, titulo, efecto }: {
   color: string; titulo: string; efecto: EfectoVisible;
 }) {
   const chips = chipsDe(efecto);
   return (
-    <span className="min-w-0 rounded-md px-1.5 py-1"
-          style={{
-            // el peso es la cantidad de chips: el lado con más ocupa más
-            flexGrow: Math.max(1, chips.length), flexBasis: 0,
-            background: `color-mix(in srgb, ${color} 9%, transparent)`,
-            boxShadow: `inset 2px 0 0 ${color}`,
-          }}>
-      <span className="block text-[8px] font-extrabold uppercase tracking-[0.14em]"
+    <span className="mt-1 flex items-center gap-2">
+      <span className="w-[56px] shrink-0 whitespace-nowrap text-[8px] font-extrabold uppercase tracking-[0.06em]"
             style={{ color }}>
         {titulo}
       </span>
-      <span className="mt-1 flex flex-wrap gap-1">
+      <span className="flex min-w-0 flex-1 flex-wrap gap-1">
         {chips.length
           ? chips.map((c, i) => <Chip key={i} {...c} />)
           : <span className="text-[9px]" style={{ color: "var(--apagado)" }}>no pasa nada</span>}
