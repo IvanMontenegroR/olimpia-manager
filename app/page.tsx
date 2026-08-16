@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import ArmarOnce, { type Salida } from "@/components/ArmarOnce.tsx";
 import Arranque from "@/components/Arranque.tsx";
+import { useAtras, useAtrasTrabado } from "@/lib/atras.ts";
 import PantallaHito from "@/components/PantallaHito.tsx";
 import Penales from "@/components/Penales.tsx";
 import PartidoEnVivo from "@/components/PartidoEnVivo.tsx";
@@ -23,6 +24,21 @@ export default function Page() {
 
   useEffect(() => { setPartida(cargar()); }, []);
   useEffect(() => { if (partida) guardar(partida); }, [partida]);
+
+  /*
+   * Armar el once es una pantalla aparte, así que el atrás del navegador
+   * vuelve al escritorio. El partido en vivo NO: de un partido empezado no se
+   * sale sin terminarlo, y la tanda y el hito tampoco, porque cerrarlos
+   * adelanta el juego y volver atrás no lo desharía.
+   */
+  useAtras(fase === "armar", () => setFase("escritorio"));
+  /*
+   * De estas tres no se vuelve. Un partido empezado se termina, y la tanda y
+   * la pantalla de campeón se cierran con su botón porque cerrarlas adelanta
+   * el juego. Trabarlas es para que el atrás no haga lo otro que podría hacer,
+   * que es sacarte de la página.
+   */
+  useAtrasTrabado(fase === "partido" || !!partida?.tanda || !!partida?.hito);
 
   if (!partida) {
     return (

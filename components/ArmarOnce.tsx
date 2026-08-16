@@ -7,6 +7,7 @@ import {
 } from "@/lib/juego.ts";
 import type { Actitud, Jugador, Posicion } from "@/engine/tipos.ts";
 import { comoLoDejaste, type EquipoGuardado } from "@/lib/temporada.ts";
+import { useAtras } from "@/lib/atras.ts";
 import Escudo from "./Escudo.tsx";
 import Alineador, { Hoja, type EstadoAlineacion } from "./Alineador.tsx";
 import { ACTITUD } from "./PartidoEnVivo.tsx";
@@ -75,6 +76,7 @@ export default function ArmarOnce({
   const [estado, setEstado] = useState<EstadoAlineacion>(inicial);
   const [actitud, setActitud] = useState<Actitud>(ctx.esLocal ? "ofensivo" : "equilibrado");
   const [verEquipos, setVerEquipos] = useState(false);
+  useAtras(verEquipos, () => setVerEquipos(false));
   const [nombreNuevo, setNombreNuevo] = useState("");
 
   const slots = MOLDE_DE(estado.formacion);

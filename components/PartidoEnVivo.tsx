@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useAtras } from "@/lib/atras.ts";
 import { Rng } from "@/engine/rng.ts";
 import { desgastePorPartido, factorCondicion, fuerzas, ovrDelOnce, P } from "@/engine/motor.ts";
 import { ambienteDe, relatarTramo, type EventoRelato, type TipoEvento } from "@/engine/relato.ts";
@@ -101,6 +102,12 @@ export default function PartidoEnVivo({
   const animoPorPenales = useRef<Record<string, number>>({});
   const [actitudUsada, setActitudUsada] = useState(false);
   const [panel, setPanel] = useState<"cambio" | "actitud" | null>(null);
+  /*
+   * El panel de cambios se puede cerrar con el atrás, pero el partido no: de
+   * un partido empezado no se sale, y un momento con el reloj corriendo
+   * tampoco se esquiva volviendo atrás.
+   */
+  useAtras(panel !== null, () => setPanel(null));
   const [terminado, setTerminado] = useState(false);
   const [lesionado, setLesionado] = useState<string | null>(null);
   /** El golpe que hay que mirar antes de seguir: una lesión o una roja. */

@@ -18,6 +18,7 @@ import {
   tablaDe, type EquipoGuardado, type Partida,
   comoLoDejaste, guardarEquipo,
 } from "@/lib/temporada.ts";
+import { useAtras } from "@/lib/atras.ts";
 import Alineador, { type EstadoAlineacion } from "./Alineador.tsx";
 import FichaJugador from "./FichaJugador.tsx";
 import PantallaEstrella from "./PantallaEstrella.tsx";
@@ -111,6 +112,16 @@ export default function Escritorio({
   const [reiniciar, setReiniciar] = useState(false);
   /** El jugador que tocaste en la cancha de la pantalla principal. */
   const [fichaHome, setFichaHome] = useState<string | null>(null);
+
+  /*
+   * Cada capa que se puede cerrar avisa al historial, así el atrás del
+   * navegador (y el gesto de deslizar en el celular) cierra una sola.
+   */
+  useAtras(vista !== "escritorio", () => setVista("escritorio"));
+  useAtras(ayuda !== null, () => setAyuda(null));
+  useAtras(reiniciar, () => setReiniciar(false));
+  useAtras(fichaHome !== null, () => setFichaHome(null));
+
   const tabla = useMemo(() => tablaDe(partida), [partida]);
   const plantel = useMemo(() => plantelDe(partida), [partida]);
   const posicion = useMemo(() => posicionDe(partida), [partida]);
@@ -909,6 +920,8 @@ function VistaPlantel({ plantel, partida, onGuardarEquipos, onMoverReserva }: {
   const orden = ["ARQ", "DEF", "MED", "DEL"];
   const [pestana, setPestana] = useState<"lista" | "equipos">("lista");
   const [ficha, setFicha] = useState<string | null>(null);
+  useAtras(pestana === "equipos", () => setPestana("lista"));
+  useAtras(ficha !== null, () => setFicha(null));
 
   // contexto neutro: la ficha muestra en qué puestos rinde, no simula un partido
   const ctxFicha = useMemo(() => partidoDe(partida)?.ctx ?? {
@@ -1377,6 +1390,7 @@ function VistaEquipos({ partida, plantel, onGuardar, onVolver }: {
 }) {
   const [editando, setEditando] = useState<string | null>(null);
   const [nombreNuevo, setNombreNuevo] = useState("");
+  useAtras(editando !== null, () => setEditando(null));
 
   // Se arma con todo el plantel, no solo con los disponibles hoy: un equipo
   // guardado es un plan, y para cuando lo uses el lesionado ya puede estar bien.
