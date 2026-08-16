@@ -174,9 +174,9 @@
     "nombre": "Alan",
     "apellido": "Rodríguez",
     "numero": 30,
-    "posicion": "DFC",
+    "posicion": "LI",
     "posiciones_secundarias": [
-      "LI"
+      "DFC"
     ],
     "edad": 25,
     "fecha_nacimiento": "2000-08-15",
@@ -228,9 +228,9 @@
     "nombre": "Bryan",
     "apellido": "Bentaberry",
     "numero": 2,
-    "posicion": "LI",
+    "posicion": "DFC",
     "posiciones_secundarias": [
-      "DFC"
+      "LI"
     ],
     "edad": 29,
     "fecha_nacimiento": "1997-01-21",
