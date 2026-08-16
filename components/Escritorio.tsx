@@ -313,23 +313,6 @@ export default function Escritorio({
                       className="num text-[12px] font-extrabold"
                       style={{ color: colorDirigencia(partida.paciencia) }} />
             </span>
-            {/*
-              * La barra, y va llena exactamente hasta el número: si dice 87,
-              * está al 87%. Las dos rayitas son los dos umbrales que ya existen
-              * en el juego (abajo de 40 aparece el aviso, abajo de 25 evalúan
-              * tu continuidad) y están ahí para que se vea de un vistazo cuánto
-              * margen queda, sin una línea de texto más.
-              */}
-            <span className="relative mt-1 block h-[5px] w-[74px] overflow-hidden rounded-full"
-                  style={{ background: "var(--linea)" }}>
-              <span className="barra-llena absolute inset-y-0 left-0 rounded-full"
-                    style={{ width: `${Math.max(0, Math.min(100, partida.paciencia))}%`,
-                             background: colorDirigencia(partida.paciencia) }} />
-              {[25, 40].map((x) => (
-                <span key={x} className="absolute inset-y-0"
-                      style={{ left: `${x}%`, width: 1, background: "rgba(0,0,0,0.75)" }} />
-              ))}
-            </span>
           </button>
           {/* Empezar de nuevo estaba solo al terminar la temporada, así que si
               te ibas al descenso no había forma de arrancar otra vez. */}
