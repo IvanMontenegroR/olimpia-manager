@@ -310,7 +310,15 @@ export function relatarTramo(
     sucesos.push({ min: m, hacer: () => push(m, "ocasion_rival", texto(rng, OCASION_RIVAL)) });
 
   for (const j of cansados.once) {
+    /*
+     * El que va fuerte se lleva más amarillas, y por lo tanto es el que más
+     * seguido te obliga a decidir si lo sacás. Antes la amarilla dependía solo
+     * de la línea: un lateral que no baja el codo nunca y uno que hace dos
+     * faltas por partido se amonestaban igual. El rasgo sale de las faltas por
+     * noventa de la temporada 2026, no de mi opinión.
+     */
     const pAm = ((LINEA_DE[j.posicion] === "DEF" ? 0.16 : LINEA_DE[j.posicion] === "MED" ? 0.14 : 0.08)
+      * (j.rasgos.includes("va_fuerte") ? P.rasgoVaFuerte : 1)
       * (ctx.esClasico ? 1.5 : 1) * (aprieta(a.actitud) ? 1.25 : 1)) * parte;
     if (rng.chance(pAm)) {
       const m = rng.entero(desde + 1, Math.max(hasta, desde + 1));

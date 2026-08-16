@@ -300,10 +300,16 @@ export function partidaNueva(): Partida {
       condicion: j.condicion,
       amarillas: 0,
       suspendidoFechas: 0,
-      lesionadoHasta: null,
+      /*
+       * El arranque respeta lo que dice el plantel. Antes salían todos con
+       * ánimo 70 y enteros, así que un delantero que viene sin meter un gol
+       * hace meses y uno que está encendido eran el mismo jugador, y el que
+       * está lesionado de verdad aparecía disponible el primer día.
+       */
+      lesionadoHasta: j.lesionado_hasta ?? null,
       golesTorneo: 0,
       minutos: 0,
-      animo: 70,
+      animo: j.animo ?? 70,
       crecimiento: 0,
     }])),
     minutosSub18: 0,

@@ -12,7 +12,7 @@
     "nacionalidad_origen": "URU",
     "extranjero": false,
     "nota": "Nacionalizado paraguayo, no ocupa cupo de extranjero. Capitán.",
-    "nivel": 71,
+    "nivel": 73,
     "nivel_incertidumbre": 0,
     "condicion": 100,
     "partidos_internacionales": 32,
@@ -24,7 +24,8 @@
     "tarjetas_amarillas": 0,
     "suspendido": false,
     "rasgos": [],
-    "animo": 70
+    "animo": 70,
+    "minutos_ultimos_12_meses": 2520
   },
   {
     "id": "sebastian_lentinelly",
@@ -49,7 +50,8 @@
     "tarjetas_amarillas": 0,
     "suspendido": false,
     "rasgos": [],
-    "animo": 70
+    "animo": 70,
+    "minutos_ultimos_12_meses": 360
   },
   {
     "id": "lucas_verza",
@@ -91,7 +93,7 @@
     "nacionalidad": "NZL",
     "extranjero": true,
     "nota": "Mundialista con Nueva Zelanda. Caso de referencia del sistema de marketing.",
-    "nivel": 67,
+    "nivel": 64,
     "nivel_incertidumbre": 0,
     "condicion": 100,
     "partidos_internacionales": 62,
@@ -103,10 +105,10 @@
     "tarjetas_amarillas": 0,
     "suspendido": false,
     "rasgos": [
-      "veterano_de_copas",
-      "juego_aereo"
+      "veterano_de_copas"
     ],
-    "animo": 70
+    "animo": 70,
+    "minutos_ultimos_12_meses": 21
   },
   {
     "id": "raul_caceres",
@@ -136,7 +138,8 @@
     "rasgos": [
       "veterano_de_copas"
     ],
-    "animo": 70
+    "animo": 70,
+    "minutos_ultimos_12_meses": 2244
   },
   {
     "id": "mateo_gamarra",
@@ -149,7 +152,7 @@
     "fecha_nacimiento": "2000-10-20",
     "nacionalidad": "PAR",
     "extranjero": false,
-    "nivel": 65,
+    "nivel": 68,
     "nivel_incertidumbre": 0,
     "condicion": 100,
     "partidos_internacionales": 8,
@@ -163,7 +166,8 @@
     "rasgos": [
       "juego_aereo"
     ],
-    "animo": 70
+    "animo": 70,
+    "minutos_ultimos_12_meses": 2037
   },
   {
     "id": "alan_rodriguez",
@@ -178,7 +182,7 @@
     "fecha_nacimiento": "2000-08-15",
     "nacionalidad": "PAR",
     "extranjero": false,
-    "nivel": 63,
+    "nivel": 65,
     "nivel_incertidumbre": 0,
     "condicion": 100,
     "partidos_internacionales": 6,
@@ -190,7 +194,8 @@
     "tarjetas_amarillas": 0,
     "suspendido": false,
     "rasgos": [],
-    "animo": 70
+    "animo": 70,
+    "minutos_ultimos_12_meses": 1840
   },
   {
     "id": "juan_vera",
@@ -203,7 +208,7 @@
     "fecha_nacimiento": "1999-02-05",
     "nacionalidad": "PAR",
     "extranjero": false,
-    "nivel": 65,
+    "nivel": 66,
     "nivel_incertidumbre": 0,
     "condicion": 100,
     "partidos_internacionales": 4,
@@ -215,7 +220,8 @@
     "tarjetas_amarillas": 0,
     "suspendido": false,
     "rasgos": [],
-    "animo": 70
+    "animo": 70,
+    "minutos_ultimos_12_meses": 1548
   },
   {
     "id": "bryan_bentaberry",
@@ -230,7 +236,7 @@
     "fecha_nacimiento": "1997-01-21",
     "nacionalidad": "URU",
     "extranjero": true,
-    "nivel": 65,
+    "nivel": 66,
     "nivel_incertidumbre": 0,
     "condicion": 100,
     "partidos_internacionales": 18,
@@ -241,8 +247,11 @@
     "lesionado_hasta": null,
     "tarjetas_amarillas": 0,
     "suspendido": false,
-    "rasgos": [],
-    "animo": 70
+    "rasgos": [
+      "juego_aereo"
+    ],
+    "animo": 70,
+    "minutos_ultimos_12_meses": 1087
   },
   {
     "id": "esteban_matus",
@@ -256,7 +265,7 @@
     "nacionalidad": "CHI",
     "extranjero": true,
     "nota": "Lateral izquierdo. Refuerzo del segundo semestre, ocupa el 17 que dejó Alcaraz.",
-    "nivel": 64,
+    "nivel": 62,
     "nivel_incertidumbre": 0,
     "condicion": 100,
     "partidos_internacionales": 10,
@@ -268,7 +277,8 @@
     "tarjetas_amarillas": 0,
     "suspendido": false,
     "rasgos": [],
-    "animo": 70
+    "animo": 70,
+    "minutos_ultimos_12_meses": 586
   },
   {
     "id": "gustavo_vargas",
@@ -281,7 +291,7 @@
     "fecha_nacimiento": "2001-09-29",
     "nacionalidad": "PAR",
     "extranjero": false,
-    "nivel": 64,
+    "nivel": 67,
     "nivel_incertidumbre": 0,
     "condicion": 100,
     "partidos_internacionales": 2,
@@ -292,8 +302,11 @@
     "lesionado_hasta": null,
     "tarjetas_amarillas": 0,
     "suspendido": false,
-    "rasgos": [],
-    "animo": 70
+    "rasgos": [
+      "juego_aereo"
+    ],
+    "animo": 70,
+    "minutos_ultimos_12_meses": 1385
   },
   {
     "id": "cesar_olmedo",
@@ -309,7 +322,7 @@
     "nacionalidad": "PAR",
     "extranjero": false,
     "canterano": true,
-    "nivel": 55,
+    "nivel": 57,
     "nivel_incertidumbre": 4,
     "condicion": 100,
     "partidos_internacionales": 0,
@@ -322,7 +335,8 @@
     "suspendido": false,
     "rasgos": [],
     "reserva": true,
-    "animo": 70
+    "animo": 70,
+    "minutos_ultimos_12_meses": 246
   },
   {
     "id": "richard_sanchez",
@@ -337,7 +351,7 @@
     "fecha_nacimiento": "1996-03-29",
     "nacionalidad": "PAR",
     "extranjero": false,
-    "nivel": 69,
+    "nivel": 70,
     "nivel_incertidumbre": 0,
     "condicion": 100,
     "partidos_internacionales": 48,
@@ -349,7 +363,8 @@
     "tarjetas_amarillas": 0,
     "suspendido": false,
     "rasgos": [],
-    "animo": 70
+    "animo": 70,
+    "minutos_ultimos_12_meses": 895
   },
   {
     "id": "richard_ortiz",
@@ -365,7 +380,7 @@
     "nacionalidad": "PAR",
     "extranjero": false,
     "nota": "Capitán. Veterano de muchas copas, resiste bien el ambiente hostil.",
-    "nivel": 68,
+    "nivel": 66,
     "nivel_incertidumbre": 0,
     "condicion": 100,
     "partidos_internacionales": 71,
@@ -377,9 +392,11 @@
     "tarjetas_amarillas": 0,
     "suspendido": false,
     "rasgos": [
+      "va_fuerte",
       "veterano_de_copas"
     ],
-    "animo": 70
+    "animo": 70,
+    "minutos_ultimos_12_meses": 1423
   },
   {
     "id": "juan_fernando_alfaro",
@@ -394,7 +411,7 @@
     "fecha_nacimiento": "1999-10-16",
     "nacionalidad": "ARG",
     "extranjero": true,
-    "nivel": 68,
+    "nivel": 69,
     "nivel_incertidumbre": 0,
     "condicion": 100,
     "partidos_internacionales": 14,
@@ -405,8 +422,11 @@
     "lesionado_hasta": null,
     "tarjetas_amarillas": 0,
     "suspendido": false,
-    "rasgos": [],
-    "animo": 70
+    "rasgos": [
+      "definicion_irregular"
+    ],
+    "animo": 70,
+    "minutos_ultimos_12_meses": 1935
   },
   {
     "id": "ruben_lezcano",
@@ -422,7 +442,7 @@
     "fecha_nacimiento": "2004-02-09",
     "nacionalidad": "PAR",
     "extranjero": false,
-    "nivel": 63,
+    "nivel": 68,
     "nivel_incertidumbre": 5,
     "condicion": 100,
     "partidos_internacionales": 2,
@@ -434,7 +454,8 @@
     "tarjetas_amarillas": 0,
     "suspendido": false,
     "rasgos": [],
-    "animo": 70
+    "animo": 70,
+    "minutos_ultimos_12_meses": 1210
   },
   {
     "id": "victor_quintana",
@@ -450,7 +471,7 @@
     "nacionalidad": "PAR",
     "extranjero": false,
     "nota": "Volante central. Volvió de Sportivo Luqueño en el mercado de mitad de año.",
-    "nivel": 60,
+    "nivel": 67,
     "nivel_incertidumbre": 4,
     "condicion": 100,
     "partidos_internacionales": 0,
@@ -462,7 +483,8 @@
     "tarjetas_amarillas": 0,
     "suspendido": false,
     "rasgos": [],
-    "animo": 70
+    "animo": 70,
+    "minutos_ultimos_12_meses": 1740
   },
   {
     "id": "derlis_gonzalez",
@@ -478,8 +500,8 @@
     "fecha_nacimiento": "1994-03-20",
     "nacionalidad": "PAR",
     "extranjero": false,
-    "nota": "El de mayor jerarquía del plantel, pero vuelve de una lesión de rodilla que lo tuvo afuera del 24/08/2025 a mayo de 2026 (menisco, plastia del cruzado, daño osteocondral). Arranca sin ritmo y con riesgo de recaída.",
-    "nivel": 70,
+    "nota": "Arrastra una lesión larga: 11 minutos en toda la temporada 2026.",
+    "nivel": 67,
     "nivel_incertidumbre": 0,
     "condicion": 62,
     "partidos_internacionales": 78,
@@ -487,13 +509,12 @@
     "sueldo_usd": 38000,
     "valor_usd": 1500000,
     "valor_comercial": 4,
-    "lesionado_hasta": null,
+    "lesionado_hasta": "2026-08-24",
     "tarjetas_amarillas": 0,
     "suspendido": false,
     "historial_lesion_grave": true,
-    "minutos_ultimos_12_meses": 180,
+    "minutos_ultimos_12_meses": 11,
     "rasgos": [
-      "definidor",
       "veterano_de_copas",
       "fragil"
     ],
@@ -512,8 +533,8 @@
     "fecha_nacimiento": "1991-02-27",
     "nacionalidad": "ARG",
     "extranjero": true,
-    "nota": "Llegó de Vélez en junio 2026, contrato hasta diciembre 2027. Campeón de Sudamericana con Defensa y Justicia.",
-    "nivel": 74,
+    "nota": "Titular, pero viene sin meter: 1 gol en 343 minutos en 2026.",
+    "nivel": 67,
     "nivel_incertidumbre": 0,
     "condicion": 100,
     "partidos_internacionales": 52,
@@ -525,10 +546,10 @@
     "tarjetas_amarillas": 0,
     "suspendido": false,
     "rasgos": [
-      "definidor",
       "veterano_de_copas"
     ],
-    "animo": 70
+    "animo": 48,
+    "minutos_ultimos_12_meses": 343
   },
   {
     "id": "sebastian_ferreira",
@@ -552,8 +573,11 @@
     "lesionado_hasta": null,
     "tarjetas_amarillas": 0,
     "suspendido": false,
-    "rasgos": [],
-    "animo": 70
+    "rasgos": [
+      "definicion_irregular"
+    ],
+    "animo": 70,
+    "minutos_ultimos_12_meses": 975
   },
   {
     "id": "fernando_cardozo",
@@ -568,7 +592,7 @@
     "fecha_nacimiento": "2001-02-08",
     "nacionalidad": "PAR",
     "extranjero": false,
-    "nivel": 64,
+    "nivel": 68,
     "nivel_incertidumbre": 0,
     "condicion": 100,
     "partidos_internacionales": 6,
@@ -579,8 +603,11 @@
     "lesionado_hasta": null,
     "tarjetas_amarillas": 0,
     "suspendido": false,
-    "rasgos": [],
-    "animo": 70
+    "rasgos": [
+      "definidor"
+    ],
+    "animo": 70,
+    "minutos_ultimos_12_meses": 932
   },
   {
     "id": "ivan_leguizamon",
@@ -606,8 +633,12 @@
     "lesionado_hasta": null,
     "tarjetas_amarillas": 0,
     "suspendido": false,
-    "rasgos": [],
-    "animo": 70
+    "rasgos": [
+      "desequilibrante",
+      "va_fuerte"
+    ],
+    "animo": 70,
+    "minutos_ultimos_12_meses": 721
   },
   {
     "id": "hugo_sandoval",
@@ -622,7 +653,7 @@
     "fecha_nacimiento": "2000-02-09",
     "nacionalidad": "PAR",
     "extranjero": false,
-    "nivel": 62,
+    "nivel": 64,
     "nivel_incertidumbre": 0,
     "condicion": 100,
     "partidos_internacionales": 2,
@@ -633,8 +664,12 @@
     "lesionado_hasta": null,
     "tarjetas_amarillas": 0,
     "suspendido": false,
-    "rasgos": [],
-    "animo": 70
+    "rasgos": [
+      "definidor",
+      "va_fuerte"
+    ],
+    "animo": 70,
+    "minutos_ultimos_12_meses": 578
   },
   {
     "id": "romeo_benitez",
@@ -649,7 +684,7 @@
     "fecha_nacimiento": "2002-11-14",
     "nacionalidad": "PAR",
     "extranjero": false,
-    "nivel": 61,
+    "nivel": 67,
     "nivel_incertidumbre": 3,
     "condicion": 100,
     "partidos_internacionales": 2,
@@ -664,7 +699,8 @@
       "desequilibrante",
       "definicion_irregular"
     ],
-    "animo": 70
+    "animo": 70,
+    "minutos_ultimos_12_meses": 1156
   },
   {
     "id": "franco_alfonso",
@@ -679,7 +715,7 @@
     "fecha_nacimiento": "2002-05-04",
     "nacionalidad": "ARG",
     "extranjero": true,
-    "nivel": 61,
+    "nivel": 62,
     "nivel_incertidumbre": 0,
     "condicion": 100,
     "partidos_internacionales": 4,
@@ -691,7 +727,8 @@
     "tarjetas_amarillas": 0,
     "suspendido": false,
     "rasgos": [],
-    "animo": 70
+    "animo": 70,
+    "minutos_ultimos_12_meses": 362
   },
   {
     "id": "pedro_zarza",
@@ -708,7 +745,7 @@
     "extranjero": false,
     "canterano": true,
     "nota": "Volvió del préstamo en Trinidense, que retiene 50% del pase. River tiene prioridad de compra. Cuenta para la regla Sub-18.",
-    "nivel": 58,
+    "nivel": 63,
     "nivel_incertidumbre": 12,
     "condicion": 100,
     "partidos_internacionales": 0,
@@ -720,10 +757,10 @@
     "tarjetas_amarillas": 0,
     "suspendido": false,
     "rasgos": [
-      "desequilibrante",
-      "definicion_irregular"
+      "desequilibrante"
     ],
-    "animo": 82
+    "animo": 82,
+    "minutos_ultimos_12_meses": 964
   },
   {
     "id": "tiago_caballero",
@@ -737,7 +774,7 @@
     "nacionalidad": "PAR",
     "extranjero": false,
     "canterano": true,
-    "nivel": 59,
+    "nivel": 60,
     "nivel_incertidumbre": 6,
     "condicion": 100,
     "partidos_internacionales": 0,
@@ -750,7 +787,8 @@
     "suspendido": false,
     "rasgos": [],
     "reserva": true,
-    "animo": 70
+    "animo": 70,
+    "minutos_ultimos_12_meses": 230
   },
   {
     "id": "eduardo_delmas",
@@ -767,7 +805,7 @@
     "extranjero": false,
     "canterano": true,
     "nota": "El juvenil con más proyección del plantel. Titular en el Clausura. Cuenta para la regla Sub-18.",
-    "nivel": 57,
+    "nivel": 60,
     "nivel_incertidumbre": 15,
     "condicion": 100,
     "partidos_internacionales": 0,
@@ -779,10 +817,9 @@
     "tarjetas_amarillas": 0,
     "suspendido": false,
     "proyeccion": "alta",
-    "rasgos": [
-      "proyeccion"
-    ],
-    "animo": 70
+    "rasgos": [],
+    "animo": 70,
+    "minutos_ultimos_12_meses": 1419
   },
   {
     "id": "faustino_barone",
@@ -797,7 +834,7 @@
     "fecha_nacimiento": "2006-06-11",
     "nacionalidad": "URU",
     "extranjero": true,
-    "nivel": 54,
+    "nivel": 57,
     "nivel_incertidumbre": 9,
     "condicion": 100,
     "partidos_internacionales": 0,
@@ -810,7 +847,8 @@
     "suspendido": false,
     "rasgos": [],
     "reserva": true,
-    "animo": 70
+    "animo": 70,
+    "minutos_ultimos_12_meses": 22
   },
   {
     "id": "cesar_mino",
@@ -838,9 +876,8 @@
     "lesionado_hasta": null,
     "tarjetas_amarillas": 0,
     "suspendido": false,
-    "rasgos": [
-      "desequilibrante"
-    ],
-    "animo": 80
+    "rasgos": [],
+    "animo": 80,
+    "minutos_ultimos_12_meses": 276
   }
 ]

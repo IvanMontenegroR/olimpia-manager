@@ -9,6 +9,7 @@ const RASGO: Record<string, { texto: string; color: string }> = {
   definidor: { texto: "definidor", color: "#3fa76a" },
   juego_aereo: { texto: "gana arriba", color: "#4a7fb5" },
   definicion_irregular: { texto: "irregular", color: "#e0902a" },
+  va_fuerte: { texto: "va fuerte", color: "#e0902a" },
   veterano_de_copas: { texto: "jugó de todo", color: "#a1a1aa" },
   fragil: { texto: "se rompe seguido", color: "#c0392b" },
 };

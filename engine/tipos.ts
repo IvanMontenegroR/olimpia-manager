@@ -80,6 +80,8 @@ export type Rasgo =
   | "juego_aereo"
   | "veterano_de_copas"
   | "proyeccion"
+  /** Va fuerte: se lleva más amarillas y te hace decidir si lo sacás. */
+  | "va_fuerte"
   | "fragil";
 
 export interface Jugador {

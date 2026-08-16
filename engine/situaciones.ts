@@ -118,8 +118,17 @@ const PLANTILLAS: Plantilla[] = [
           ],
         },
         efectos: {
+          /*
+           * El ambiente de la promesa tiene que pagar más que la franqueza.
+           *
+           * El +18 de moral es para un suplente, y la moral de alguien que no
+           * está en el once no mueve el nivel del domingo: en pantalla la
+           * apuesta salía +0.4 contra un +0.8 seguro, o sea nunca convenía.
+           * Lo que de verdad se juega acá es el vestuario, así que ahí está el
+           * número.
+           */
           prometer: {
-            moralDe: { id: j.id, delta: 18 }, ambiente: 4,
+            moralDe: { id: j.id, delta: 18 }, ambiente: 10,
             texto: `${j.apellido} se fue conforme y respondió adentro de la cancha.`,
             siSaleMal: { moralDe: { id: j.id, delta: 8 }, ambiente: -12, paciencia: -5,
               texto: "Se supo lo que le prometiste y el resto del banco lo tomó pésimo." },

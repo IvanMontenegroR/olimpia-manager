@@ -196,6 +196,8 @@ export const P = {
 
   // --- rasgos ---
   rasgoDesequilibranteXg: 0.12,   // +12% de situaciones generadas
+  /** Cuánto más seguido se lleva la amarilla el que va fuerte. */
+  rasgoVaFuerte: 1.6,
   rasgoIrregularDesvio: 0.45,     // ruido multiplicativo, misma media
   rasgoDefinidorXg: 0.06,
 };
