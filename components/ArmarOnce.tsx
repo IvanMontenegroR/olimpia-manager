@@ -17,6 +17,8 @@ export interface Salida {
   suplentes: Jugador[];
   actitud: Actitud;
   puestos: Map<string, Posicion>;
+  /** El dibujo con el que salís, para poder cambiarlo adentro del partido. */
+  formacion: string;
 }
 
 export default function ArmarOnce({
@@ -121,7 +123,8 @@ export default function ArmarOnce({
     const dentro = new Set(once.map((j) => j.id));
     const otros = equipos.filter((e) => !e.jugadores.every((id) => dentro.has(id)))
       .flatMap((e) => e.jugadores);
-    onJugar({ once, suplentes: bancoSugerido(aptos, once, ctx, otros), actitud, puestos });
+    onJugar({ once, suplentes: bancoSugerido(aptos, once, ctx, otros),
+              actitud, puestos, formacion: estado.formacion });
   };
 
   /*

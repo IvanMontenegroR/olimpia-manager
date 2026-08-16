@@ -114,7 +114,7 @@ export default function Asuntos({
                   ? (salioBien ? apuesta.bien : apuesta.mal)
                   : esta && listo && o.rango
                     ? `Salió ${o.rango.valor} de nivel.`
-                    : o.detalle}
+                    : esta ? "" : o.detalle}
               </span>
 
               {/* Antes de elegir, la apuesta. Después, la misma barra con la
@@ -166,10 +166,8 @@ export default function Asuntos({
                   <Efectos e={!salioBien && o.efecto.siSaleMal ? o.efecto.siSaleMal : o.efecto} />
                 ) : o.apuesta && o.efecto.siSaleMal ? (
                   <span className="mt-1.5 block">
-                    <Rama color="var(--cesped)" que={`Sale bien: ${o.apuesta.bien}`}
-                          efecto={o.efecto} />
-                    <Rama color="var(--ladrillo)" que={`Sale mal: ${o.apuesta.mal}`}
-                          efecto={o.efecto.siSaleMal} />
+                    <Rama color="var(--cesped)" efecto={o.efecto} />
+                    <Rama color="var(--ladrillo)" efecto={o.efecto.siSaleMal} />
                   </span>
                 ) : (
                   <Efectos e={o.efecto} />
@@ -212,16 +210,20 @@ interface OpcionUI {
  * prometer en la escala que quisiera.
  */
 /** Uno de los dos desenlaces de una apuesta, con lo que se gana o se pierde. */
-function Rama({ color, que, efecto }: { color: string; que: string; efecto: EfectoVisible }) {
+/**
+ * Un desenlace: la barrita de color y los chips, sin frase.
+ *
+ * Antes cada rama traía "Sale bien: se pone la camiseta y el grupo lo termina
+ * aceptando". Es lindo de leer una vez y estorba las veinte siguientes: lo que
+ * se mira para decidir son los números, y el color ya dice cuál es cuál. El
+ * relato de lo que pasó sigue estando, pero después de elegir, que es cuando
+ * sirve.
+ */
+function Rama({ color, efecto }: { color: string; efecto: EfectoVisible }) {
   return (
-    <span className="mt-1 flex gap-1.5">
-      <span className="mt-[3px] w-[2px] shrink-0 rounded-full" style={{ background: color }} />
-      <span className="min-w-0 flex-1">
-        <span className="block text-[10px] leading-snug" style={{ color: "var(--apagado)" }}>
-          {que}
-        </span>
-        <Efectos e={efecto} />
-      </span>
+    <span className="mt-1 flex items-center gap-1.5">
+      <span className="h-[13px] w-[2px] shrink-0 rounded-full" style={{ background: color }} />
+      <span className="min-w-0 flex-1"><Efectos e={efecto} /></span>
     </span>
   );
 }

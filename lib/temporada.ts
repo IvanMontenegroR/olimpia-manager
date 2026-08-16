@@ -126,7 +126,11 @@ export interface EntradaDiario {
  */
 export type TipoHito =
   | "campeon_liga" | "campeon_copa" | "eliminado_copa" | "despedido"
-  | "fin_temporada" | "fichaje" | "lesion" | "revelacion";
+  | "fin_temporada" | "fichaje" | "lesion" | "revelacion"
+  /** Ganaste el clásico. */
+  | "gana_clasico"
+  /** Pasaste de ronda en la copa: cuanto más adentro, más grande. */
+  | "pasa_ronda";
 
 /** Un penal de la tanda: quién pateó y si la metió. */
 export interface PenalTanda {
@@ -152,6 +156,15 @@ export interface Hito {
   /** Dato grande de la pantalla: el marcador, la posición, los puntos. */
   cifra?: string;
   pie?: string;
+  /**
+   * Cuánto pesa, de 0 a 3.
+   *
+   * Pasar de octavos y meterse en una final no pueden verse igual. La pantalla
+   * lo usa para escalar todo: los papelitos, el tamaño del marcador y cuánto
+   * dura la entrada. Es lo que hace que la copa se sienta más a medida que
+   * avanzás en vez de repetir el mismo cartel cuatro veces.
+   */
+  intensidad?: number;
 }
 
 /** Un once armado y guardado con nombre, para volver a ponerlo de un toque. */
@@ -1014,6 +1027,25 @@ export function cerrarPartido(p: Partida, partido: PartidoUI, c: CierrePartido):
 
   actualizarPaciencia(n, { gano, empate, esCopa, esClasico: partido.ctx.esClasico });
 
+  /*
+   * El clásico ganado se para y se mira.
+   *
+   * Era una línea más de la bitácora con otro color, igual que un 1-0 contra
+   * el último. Y no es lo mismo: la hinchada se mueve el doble, el vestuario
+   * también, y es de lo poco que en Paraguay se recuerda por años.
+   */
+  if (partido.ctx.esClasico && gano && !esCopa) {
+    n.hito = {
+      tipo: "gana_clasico",
+      titulo: "Le ganamos a Cerro",
+      detalle: `${partido.ctx.esLocal ? "En el Defensores" : "De visitante"}, ` +
+        `contra ${partido.rivalNombre}.`,
+      cifra: `${c.golesOlimpia} - ${c.golesRival}`,
+      pie: "el clásico",
+      intensidad: 2,
+    };
+  }
+
   if (esCopa) {
     avanzarLlave(n, c, partido);
   } else {
@@ -1206,7 +1238,29 @@ function avanzarLlave(n: Partida, c: CierrePartido, partido: PartidoUI) {
     : copa.ronda === "cuartos" ? 500_000
     : copa.ronda === "semis" ? 800_000 : 2_200_000;
 
+  /*
+   * Pasar de ronda tiene pantalla propia y crece con la ronda. Antes solo se
+   * paraba el juego al salir campeón o al quedar afuera, así que meterse en
+   * una semifinal de América pasaba en una línea de la bitácora.
+   */
+  const PESO_RONDA: Record<string, number> = { octavos: 0, cuartos: 1, semis: 2 };
+  const VA_A: Record<string, string> = {
+    octavos: "cuartos de final", cuartos: "semifinales", semis: "LA FINAL",
+  };
   const siguiente = SIGUIENTE[copa.ronda];
+  if (siguiente !== "campeon" && copa.ronda in PESO_RONDA) {
+    n.hito = {
+      tipo: "pasa_ronda",
+      titulo: copa.ronda === "semis" ? "Olimpia está en la final"
+        : `A ${VA_A[copa.ronda]}`,
+      detalle: copa.ronda === "semis"
+        ? `Olimpia eliminó a ${partido.rivalNombre} y se juega la Copa Sudamericana.`
+        : `Olimpia eliminó a ${partido.rivalNombre} en ${NOMBRE_RONDA[rondaJugada]}.`,
+      cifra: `${copa.globalO} - ${copa.globalR}`,
+      pie: "global",
+      intensidad: PESO_RONDA[copa.ronda],
+    };
+  }
   if (siguiente === "campeon") {
     copa.ronda = "campeon";
     if (n.sponsorConBonus) pagarBonus(n, "la Sudamericana");
@@ -1218,6 +1272,7 @@ function avanzarLlave(n: Partida, c: CierrePartido, partido: PartidoUI) {
       detalle: `Olimpia le ganó la final a ${partido.rivalNombre} en el Defensores del Chaco.`,
       cifra: `${c.golesOlimpia} - ${c.golesRival}`,
       pie: "la final",
+      intensidad: 3,
     };
     return;
   }

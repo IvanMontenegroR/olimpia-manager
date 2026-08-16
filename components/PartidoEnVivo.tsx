@@ -5,7 +5,10 @@ import { useAtras } from "@/lib/atras.ts";
 import { Rng } from "@/engine/rng.ts";
 import { desgastePorPartido, factorCondicion, fuerzas, ovrDelOnce, P } from "@/engine/motor.ts";
 import { ambienteDe, relatarTramo, type EventoRelato, type TipoEvento } from "@/engine/relato.ts";
-import { colorCondicion, nivelEf, nombreCorto, type PartidoUI } from "@/lib/juego.ts";
+import {
+  colorCondicion, MOLDE_DE, MOLDES, nivelEf, nombreCorto, repartirEnMolde,
+  type PartidoUI,
+} from "@/lib/juego.ts";
 import { LINEA_DE, type Actitud, type Alineacion, type Jugador, type Posicion } from "@/engine/tipos.ts";
 import type { Salida } from "./ArmarOnce.tsx";
 import PanelPartido, { type EstadoJugador } from "./PanelPartido.tsx";
@@ -69,6 +72,7 @@ export default function PartidoEnVivo({
   const [banco, setBanco] = useState<Jugador[]>(salida.suplentes);
   const [puestos, setPuestos] = useState<Map<string, Posicion>>(salida.puestos);
   const [actitud, setActitud] = useState<Actitud>(salida.actitud);
+  const [formacion, setFormacion] = useState<string>(salida.formacion);
 
   const [minuto, setMinuto] = useState(0);
   const [visibles, setVisibles] = useState<EventoRelato[]>([
@@ -357,6 +361,64 @@ export default function PartidoEnVivo({
     setCorriendo(true);
   };
 
+  /**
+   * Cambiar el dibujo en pleno partido.
+   *
+   * Los once que están en la cancha se reparten en el molde nuevo y listo: no
+   * cuesta un cambio porque mover a un volante a la línea de fondo no requiere
+   * traer a nadie. Lo que cuesta es lo otro, que con un hombre más atrás vas a
+   * llegar menos.
+   *
+   * Esto empezó a servir cuando la formación pasó a pesar de verdad. Antes un
+   * 5-3-2 recibía 0.92 goles y un 4-3-3 recibía 0.91, o sea que meterse atrás
+   * era un gesto; ahora recibe 0.75 contra 0.91 y mete 1.30 contra 1.59.
+   */
+  const cambiarFormacion = (f: string) => {
+    if (f === formacion) { setPanel(null); setCorriendo(true); return; }
+    const slots = MOLDE_DE(f);
+    const ids = repartirEnMolde(once, slots, ctx).filter(Boolean) as string[];
+    if (ids.length < slots.length) return;
+    const nuevos = new Map<string, Posicion>();
+    ids.forEach((id, i) => nuevos.set(id, slots[i]));
+    setFormacion(f);
+    setPuestos(nuevos);
+    setVisibles((v) => [...v, {
+      minuto, tipo: "cambio", texto: `Olimpia se para en ${f}.`,
+      golesOlimpia: gO, golesRival: gR,
+    }]);
+    resimular(minuto, { ...alineacion, puestos: nuevos });
+    setPanel(null); setCorriendo(true);
+  };
+
+  /**
+   * Qué le hace cada dibujo al partido, contra el que tenés puesto.
+   *
+   * Es la misma cuenta que decide los goles, no una tabla escrita a mano: se
+   * arma la alineación con los once que están en la cancha repartidos en el
+   * molde nuevo y se le pregunta al motor. Así el chip no puede mentir.
+   */
+  const deFormacion = (f: string): { texto: string; bueno: boolean }[] | null => {
+    if (f === formacion) return null;
+    const slots = MOLDE_DE(f);
+    const ids = repartirEnMolde(once, slots, ctx).filter(Boolean) as string[];
+    if (ids.length < slots.length) return null;
+    const nuevos = new Map<string, Posicion>();
+    ids.forEach((id, i) => nuevos.set(id, slots[i]));
+    const hoy = fuerzas({ once, suplentes: banco, actitud, puestos }, ctx);
+    const con = fuerzas({ once, suplentes: banco, actitud, puestos: nuevos }, ctx);
+    // el mismo pasaje de puntos a porcentaje que usa el motor para las xG
+    const pct = (d: number) => Math.round((1 - Math.exp(-P.xgK * Math.abs(d))) * 100);
+    const chips: { texto: string; bueno: boolean }[] = [];
+    const dAt = con.ataque - hoy.ataque, dDf = con.defensa - hoy.defensa;
+    if (Math.abs(dAt) >= 0.4) {
+      chips.push({ texto: `Llegás ${pct(dAt)}% ${dAt > 0 ? "más" : "menos"}`, bueno: dAt > 0 });
+    }
+    if (Math.abs(dDf) >= 0.4) {
+      chips.push({ texto: `Te llegan ${pct(dDf)}% ${dDf > 0 ? "menos" : "más"}`, bueno: dDf > 0 });
+    }
+    return chips.length ? chips : [{ texto: "Igual", bueno: true }];
+  };
+
   const cambiarActitud = (a: Actitud) => {
     setActitud(a);
     setActitudUsada(true);
@@ -640,11 +702,13 @@ export default function PartidoEnVivo({
               </span>
             </button>
             {/* muestra la actitud puesta, con su color */}
-            <button onClick={() => { if (!actitudUsada) { setCorriendo(false); setPanel("actitud"); } }}
-              disabled={actitudUsada}
+            {/* El plan: el dibujo y cómo te parás. La actitud se usa una vez,
+                el dibujo se puede mover todas las que quieras. */}
+            <button onClick={() => { setCorriendo(false); setPanel("actitud"); }}
               className="flex-1 rounded py-2.5 text-[11px] font-bold uppercase tracking-wider"
-              style={{ background: act.color, color: act.sobre, opacity: actitudUsada ? 0.5 : 1 }}>
-              {act.nombre}
+              style={{ background: act.color, color: act.sobre }}>
+              {formacion}
+              <span className="ml-1.5 text-[9px] opacity-70">{act.nombre}</span>
             </button>
           </div>
         </div>
@@ -658,23 +722,52 @@ export default function PartidoEnVivo({
             : `¿Quiénes salen? · te quedan ${cambios}`}
           onCerrar={cerrarPanel}>
 
-          {eligiendoPara ? (
-            [...banco]
-              .filter((j) => !Object.values(entran).includes(j.id))
-              .sort((a, b) => {
-                const puesto = puestos.get(eligiendoPara);
-                const enc = (j: Jugador) =>
-                  j.posicion === puesto ? 0 : j.posiciones_secundarias.includes(puesto!) ? 1 : 2;
-                return enc(a) - enc(b) || nivelEf(b, b.posicion, ctx) - nivelEf(a, a.posicion, ctx);
-              })
-              .map((j) => (
-              <FilaJugador key={j.id} j={j} puesto={j.posicion} cond={j.condicion} ctx={ctx}
-                onClick={() => {
-                  setEntran((e) => ({ ...e, [eligiendoPara]: j.id }));
-                  setEligiendoPara(null);
-                }} />
-            ))
-          ) : (
+          {eligiendoPara ? (() => {
+            /*
+             * El número que se muestra es el nivel EN EL PUESTO QUE VA A
+             * OCUPAR, no el suyo. Antes decía el de su puesto natural, así que
+             * un volante de 66 parecía mejor que un central de 64 para entrar
+             * de central, cuando de central el volante rinde 59. Y eso pesa de
+             * verdad: medido, un defensor de 66 puesto de nueve te baja de 48%
+             * a 41% de chance de ganar, contra un delantero de 67 que la deja
+             * igual. Ordenar por este número resuelve las dos cosas de una
+             * vez, porque quien está en su puesto queda arriba solo.
+             */
+            const destino = puestos.get(eligiendoPara) ?? "MC";
+            const libres = banco.filter((j) => !Object.values(entran).includes(j.id));
+            /*
+             * Al arquero lo reemplaza un arquero. Un jugador de campo bajo los
+             * tres palos rinde la mitad, así que ofrecerlo mezclado con el
+             * resto es una trampa; solo aparece si no queda ningún arquero, y
+             * ahí la pantalla lo dice.
+             */
+            const arqueros = libres.filter((j) => j.posicion === "ARQ");
+            const hayArquero = destino === "ARQ" && arqueros.length > 0;
+            const elegibles = destino === "ARQ"
+              ? (hayArquero ? arqueros : libres)
+              : libres.filter((j) => j.posicion !== "ARQ" || libres.length === 1);
+
+            return (<>
+              {destino === "ARQ" && !hayArquero && (
+                <p className="mb-2 rounded-lg px-3 py-2 text-[11px] leading-snug"
+                   style={{ background: "color-mix(in srgb, var(--critico) 20%, transparent)",
+                            color: "#e88" }}>
+                  No te queda ningún arquero en el banco. El que pongas ataja a
+                  la mitad de lo que rinde en su puesto.
+                </p>
+              )}
+              {[...elegibles]
+                .sort((a, b) => nivelEf(b, destino, ctx) - nivelEf(a, destino, ctx))
+                .map((j) => (
+                  <FilaJugador key={j.id} j={j} puesto={destino} cond={j.condicion} ctx={ctx}
+                    natural={j.posicion}
+                    onClick={() => {
+                      setEntran((e) => ({ ...e, [eligiendoPara]: j.id }));
+                      setEligiendoPara(null);
+                    }} />
+                ))}
+            </>);
+          })() : (
             <>
               {[...once]
                 .sort((a, b) => (b.id === lesionado ? 1 : 0) - (a.id === lesionado ? 1 : 0) ||
@@ -718,7 +811,47 @@ export default function PartidoEnVivo({
       )}
 
       {panel === "actitud" && (
-        <Panel titulo="Cambio de actitud · una sola vez" onCerrar={() => { setPanel(null); setCorriendo(true); }}>
+        <Panel titulo="Plan de partido" onCerrar={() => { setPanel(null); setCorriendo(true); }}>
+          <span className="mb-1.5 block text-[9px] uppercase tracking-[0.18em]"
+                style={{ color: "var(--apagado)" }}>
+            Formación · no cuesta cambio
+          </span>
+          <div className="mb-3 grid grid-cols-2 gap-1.5">
+            {MOLDES.map((m) => m.nombre).map((f) => {
+              const d = deFormacion(f);
+              const puesta = f === formacion;
+              return (
+                <button key={f} onClick={() => cambiarFormacion(f)}
+                  className="rounded-lg px-2.5 py-2 text-left"
+                  style={{
+                    background: puesta ? "var(--blanco)" : "var(--carbon)",
+                    color: puesta ? "var(--negro)" : "var(--blanco)",
+                  }}>
+                  <span className="apellido block text-[13px] leading-tight">{f}</span>
+                  {d && (
+                    <span className="mt-0.5 flex flex-wrap gap-1">
+                      {d.map((c, i) => (
+                        <span key={i} className="num rounded px-1 py-0.5 text-[9px] font-extrabold"
+                              style={{
+                                background: c.bueno
+                                  ? "color-mix(in srgb, var(--cesped) 24%, transparent)"
+                                  : "color-mix(in srgb, var(--ladrillo) 24%, transparent)",
+                                color: c.bueno ? "var(--cesped)" : "var(--ladrillo)",
+                              }}>
+                          {c.texto}
+                        </span>
+                      ))}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          <span className="mb-1.5 block text-[9px] uppercase tracking-[0.18em]"
+                style={{ color: "var(--apagado)" }}>
+            Actitud · una sola vez
+          </span>
           {(["defensivo", "equilibrado", "ofensivo"] as Actitud[]).map((a) => {
             const A = ACTITUD[a];
             const activa = a === actitud;
@@ -781,11 +914,16 @@ export default function PartidoEnVivo({
 }
 
 function FilaJugador({
-  j, puesto, cond, ctx, onClick, marcado, lesionado, entrante,
+  j, puesto, cond, ctx, onClick, marcado, lesionado, entrante, natural,
 }: {
   j: Jugador; puesto: Posicion; cond: number; ctx: PartidoUI["ctx"];
   onClick: () => void; marcado?: boolean; lesionado?: boolean; entrante?: Jugador;
+  /** Su puesto de verdad, cuando el de arriba es el casillero que va a ocupar. */
+  natural?: Posicion;
 }) {
+  // lo que pierde por jugar donde no es, en el mismo número que se ve al lado
+  const cuesta = natural && natural !== puesto
+    ? nivelEf(j, natural, ctx) - nivelEf(j, puesto, ctx) : 0;
   return (
     <button onClick={onClick}
       className="mb-1 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left"
@@ -797,7 +935,13 @@ function FilaJugador({
       <span className="min-w-0 flex-1">
         <span className="apellido block truncate text-[14px]">{j.apellido}</span>
         <span className="text-[10px]" style={{ color: "var(--tenue)" }}>
-          {puesto} · <span style={{ color: colorCondicion(cond) }}>{cond}%</span>
+          {natural && natural !== puesto ? <>es {natural}</> : puesto}
+          {" · "}<span style={{ color: colorCondicion(cond) }}>{cond}%</span>
+          {cuesta > 0 && (
+            <span className="num ml-1.5 font-bold" style={{ color: "var(--critico)" }}>
+              −{cuesta} fuera de puesto
+            </span>
+          )}
           {lesionado && <span className="ml-1.5 font-bold" style={{ color: "var(--bajo)" }}>LESIONADO</span>}
           {entrante && <span className="ml-1.5" style={{ color: "var(--ok)" }}>→ {entrante.apellido}</span>}
         </span>

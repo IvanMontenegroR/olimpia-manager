@@ -29,7 +29,7 @@ import { salidaAutomatica } from "@/lib/juego.ts";
 import { Rng } from "@/engine/rng.ts";
 import {
   fichar, ficharEstrella, partidaNueva, partidoDe, plantelDe, sumarDias,
-  type Asunto, type Partida,
+  type Asunto, type Partida, type TipoHito,
 } from "@/lib/temporada.ts";
 
 const fallas: string[] = [];
@@ -161,6 +161,30 @@ for (const [que, p2] of escritorios) {
                   onFicharEstrella={() => {}} onRechazarEstrella={() => {}} />,
     );
   });
+}
+
+/*
+ * Cada pantalla de hito, en sus cuatro intensidades. Es donde más fácil se
+ * rompe algo sin que nadie lo vea: solo aparecen cuando salís campeón o pasás
+ * de ronda, o sea casi nunca mientras se programa.
+ */
+{
+  const TIPOS: TipoHito[] = [
+    "campeon_liga", "campeon_copa", "eliminado_copa", "despedido",
+    "fin_temporada", "fichaje", "lesion", "revelacion", "gana_clasico", "pasa_ronda",
+  ];
+  for (const tipo of TIPOS) {
+    for (const intensidad of [0, 1, 2, 3]) {
+      probar(`hito ${tipo} intensidad ${intensidad}`, () => {
+        renderToStaticMarkup(
+          <PantallaHito onCerrar={() => {}} hito={{
+            tipo, titulo: "Título de prueba", detalle: "Lo que pasó, contado.",
+            cifra: "3 - 1", pie: "global", intensidad,
+          }} />,
+        );
+      });
+    }
+  }
 }
 
 /*

@@ -39,6 +39,22 @@ import { LINEA_DE, type Linea, type Posicion } from "../engine/tipos.ts";
  */
 const LESIONADOS = new Set(["Derlis González"]);
 
+/*
+ * Lo que sabe el que los ve jugar y el dato no dice.
+ *
+ * Sofascore mide lo que pasó en 2026, no lo que el jugador es. Un extremo que
+ * jugó todo un torneo malo en un equipo que no le llegaba puntea abajo, y uno
+ * que entró veinte minutos por partido en buen momento no aparece. Estas son
+ * correcciones de Ivan, que los ve todos los domingos, y ganan sobre el
+ * modelo: se aplican después de las dos anclas y antes de recentrar, así que
+ * el orden que él pide se respeta y el balance del once no se mueve.
+ */
+const A_MANO: Record<string, number> = {
+  "Romeo Benítez": 68, "Pedro Zarza": 66, "Eduardo Delmas": 65,
+  "Rubén Lezcano": 63, "Iván Leguizamón": 63,
+  "Bryan Bentaberry": 66, "Juan Ángel Vera": 64,
+};
+
 interface Torneo { [k: string]: number }
 interface Fila { id: number; nombre: string; posicion: string; dorsal: string;
                  torneos: Record<string, Torneo> }
@@ -150,6 +166,16 @@ for (let i = 0; i < 20; i++) {
   ajuste += d;
 }
 for (const x of props) x.nivel = Math.round(x.crudo + ajuste);
+/*
+ * Las correcciones del DT van AL FINAL, después de recentrar. Si fueran antes,
+ * el recentrado se las llevaría puestas y correr el script dos veces daría
+ * números distintos; así el valor que él pidió es el que queda, y correrlo de
+ * nuevo no mueve nada.
+ */
+for (const x of props) {
+  const k = `${x.p.j.nombre} ${x.p.j.apellido}`;
+  if (k in A_MANO) x.nivel = A_MANO[k];
+}
 
 // ---------------------------------------------------------------- los rasgos
 for (const x of props) {

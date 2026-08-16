@@ -76,8 +76,17 @@ export default function Arranque({ partida, onListo }: {
      * lugar a los que el DT ya acomodó.
      */
     if (huecos.length === estado.alineado.length) {
-      const once = [...libres].sort((a, b) => b.nivel - a.nivel).slice(0, 11);
-      setEstado(mejorMolde(once, ctx));
+      /*
+       * Se le pasa el plantel ENTERO, no los once de más nivel.
+       *
+       * Antes se cortaban los once mejores de ficha y recién ahí se buscaba
+       * dibujo, así que si tus mejores eran cinco volantes te armaba un equipo
+       * con gente fuera de puesto. `mejorMolde` prueba las nueve formaciones y
+       * para cada una elige a los once que mejor le calzan, quedándose con la
+       * que suma más nivel efectivo: jugar en tu puesto ya vale ahí adentro,
+       * así que la formación que sale sola es la que menos gente tuerce.
+       */
+      setEstado(mejorMolde(libres, ctx));
       return;
     }
     const slots = MOLDE_DE(estado.formacion);

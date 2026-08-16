@@ -182,6 +182,13 @@ export const P = {
   rhoEmpates: -0.28,
   // Meterse atrás tiene que servir de verdad: aguantar en Río y definirla en
   // Asunción es una estrategia legítima, no un suicidio.
+  /**
+   * Lo que suma cada defensor de más y lo que resta cada delantero de menos,
+   * contra el 4-3-3. Es lo que hace que meter un central en el 80 sirva de
+   * algo: sin esto la formación era decorativa.
+   */
+  formacionPorDefensor: 3.5,
+  formacionPorDelantero: 2.2,
   actitudAtaque: { defensivo: -7, equilibrado: 0, ofensivo: 5 } as Record<Actitud, number>,
   actitudDefensa: { defensivo: 9, equilibrado: 0, ofensivo: -6 } as Record<Actitud, number>,
   presionAtaque: 2.5,
@@ -409,9 +416,50 @@ export function bonoLocalia(ctx: ContextoPartido): number {
   return Math.max(0, base + (aliento - 1) * P.alientoPeso);
 }
 
+/**
+ * Cuánta gente pusiste atrás y cuánta adelante.
+ *
+ * El promedio pesado por línea ya distinguía algo las formaciones, pero casi
+ * nada: medido, un 5-3-2 recibía 0.92 goles y un 4-3-3 recibía 0.91. El motivo
+ * es que se cancelaba solo, porque el quinto defensor que entra es peor que el
+ * mediocampista que sale y el promedio queda donde estaba.
+ *
+ * Pero once cuerpos no se reparten gratis. Un central de más es un central de
+ * más aunque sea el quinto, y jugar con un solo nueve es llegar menos aunque
+ * el nueve sea bueno. Esto es esa parte: no cuánto valen, cuántos son.
+ */
+function estructura(a: Alineacion) {
+  let atras = 0, medio = 0, adelante = 0;
+  for (const j of a.once) {
+    const l = LINEA_DE[a.puestos.get(j.id) ?? j.posicion];
+    if (l === "DEF") atras++;
+    else if (l === "MED") medio++;
+    else if (l === "DEL") adelante++;
+  }
+  /*
+   * El mediocampo cuenta para los dos lados, a medias.
+   *
+   * Contando solo defensores y delanteros, el 3-4-3 quedaba estrictamente peor
+   * que el 4-3-3: metía lo mismo (los dos llevan tres arriba) y recibía más
+   * (uno menos atrás). O sea que el volante de más que gana el 3-4-3 no valía
+   * nada, y una formación que nunca conviene no es una opción. Poblar el medio
+   * ayuda en las dos áreas, pero menos que un cuerpo puesto ahí.
+   */
+  const M = 0.35;
+  // el 4-3-3 es el cero: cuatro atrás, tres en el medio y tres arriba
+  return {
+    defensa: (atras + medio * M - (4 + 3 * M)) * P.formacionPorDefensor,
+    ataque: (adelante + medio * M - (3 + 3 * M)) * P.formacionPorDelantero,
+  };
+}
+
 export function fuerzas(a: Alineacion, ctx: ContextoPartido) {
   let ataque = media(a.once, a.puestos, ctx, PESO_ATAQUE);
   let defensa = media(a.once, a.puestos, ctx, PESO_DEFENSA);
+
+  const forma = estructura(a);
+  ataque += forma.ataque;
+  defensa += forma.defensa;
 
   ataque += P.actitudAtaque[a.actitud];
   defensa += P.actitudDefensa[a.actitud];

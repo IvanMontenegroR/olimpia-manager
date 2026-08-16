@@ -69,37 +69,68 @@ const ESTILO: Record<TipoHito, Estilo> = {
     fondoAnimado: "nada",
     encabezado: "Clausura 2026",
   },
+  gana_clasico: {
+    // franjas negras y blancas de fondo: el clásico se ve antes de leerse
+    fondo: "radial-gradient(120% 90% at 50% 0%, #33302b, #0a120d 72%)",
+    acento: "#f2efe6",
+    fondoAnimado: "papelitos",
+    encabezado: "El clásico",
+  },
+  pasa_ronda: {
+    fondo: "radial-gradient(120% 90% at 50% 0%, #123a44, #0a120d 70%)",
+    acento: "#4fd0e0",
+    fondoAnimado: "rayos",
+    encabezado: "Copa Sudamericana",
+  },
 };
 
 export default function PantallaHito({ hito, onCerrar }: {
   hito: Hito; onCerrar: () => void;
 }) {
   const e = ESTILO[hito.tipo];
+  /*
+   * Cuánto pesa esto, de 0 a 3.
+   *
+   * Es lo que hace que la copa crezca en vez de repetir el mismo cartel cuatro
+   * veces: pasar de octavos entra tranquilo y la final te tapa la pantalla de
+   * papelitos. Escala el título, el marcador, el brillo y cuántas cosas caen.
+   */
+  const peso = Math.max(0, Math.min(3, hito.intensidad ?? 1));
+  const tituloPx = [26, 30, 36, 44][peso];
+  const cifraPx = [50, 62, 74, 88][peso];
+  const escudoPx = [46, 54, 62, 74][peso];
+  const brillo = [0.25, 0.4, 0.62, 1][peso];
 
   return (
     <div className="fixed inset-0 z-[60] flex flex-col items-center justify-center px-6"
          style={{ background: e.fondo }}>
-      <Telon tipo={e.fondoAnimado} color={e.acento} />
+      <Telon tipo={e.fondoAnimado} color={e.acento} peso={peso} />
 
       {/* La entrada va por CSS y no por estado de React: con estado dependía de
           que el efecto llegara a correr, y si no corría la pantalla quedaba
           en negro con el contenido invisible. */}
       <div className="entra-hito relative flex w-full max-w-sm flex-col items-center text-center">
-        <Escudo id="olimpia" nombre="Olimpia" tam={54} />
+        <Escudo id="olimpia" nombre="Olimpia" tam={escudoPx} />
 
         <div className="mt-4 text-[10px] uppercase tracking-[0.28em]" style={{ color: e.acento }}>
           {e.encabezado}
         </div>
 
-        <h1 className="apellido mt-1.5 text-[30px] leading-[1.05]"
-            style={{ color: "var(--blanco)", textShadow: "0 3px 18px rgba(0,0,0,0.7)" }}>
+        <h1 className="apellido mt-1.5 leading-[1.05]"
+            style={{
+              fontSize: tituloPx, color: "var(--blanco)",
+              textShadow: `0 3px 18px rgba(0,0,0,0.7), 0 0 ${28 * brillo}px ${e.acento}${
+                peso >= 2 ? "66" : "00"}`,
+            }}>
           {hito.titulo}
         </h1>
 
         {hito.cifra && (
           <div className="golpea-hito mt-5">
             <div className="num leading-none"
-                 style={{ fontSize: 62, color: e.acento, textShadow: `0 0 34px ${e.acento}44` }}>
+                 style={{ fontSize: cifraPx, color: e.acento,
+                          textShadow: `0 0 ${34 + 26 * brillo}px ${e.acento}${
+                            peso >= 2 ? "88" : "44"}` }}>
               {hito.cifra}
             </div>
             {hito.pie && (
@@ -126,7 +157,9 @@ export default function PantallaHito({ hito, onCerrar }: {
 }
 
 /** El fondo animado. Cada momento tiene el suyo. */
-function Telon({ tipo, color }: { tipo: Estilo["fondoAnimado"]; color: string }) {
+function Telon({ tipo, color, peso }: {
+  tipo: Estilo["fondoAnimado"]; color: string; peso: number;
+}) {
   if (tipo === "nada") return null;
 
   if (tipo === "rayos") {
@@ -135,7 +168,8 @@ function Telon({ tipo, color }: { tipo: Estilo["fondoAnimado"]; color: string })
         <span className="rayos-hito absolute left-1/2 top-1/2 block"
               style={{
                 width: 900, height: 900, marginLeft: -450, marginTop: -450,
-                background: `conic-gradient(from 0deg, transparent 0 8deg, ${color}22 8deg 16deg)`,
+                background: `conic-gradient(from 0deg, transparent 0 8deg, ${color}${
+                  ["11", "22", "33", "4a"][peso]} 8deg 16deg)`,
                 borderRadius: "50%",
               }} />
       </div>
@@ -162,7 +196,7 @@ function Telon({ tipo, color }: { tipo: Estilo["fondoAnimado"]; color: string })
   // papelitos: la vuelta olímpica
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden">
-      {Array.from({ length: 42 }, (_, i) => {
+      {Array.from({ length: [16, 42, 72, 120][peso] }, (_, i) => {
         const negro = i % 3 === 0;
         return (
           <span key={i} className="papelito-hito absolute block"
