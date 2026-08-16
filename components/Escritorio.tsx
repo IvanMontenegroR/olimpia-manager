@@ -182,26 +182,12 @@ export default function Escritorio({
         mercado: "Fichajes", bitacora: "Bitácora", copa: "Sudamericana",
         estrella: "Mercado",
       }[vista]} onVolver={() => setVista("escritorio")}>
-        {(vista === "mercado" || vista === "plantel") && (
-          <div className="mb-2 flex gap-1">
-            {([["mercado", "Mercado"], ["plantel", "Mi plantel"]] as const).map(([id, texto]) => (
-              <button key={id} onClick={() => setVista(id)}
-                className="flex-1 rounded-md py-2 text-[10px] font-bold uppercase tracking-[0.14em]"
-                style={{
-                  background: vista === id ? "var(--blanco)" : "var(--carbon)",
-                  color: vista === id ? "var(--negro)" : "var(--tenue)",
-                }}>
-                {texto}
-                {id === "plantel" && (
-                  <span className="num ml-1.5 text-[9px]"
-                        style={{ color: vista === id ? "var(--apagado)" : "var(--apagado)" }}>
-                    {plantel.length}
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
-        )}
+        {/*
+          * Sin pestañas. El plantel y el mercado eran dos solapas de la misma
+          * pantalla porque el plantel no tenía puerta propia; ahora tiene su
+          * botón en la home, así que entrar a ver a los tuyos ya no pasa por
+          * la vidriera de los que no son tuyos.
+          */}
         {vista === "plantel" && (
           <VistaPlantel plantel={plantel} partida={partida} onGuardarEquipos={onGuardarEquipos}
                         onMoverReserva={onMoverReserva} />
@@ -508,20 +494,16 @@ export default function Escritorio({
                 ))}
               </span>
 
-              {(bajas.length > 0 || !sub18.alcanza) && (
+              {/* Las bajas se fueron al botón de Plantel: son un dato que se
+                  mira cuando vas a mirar el plantel, no cada vez que abrís el
+                  juego. Lo del Sub-18 se queda porque tiene fecha de
+                  vencimiento y si te lo pasás son tres puntos menos. */}
+              {!sub18.alcanza && (
                 <span className="mt-1.5 flex flex-wrap gap-1">
-                  {bajas.length > 0 && (
-                    <span className="rounded px-1.5 py-[1px] text-[9px] font-extrabold uppercase"
-                          style={{ background: "var(--ladrillo)", color: "var(--blanco)" }}>
-                      {bajas.length} baja{bajas.length > 1 ? "s" : ""}
-                    </span>
-                  )}
-                  {!sub18.alcanza && (
-                    <span className="rounded px-1.5 py-[1px] text-[9px] font-extrabold uppercase"
-                          style={{ background: "#e0902a", color: "#0a120d" }}>
-                      Sub-18: {sub18.faltan}'
-                    </span>
-                  )}
+                  <span className="rounded px-1.5 py-[1px] text-[9px] font-extrabold uppercase"
+                        style={{ background: "#e0902a", color: "#0a120d" }}>
+                    Sub-18: {sub18.faltan}'
+                  </span>
                 </span>
               )}
             </button>
@@ -698,13 +680,24 @@ export default function Escritorio({
             className="relieve relative rounded-md py-2.5 text-[10px] font-bold uppercase tracking-[0.14em]"
             style={{ background: "var(--carbon)", color: "var(--tenue)" }}>
             {texto}
-            {/* cuántos hay para mirar, sin tener que entrar */}
-            {id === "mercado" && partida.fichajes.length > 0 && (
-              <span className="num absolute right-1.5 top-1 rounded-full px-[5px] text-[8px] font-extrabold"
-                    style={{ background: color, color: "#0a120d" }}>
-                {partida.fichajes.length}
-              </span>
-            )}
+            {/*
+              * Cuántos hay para mirar, sin tener que entrar. Las bajas vivían
+              * en la card del nivel, que es la de arriba de todo y la que más
+              * aire necesita: acá ocupan cero y están al lado del botón que
+              * lleva justo adonde se ven.
+              */}
+            {(() => {
+              const n = id === "mercado" ? partida.fichajes.length
+                : id === "plantel" ? bajas.length : 0;
+              if (!n) return null;
+              return (
+                <span className="num absolute right-1.5 top-1 rounded-full px-[5px] text-[8px] font-extrabold"
+                      style={{ background: id === "plantel" ? "var(--ladrillo)" : color,
+                               color: id === "plantel" ? "var(--blanco)" : "#0a120d" }}>
+                  {n}
+                </span>
+              );
+            })()}
           </button>
         ))}
       </div>
@@ -1120,12 +1113,19 @@ function VistaPlantel({ plantel, partida, onGuardarEquipos, onMoverReserva }: {
         const activos = plantel.filter(
           (j) => partida.plantel[j.id]?.lesionadoHasta !== "2099-01-01");
         const reserva = activos.filter((j) => j.reserva).length;
+        // los mismos que cuenta la insignia del botón, para que el número cierre
+        const fuera = activos.filter((j) => j.suspendido || j.lesionado_hasta).length;
         return (
           <div className="mb-2 flex items-baseline justify-between text-[10px]">
             <span style={{ color: "var(--tenue)" }}>
               Primer equipo <span className="num">{activos.length - reserva}</span>
               {reserva > 0 && (
                 <> · reserva <span className="num">{reserva}</span></>
+              )}
+              {fuera > 0 && (
+                <span style={{ color: "var(--ladrillo)" }}>
+                  {" · "}<span className="num">{fuera}</span> {fuera === 1 ? "baja" : "bajas"}
+                </span>
               )}
             </span>
             <span style={{ color: "var(--apagado)" }}>tocá a uno para ver su ficha</span>
