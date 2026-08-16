@@ -165,7 +165,14 @@ export default function Asuntos({
                 esta && listo ? (
                   <Efectos e={!salioBien && o.efecto.siSaleMal ? o.efecto.siSaleMal : o.efecto} />
                 ) : o.apuesta && o.efecto.siSaleMal ? (
-                  <span className="mt-1.5 block">
+                  /*
+                   * Los dos desenlaces uno al lado del otro y no uno debajo
+                   * del otro. Sin las frases quedaron dos renglones de chips
+                   * cortos, y apilados hacían que una decisión de tres
+                   * opciones no entrara en la pantalla del teléfono. Al lado
+                   * también se comparan mejor, que es para lo que están.
+                   */
+                  <span className="mt-1.5 flex items-start gap-2">
                     <Rama color="var(--cesped)" efecto={o.efecto} />
                     <Rama color="var(--ladrillo)" efecto={o.efecto.siSaleMal} />
                   </span>
@@ -221,8 +228,9 @@ interface OpcionUI {
  */
 function Rama({ color, efecto }: { color: string; efecto: EfectoVisible }) {
   return (
-    <span className="mt-1 flex items-center gap-1.5">
-      <span className="h-[13px] w-[2px] shrink-0 rounded-full" style={{ background: color }} />
+    <span className="flex min-w-0 flex-1 items-start gap-1.5">
+      <span className="mt-[5px] h-[13px] w-[2px] shrink-0 rounded-full"
+            style={{ background: color }} />
       <span className="min-w-0 flex-1"><Efectos e={efecto} /></span>
     </span>
   );

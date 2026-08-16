@@ -35,14 +35,10 @@ type Ayuda = "ovr" | "estadio" | "vestuario" | "hinchada" | "dirigencia";
 const AYUDAS: Record<Ayuda, { titulo: string; texto: string; mueve: string[] }> = {
   ovr: {
     titulo: "El nivel de tu equipo",
-    texto: "Qué tan fuerte sale Olimpia al partido. Antes de cada partido se " +
-      "compara con el del rival: el que tiene más nivel tiene más chance de ganar.",
-    mueve: [
-      "Traer mejores jugadores",
-      "Ganar, y que el vestuario esté contento",
-      "Llenar la cancha, que se llena bajando el precio de la entrada",
-      "No hacer jugar a los mismos dos veces en la semana",
-    ],
+    texto: "Qué tan fuerte sale Olimpia al partido. Se compara con el del rival: " +
+      "el que tiene más tiene más chance de ganar. Sale de sumar seis cosas, y " +
+      "cada una se sube de una manera distinta.",
+    mueve: [],
   },
   estadio: {
     titulo: "Estadio",
@@ -263,6 +259,17 @@ export default function Escritorio({
   const lider = tabla[0];
   const difLider = lider.id === "olimpia" ? 0 : lider.pts - yo.pts;
   const rivalCopa = (RIVALES_COPA as any[]).find((r) => r.id === partida.copa.rivalId);
+  /*
+   * Cuándo se juega el próximo de la copa. La card decía la ronda y el rival
+   * pero no cuándo, así que la única forma de saber si era pasado mañana o el
+   * mes que viene era contar los días en la tira de arriba.
+   */
+  const diasCopa = (() => {
+    const cal = CALENDARIO_COPA[partida.copa.ronda];
+    if (!cal) return null;
+    const proximo = [cal.ida, cal.vuelta].filter((d) => d >= partida.dia).sort()[0];
+    return proximo ? diasEntre(partida.dia, proximo) : null;
+  })();
   const NOMBRE_RONDA: Record<string, string> = {
     octavos: "Octavos", cuartos: "Cuartos", semis: "Semifinal", final: "Final",
     eliminado: "Eliminado", campeon: "Campeón",
@@ -305,6 +312,23 @@ export default function Escritorio({
               <Numero valor={partida.paciencia} formato={(n) => String(Math.round(n))}
                       className="num text-[12px] font-extrabold"
                       style={{ color: colorDirigencia(partida.paciencia) }} />
+            </span>
+            {/*
+              * La barra, y va llena exactamente hasta el número: si dice 87,
+              * está al 87%. Las dos rayitas son los dos umbrales que ya existen
+              * en el juego (abajo de 40 aparece el aviso, abajo de 25 evalúan
+              * tu continuidad) y están ahí para que se vea de un vistazo cuánto
+              * margen queda, sin una línea de texto más.
+              */}
+            <span className="relative mt-1 block h-[5px] w-[74px] overflow-hidden rounded-full"
+                  style={{ background: "var(--linea)" }}>
+              <span className="barra-llena absolute inset-y-0 left-0 rounded-full"
+                    style={{ width: `${Math.max(0, Math.min(100, partida.paciencia))}%`,
+                             background: colorDirigencia(partida.paciencia) }} />
+              {[25, 40].map((x) => (
+                <span key={x} className="absolute inset-y-0"
+                      style={{ left: `${x}%`, width: 1, background: "rgba(0,0,0,0.75)" }} />
+              ))}
             </span>
           </button>
           {/* Empezar de nuevo estaba solo al terminar la temporada, así que si
@@ -382,6 +406,13 @@ export default function Escritorio({
           const copaHoy = Object.values(CALENDARIO_COPA).some(
             (r) => (r.ida === dia || r.vuelta === dia)
               && partida.copa.ronda !== "eliminado" && partida.copa.ronda !== "campeon");
+          /*
+           * El día de copa se pintaba de amarillo con un puntito amarillo, o
+           * sea con la gama de la Libertadores y sin decir contra quién. Ahora
+           * usa el azul de la Sudamericana, el mismo de la card de al lado, y
+           * muestra el escudo del rival igual que los partidos de liga.
+           */
+          const azul = COPAS.sudamericana.acento;
           const hoy = i === 0;
           return (
             <div key={dia}
@@ -389,7 +420,7 @@ export default function Escritorio({
                 hoy ? "pasa-el-dia relieve-alto" : "relieve"}`}
               style={{
                 background: hoy ? "var(--blanco)"
-                  : copaHoy ? "color-mix(in srgb, #d9a832 30%, var(--carbon))"
+                  : copaHoy ? `color-mix(in srgb, ${azul} 30%, var(--carbon))`
                   : m ? "color-mix(in srgb, #3fa76a 24%, var(--carbon))"
                   : "var(--carbon)",
                 color: hoy ? "var(--negro)" : "var(--blanco)",
@@ -400,7 +431,9 @@ export default function Escritorio({
               </span>
               <span className="num text-[13px] leading-none">{dia.slice(8, 10)}</span>
               <span className="flex h-3.5 items-center">
-                {copaHoy ? <Punto color="#d9a832" />
+                {copaHoy && rivalCopa
+                  ? <Escudo id={rivalCopa.id} nombre={rivalCopa.nombre} tam={13} />
+                  : copaHoy ? <Punto color={azul} />
                   : m ? <Escudo id={m.rivalId} nombre={m.rivalNombre} tam={13} />
                   : null}
               </span>
@@ -432,7 +465,7 @@ export default function Escritorio({
               * que son números que se pueden mover.
               */}
             <button onClick={() => setAyuda("ovr")}
-              className="relieve-alto relative overflow-hidden rounded-lg px-2.5 py-2.5 text-left"
+              className="relieve-alto relative overflow-hidden rounded-lg px-2.5 py-2 text-left"
               style={{ background: "linear-gradient(160deg, #16201b, #0c120f 70%)",
                        boxShadow: `inset 0 0 0 1.5px color-mix(in srgb, ${colorOvr} 55%, transparent),
                                    0 0 20px color-mix(in srgb, ${colorOvr} 16%, transparent)` }}>
@@ -444,7 +477,7 @@ export default function Escritorio({
               <span className="flex items-baseline gap-2">
                 <Numero valor={ovr.hoy} formato={(n) => String(Math.round(n))}
                         className="apellido block leading-[0.8]"
-                        style={{ fontSize: 42, color: colorOvr,
+                        style={{ fontSize: 34, color: colorOvr,
                                  textShadow: `0 0 26px color-mix(in srgb, ${colorOvr} 50%, transparent)` }} />
                 <span className="flex items-baseline gap-1">
                   {/* el plantel se pinta con la misma vara que el OVR: así se ve
@@ -460,7 +493,7 @@ export default function Escritorio({
               </span>
 
               {/* cada cosa que lo mueve, en su propia fichita del color que le toca */}
-              <span className="mt-2 flex gap-1">
+              <span className="mt-1.5 flex gap-1">
                 {aportes.lista.slice(0, 3).map((a) => (
                   <Aporte key={a.etiqueta} etiqueta={a.etiqueta} valor={a.valor} />
                 ))}
@@ -486,6 +519,8 @@ export default function Escritorio({
 
             <CardCopa copa="sudamericana"
               ronda={NOMBRE_RONDA[partida.copa.ronda]}
+              cuando={diasCopa === null ? null
+                : diasCopa === 0 ? "hoy" : diasCopa === 1 ? "mañana" : `en ${diasCopa} días`}
               rival={rivalCopa ? rivalCopa.nombre : null}
               escudo={partida.copa.ronda !== "eliminado" && partida.copa.ronda !== "campeon"
                 ? partida.copa.rivalId : undefined}
@@ -509,6 +544,39 @@ export default function Escritorio({
               onTocar={(j) => setFichaHome(j.id)}
               onModificar={onDirigir} />
           </div>
+
+          {/*
+            * Lo último que pasó, en un renglón.
+            *
+            * El diario se fue de la home y con él la única forma de enterarse
+            * de algo sin entrar a otra pantalla. Esto es el titular del día:
+            * el resultado del domingo, la plata que entró, el que se lesionó.
+            * Lo demás sigue completo adentro del fixture.
+            */}
+          {(() => {
+            const u = partida.bitacora[partida.bitacora.length - 1];
+            if (!u) return null;
+            const m = u.marca ? MARCA[u.marca] : null;
+            return (
+              <button onClick={() => setVista("fixture")}
+                className="mt-1.5 flex shrink-0 items-center gap-2 rounded-md px-2.5 py-1.5 text-left"
+                style={{ background: m
+                  ? `color-mix(in srgb, ${m.color} 14%, var(--carbon))` : "var(--carbon)" }}>
+                {m && (
+                  <span className="shrink-0 text-[10px] font-extrabold leading-none"
+                        style={{ color: m.color }}>{m.icono}</span>
+                )}
+                <span className="min-w-0 flex-1 truncate text-[10px]"
+                      style={{ color: "var(--tenue)" }}>
+                  {u.texto}
+                </span>
+                {u.cifra && (
+                  <span className="num shrink-0 text-[11px] font-extrabold"
+                        style={{ color: m?.color ?? "var(--blanco)" }}>{u.cifra}</span>
+                )}
+              </button>
+            );
+          })()}
         </div>
       )}
 
@@ -607,8 +675,16 @@ export default function Escritorio({
 
       {/* ---------- resto ---------- */}
       <div className="grid grid-cols-3 gap-1 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-1.5">
+        {/*
+          * Plantel en vez de Diario. El diario es texto para leer y estaba a un
+          * toque de la home, mientras que el plantel (donde se ve a los treinta,
+          * se sube gente de reserva y se arman los equipos) vivía escondido
+          * adentro de Fichajes. Se cambió el que se usa todos los días por el
+          * que se lee de vez en cuando: el diario ahora vive adentro del
+          * fixture, que es la otra pantalla de consulta.
+          */}
         {([["fixture", "Fixture", "#d9a832"], ["mercado", "Fichajes", "#e0902a"],
-           ["bitacora", "Diario", "#8fa396"]] as const).map(([id, texto, color]) => (
+           ["plantel", "Plantel", "#8fa396"]] as const).map(([id, texto, color]) => (
           <button key={id} onClick={() => setVista(id)}
             className="relieve relative rounded-md py-2.5 text-[10px] font-bold uppercase tracking-[0.14em]"
             style={{ background: "var(--carbon)", color: "var(--tenue)" }}>
@@ -679,31 +755,52 @@ export default function Escritorio({
 
             {/* De dónde sale el número, sumando. Acá es donde se ve el ánimo
                 del plantel, que no aparecía en ninguna otra parte. */}
+            {/*
+              * Cada parte con su número Y cómo se sube ESA.
+              *
+              * Antes había un desglose por un lado y una lista suelta de
+              * consejos por el otro, así que "llenar la cancha" no estaba
+              * pegado al renglón de la hinchada y había que atar los cabos
+              * solo. Ahora cada cosa que mueve el nivel dice, ahí mismo,
+              * cuánto está poniendo hoy y qué hay que hacer para moverla.
+              */}
             {ayuda === "ovr" && ovr.partes && (
-              <div className="mt-3 rounded-lg p-2.5" style={{ background: "var(--carbon)" }}>
-                <ParteOvr etiqueta="Plantel (la base)"
-                          valor={Math.round(ovr.partes.base)} base />
-                <ParteOvr etiqueta="Vestuario" valor={ovr.partes.animo} siempre />
-                <ParteOvr etiqueta="Hinchada" valor={ovr.partes.cancha} siempre />
-                <ParteOvr etiqueta="Físico" valor={ovr.partes.piernas} />
-                <ParteOvr etiqueta="Fuera de puesto" valor={ovr.partes.puestos} />
-                <ParteOvr etiqueta="El viaje" valor={ovr.partes.viaje} />
-                <div className="my-1.5 h-px" style={{ background: "var(--linea)" }} />
-                <ParteOvr etiqueta="Nivel total para el partido"
-                          valor={Math.round(ovr.partes.total)} base fuerte />
+              <div className="mt-3">
+                <ParteConComo etiqueta="Plantel" valor={Math.round(ovr.partes.base)} base
+                  como="Lo que valen en ficha los once que van a jugar. Se sube fichando mejor, y con los pibes de 21 o menos, que crecen si les das minutos." />
+                <ParteConComo etiqueta="Vestuario" valor={ovr.partes.animo} siempre
+                  como="Cómo está el plantel con vos. Ganar suma, perder resta, y cómo resolvés los asuntos del vestuario es lo que más lo mueve." />
+                <ParteConComo etiqueta="Hinchada" valor={ovr.partes.cancha} siempre
+                  como="Cuánta gente entra al Defensores. Se llena bajando el precio de la entrada y ganando; de visitante no cuenta." />
+                <ParteConComo etiqueta="Físico" valor={ovr.partes.piernas}
+                  como="Cómo llegan de piernas. Se sube rotando: el que juega jueves y domingo llega fundido al segundo." />
+                <ParteConComo etiqueta="Fuera de puesto" valor={ovr.partes.puestos}
+                  como="Lo que perdés por poner gente donde no juega. Se arregla armando el once con la formación que le calza al plantel." />
+                <ParteConComo etiqueta="El viaje" valor={ovr.partes.viaje}
+                  como="El vuelo y la altura cuando jugás afuera. Se recorta viajando con días de anticipación, que se elige antes del partido." />
+                <div className="mt-2 flex items-baseline justify-between rounded-lg px-2.5 py-2"
+                     style={{ background: "var(--carbon-alto)" }}>
+                  <span className="text-[11px] font-bold">Nivel para el partido</span>
+                  <span className="num text-[16px] font-extrabold">
+                    {Math.round(ovr.partes.total)}
+                  </span>
+                </div>
               </div>
             )}
-            <div className="mt-3 text-[9px] uppercase tracking-[0.16em]" style={{ color: "var(--apagado)" }}>
-              {ayuda === "ovr" ? "Cómo se sube" : "Qué la mueve"}
-            </div>
-            <ul className="mt-1.5">
-              {AYUDAS[ayuda].mueve.map((m, i) => (
-                <li key={i} className="mb-1 flex gap-2 text-[11px] leading-snug"
-                    style={{ color: "var(--tenue)" }}>
-                  <span style={{ color: "var(--apagado)" }}>·</span>{m}
-                </li>
-              ))}
-            </ul>
+            {AYUDAS[ayuda].mueve.length > 0 && (<>
+              <div className="mt-3 text-[9px] uppercase tracking-[0.16em]"
+                   style={{ color: "var(--apagado)" }}>
+                Qué la mueve
+              </div>
+              <ul className="mt-1.5">
+                {AYUDAS[ayuda].mueve.map((m, i) => (
+                  <li key={i} className="mb-1 flex gap-2 text-[11px] leading-snug"
+                      style={{ color: "var(--tenue)" }}>
+                    <span style={{ color: "var(--apagado)" }}>·</span>{m}
+                  </li>
+                ))}
+              </ul>
+            </>)}
           </div>
         </div>
       )}
@@ -738,6 +835,36 @@ function Aporte({ etiqueta, valor }: { etiqueta: string; valor: number }) {
         {n === 0 ? "0" : `${n > 0 ? "+" : "−"}${Math.abs(n)}`}
       </span>
     </span>
+  );
+}
+
+/**
+ * Una parte del nivel: cuánto pone hoy y cómo se sube.
+ *
+ * El número solo no sirve de nada si no viene con qué hacer al respecto, y la
+ * respuesta es distinta para cada uno: la hinchada se sube con el precio de la
+ * entrada y el físico rotando. Son dos cosas que no tienen nada que ver, y
+ * antes estaban en la misma lista suelta.
+ */
+function ParteConComo({ etiqueta, valor, como, base, siempre }: {
+  etiqueta: string; valor: number; como: string; base?: boolean; siempre?: boolean;
+}) {
+  const n = Math.round(valor * 10) / 10;
+  if (!base && !siempre && Math.abs(n) < 0.05) return null;
+  const color = base ? "var(--blanco)"
+    : n > 0 ? "#5fd08c" : n < 0 ? "#e8695c" : "var(--apagado)";
+  return (
+    <div className="mb-1 rounded-lg px-2.5 py-2" style={{ background: "var(--carbon)" }}>
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="text-[12px] font-bold">{etiqueta}</span>
+        <span className="num shrink-0 text-[14px] font-extrabold" style={{ color }}>
+          {base ? n : n > 0 ? `+${n}` : n < 0 ? `−${Math.abs(n)}` : "0"}
+        </span>
+      </div>
+      <p className="mt-0.5 text-[10px] leading-snug" style={{ color: "var(--tenue)" }}>
+        {como}
+      </p>
+    </div>
   );
 }
 
@@ -788,23 +915,33 @@ const COPAS = {
   },
 } as const;
 
-function CardCopa({ copa, ronda, rival, escudo, onClick }: {
+function CardCopa({ copa, ronda, rival, escudo, cuando, onClick }: {
   copa: keyof typeof COPAS;
-  ronda: string; rival: string | null; escudo?: string; onClick: () => void;
+  ronda: string; rival: string | null; escudo?: string;
+  /** "en 6 días", "mañana", "hoy". */
+  cuando?: string | null;
+  onClick: () => void;
 }) {
   const c = COPAS[copa];
   return (
     <button onClick={onClick}
-      className="relieve relative flex items-center gap-2 overflow-hidden rounded-lg p-2.5 text-left"
+      className="relieve relative flex items-center gap-2 overflow-hidden rounded-lg px-2.5 py-2 text-left"
       style={{ background: c.fondo, boxShadow: `inset 0 0 0 1px ${c.halo}` }}>
       <span className="absolute -left-8 -top-10 h-24 w-28 rounded-full"
             style={{ background: `radial-gradient(closest-side, ${c.halo}, transparent)`,
                      filter: "blur(14px)" }} />
       <span className="relative min-w-0 flex-1">
-        <span className="block text-[9px] uppercase tracking-[0.14em]" style={{ color: c.acento }}>
-          {c.nombre}
+        <span className="flex items-baseline justify-between gap-1">
+          <span className="text-[9px] uppercase tracking-[0.14em]" style={{ color: c.acento }}>
+            {c.nombre}
+          </span>
+          {cuando && (
+            <span className="num shrink-0 text-[9px] font-extrabold" style={{ color: c.acento }}>
+              {cuando}
+            </span>
+          )}
         </span>
-        <span className="apellido mt-1 block truncate text-[19px] leading-none">{ronda}</span>
+        <span className="apellido mt-1 block truncate text-[17px] leading-none">{ronda}</span>
         <span className="mt-0.5 block truncate text-[10px]" style={{ color: "var(--tenue)" }}>
           {rival ? `vs ${rival}` : "sin rival"}
         </span>
@@ -812,7 +949,7 @@ function CardCopa({ copa, ronda, rival, escudo, onClick }: {
       {/* el escudo del rival, grande y al medio: es la cara del cruce */}
       {escudo && (
         <span className="relative shrink-0">
-          <Escudo id={escudo} nombre={rival ?? ""} tam={52} />
+          <Escudo id={escudo} nombre={rival ?? ""} tam={44} />
         </span>
       )}
     </button>
@@ -1107,7 +1244,7 @@ function VistaFixture({ partida, tabla }: {
 }) {
   /* La tabla vivía en una card propia del tablero. Está mejor acá: el que
      mira el fixture es el que quiere saber cómo va el torneo. */
-  const [comp, setComp] = useState<"todo" | "clausura" | "copa" | "tabla">("todo");
+  const [comp, setComp] = useState<"todo" | "clausura" | "copa" | "tabla" | "diario">("todo");
 
   const liga = partidosDeOlimpia().map((p, i) => ({
     clave: `liga-${i}`,
@@ -1162,16 +1299,20 @@ function VistaFixture({ partida, tabla }: {
   });
 
   const eliminado = partida.copa.ronda === "eliminado";
-  const items = (comp === "clausura" ? liga : comp === "copa" ? copa : [...liga, ...copa])
+  const items = (comp === "clausura" ? liga : comp === "copa" ? copa
+    : comp === "diario" || comp === "tabla" ? [] : [...liga, ...copa])
     .sort((a, b) => a.orden.localeCompare(b.orden));
 
   return (
     <>
       <div className="mb-2 flex gap-1">
-        {([["todo", "Todo"], ["clausura", "Clausura"], ["copa", "Copa"], ["tabla", "Tabla"]] as const)
+        {/* El diario dejó la home y vive acá, con el resto de lo que se
+            consulta de vez en cuando y no todos los días. */}
+        {([["todo", "Todo"], ["clausura", "Clausura"], ["copa", "Copa"],
+           ["tabla", "Tabla"], ["diario", "Diario"]] as const)
           .map(([id, texto]) => (
             <button key={id} onClick={() => setComp(id)}
-              className="flex-1 rounded-md py-1.5 text-[10px] font-bold uppercase tracking-wider"
+              className="flex-1 rounded-md py-1.5 text-[9px] font-bold uppercase tracking-wider"
               style={{
                 background: comp === id ? "var(--blanco)" : "var(--carbon)",
                 color: comp === id ? "var(--negro)" : "var(--tenue)",
@@ -1182,8 +1323,9 @@ function VistaFixture({ partida, tabla }: {
       </div>
 
       {comp === "tabla" && <VistaTabla tabla={tabla} />}
+      {comp === "diario" && <VistaBitacora partida={partida} />}
 
-      {comp !== "tabla" && comp !== "clausura" && eliminado && (
+      {comp !== "tabla" && comp !== "diario" && comp !== "clausura" && eliminado && (
         <div className="mb-2 rounded-md px-2.5 py-2 text-[11px]"
              style={{ background: "var(--carbon)", color: "var(--tenue)" }}>
           Olimpia quedó afuera de la Sudamericana.
