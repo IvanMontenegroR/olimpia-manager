@@ -11,7 +11,7 @@ import Escritorio from "@/components/Escritorio.tsx";
 import {
   avanzarUnDia, cargar, cerrarPartido, fichar, ficharEstrella, guardar, guardarEquipo,
   hayPartidoHoy,
-  ofrecerJugador, patearPenal, terminarTanda,
+  atajarPenal, ofrecerJugador, patearPenal, terminarTanda,
   partidaNueva, partidoDe, plantelDe, rechazarEstrella, resolverAsunto, TOTAL_FECHAS,
   type CierrePartido, type Partida,
 } from "@/lib/temporada.ts";
@@ -70,8 +70,10 @@ export default function Page() {
   if (partida.tanda) {
     return (
       <Penales tanda={partida.tanda}
-        onPatear={(id) => setPartida((p) => (p?.tanda
-          ? { ...p, tanda: patearPenal(p.tanda, id) } : p))}
+        onPatear={(id, palo) => setPartida((p) => (p?.tanda
+          ? { ...p, tanda: patearPenal(p.tanda, id, palo) } : p))}
+        onAtajar={(palo) => setPartida((p) => (p?.tanda
+          ? { ...p, tanda: atajarPenal(p.tanda, palo) } : p))}
         /* Cerrar la tanda es lo que sigue la llave: recién ahí se sabe si
            Olimpia pasa, y se dispara el hito de campeón o de eliminado. */
         onCerrar={() => setPartida((p) => (p ? terminarTanda(p) : p))} />

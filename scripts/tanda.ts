@@ -14,7 +14,8 @@
  */
 
 import {
-  estadoTanda, patearPenal, pateadoresLibres, chanceDePenal,
+  estadoTanda, patearPenal, atajarPenal, pateadoresLibres, chanceDePenal,
+  palosDeMiPenal, zonasDeMiArquero,
   partidaNueva, partidoDe, plantelDe, onceTitular, cerrarPartido,
   type Partida, type Tanda,
 } from "../lib/temporada.ts";
@@ -38,14 +39,30 @@ function tandaDePrueba(semilla: string, once?: string[]): Tanda {
   return tras.tanda;
 }
 
-/** Juega una tanda entera eligiendo con la regla que se le pase. */
-function jugar(t: Tanda, elegir: (libres: ReturnType<typeof pateadoresLibres>) => string) {
+/**
+ * Juega una tanda entera con la regla que se le pase.
+ *
+ * `bien` decide si se elige lo mejor o lo peor en cada una de las tres cosas
+ * que hay para decidir: quién patea, a qué palo, y adónde se tira el arquero.
+ */
+function jugar(
+  t: Tanda,
+  elegir: (libres: ReturnType<typeof pateadoresLibres>) => string,
+  bien = true,
+) {
+  const mejorPeor = <T extends { chance: number }>(xs: T[]) =>
+    [...xs].sort((a, b) => (bien ? b.chance - a.chance : a.chance - b.chance))[0];
   let x = t;
   let vueltas = 0;
-  while (!estadoTanda(x).termino && vueltas < 40) {
-    const libres = pateadoresLibres(x);
-    if (!libres.length) break;
-    x = patearPenal(x, elegir(libres));
+  while (!estadoTanda(x).termino && vueltas < 60) {
+    if (estadoTanda(x).meToca) {
+      const libres = pateadoresLibres(x);
+      if (!libres.length) break;
+      const quien = elegir(libres);
+      x = patearPenal(x, quien, mejorPeor(palosDeMiPenal(x, quien)).palo);
+    } else {
+      x = atajarPenal(x, mejorPeor(zonasDeMiArquero(x)).palo);
+    }
     vueltas++;
   }
   return estadoTanda(x);
@@ -57,7 +74,8 @@ const ESTRATEGIAS = {
   "el primero que caiga": (l: ReturnType<typeof pateadoresLibres>) => l[0].id,
 };
 
-console.log(`\n  ${N} tandas por estrategia\n`);
+console.log(`\n  ${N} tandas por estrategia (se decide quién patea, a qué palo,\n` +
+  `  y adónde se tira el arquero en el del rival)\n`);
 const ganadas: Record<string, number> = {};
 for (const [nombre, elegir] of Object.entries(ESTRATEGIAS)) {
   let gana = 0, penales = 0;
@@ -65,7 +83,7 @@ for (const [nombre, elegir] of Object.entries(ESTRATEGIAS)) {
     const t = tandaDePrueba(`t-${i}`);
     const r = jugar(t, nombre === "el primero que caiga"
       ? (l) => l[i % l.length].id
-      : elegir);
+      : elegir, nombre !== "el que peor patea");
     if (r.gana) gana++;
     penales += r.mios + r.suyos;
   }
@@ -98,7 +116,16 @@ console.log(`\n  El mejor del plantel patea al ${Math.round(chanceDePenal(ord[0]
   `(${ord[ord.length - 1].apellido})`);
 
 const fallas: string[] = [];
-const dif = ganadas["el que mejor patea"] - ganadas["el que peor patea"];
+/*
+ * La vara es contra jugarla al azar, no contra jugarla lo peor posible.
+ *
+ * Cuando la única decisión era el pateador, comparar lo mejor contra lo peor
+ * decía algo. Ahora hay tres decisiones por vuelta (quién, a qué palo, y
+ * adónde se tira el arquero), así que elegir siempre lo peor de las tres es un
+ * piso que nadie va a tocar: da 18% y no significa que la tanda esté rota.
+ * Lo que hay que mirar es si prestar atención rinde más que apretar cualquiera.
+ */
+const dif = ganadas["el que mejor patea"] - ganadas["el primero que caiga"];
 /*
  * Y lo que ata esto con la calibración: `engine/temporada.ts`, que es el que
  * dice cuántas Sudamericanas se ganan, resuelve la tanda con un rng.chance(0.5)
@@ -110,8 +137,8 @@ if (Math.abs(ganadas["el que mejor patea"] - 50) > 8) {
   fallas.push(`jugándola bien se gana el ${ganadas["el que mejor patea"].toFixed(1)}%, ` +
     `y balance.ts la calibra como una moneda`);
 }
-if (dif < 3) fallas.push(`elegir bien o mal casi no cambia nada (${dif.toFixed(1)} puntos)`);
-if (dif > 25) fallas.push(`elegir pesa demasiado: la tanda deja de ser una tanda (${dif.toFixed(1)} puntos)`);
+if (dif < 2) fallas.push(`jugarla bien no rinde más que apretar cualquiera (${dif.toFixed(1)} puntos)`);
+if (dif > 12) fallas.push(`elegir pesa demasiado: la tanda deja de ser una tanda (${dif.toFixed(1)} puntos)`);
 if (conTitulares.candidatos.length !== 11) {
   fallas.push(`patean ${conTitulares.candidatos.length} y tendrían que patear los 11 de la cancha`);
 }
@@ -141,7 +168,15 @@ let asimetricas = 0, subitas = 0;
 for (let i = 0; i < 500; i++) {
   const t = tandaDePrueba(`sub-${i}`);
   let x = t, v = 0;
-  while (!estadoTanda(x).termino && v < 40) { x = patearPenal(x, pateadoresLibres(x)[0].id); v++; }
+  while (!estadoTanda(x).termino && v < 60) {
+    if (estadoTanda(x).meToca) {
+      const q = pateadoresLibres(x)[0].id;
+      x = patearPenal(x, q, palosDeMiPenal(x, q)[0].palo);
+    } else {
+      x = atajarPenal(x, zonasDeMiArquero(x)[0].palo);
+    }
+    v++;
+  }
   const mios = x.penales.filter((p) => p.mio).length;
   const suyos = x.penales.filter((p) => !p.mio).length;
   if (mios >= 5 && suyos >= 5) {

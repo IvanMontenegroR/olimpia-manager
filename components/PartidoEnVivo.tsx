@@ -13,6 +13,7 @@ import {
   type PartidoUI,
 } from "@/lib/juego.ts";
 import { LINEA_DE, type Actitud, type Alineacion, type Jugador, type Posicion } from "@/engine/tipos.ts";
+import { chanceDePenal } from "@/lib/temporada.ts";
 import type { Salida } from "./ArmarOnce.tsx";
 import PanelPartido, { type EstadoJugador } from "./PanelPartido.tsx";
 import { onceRival } from "@/engine/rival.ts";
@@ -577,6 +578,17 @@ export default function PartidoEnVivo({
   }, [once, banco, actitud, puestos, ctx, minuto, visibles.length]);
 
   /**
+   * Si esto se puede terminar yendo a los penales.
+   *
+   * Cambia una decisión del final: patean los once que quedan en la cancha, así
+   * que meter a un veterano que patea bien pasa a ser una jugada posible. Sin
+   * el aviso, esa jugada solo la hacía el que ya sabía la regla de memoria.
+   */
+  const puedeIrALosPenales = !!partido.llave
+    && (partido.llave.esVuelta || partido.llave.esFinal)
+    && (partido.llave.globalO + gO) === (partido.llave.globalR + gR);
+
+  /**
    * El global de la llave, con lo de esta noche adentro.
    *
    * Solo en la vuelta: en la ida el global y el marcador son el mismo número y
@@ -923,6 +935,22 @@ export default function PartidoEnVivo({
               : libres.filter((j) => j.posicion !== "ARQ" || libres.length === 1);
 
             return (<>
+              {/*
+                * Cuando el partido se puede ir a penales, quién está en la
+                * cancha al final deja de ser solo una cuestión de piernas:
+                * patean los once que terminan. Ortiz de 66 patea al 79% por
+                * los setenta partidos de Conmebol que tiene encima, y sin este
+                * aviso meterlo faltando cinco minutos era una jugada que solo
+                * podía hacer el que ya sabía cómo funciona el juego por dentro.
+                */}
+              {puedeIrALosPenales && (
+                <p className="mb-2 rounded-lg px-3 py-2 text-[11px] leading-snug"
+                   style={{ background: "color-mix(in srgb, var(--medio) 18%, transparent)",
+                            color: "var(--tenue)" }}>
+                  Con el global empatado esto se puede ir a penales, y patean los
+                  once que terminen la cancha.
+                </p>
+              )}
               {destino === "ARQ" && !hayArquero && (
                 <p className="mb-2 rounded-lg px-3 py-2 text-[11px] leading-snug"
                    style={{ background: "color-mix(in srgb, var(--critico) 20%, transparent)",
@@ -936,6 +964,7 @@ export default function PartidoEnVivo({
                 .map((j) => (
                   <FilaJugador key={j.id} j={j} puesto={destino} cond={j.condicion} ctx={ctx}
                     natural={j.posicion}
+                    penal={puedeIrALosPenales ? chanceDePenal(j) : undefined}
                     onClick={() => {
                       setEntran((e) => ({ ...e, [eligiendoPara]: j.id }));
                       setEligiendoPara(null);
@@ -1088,12 +1117,14 @@ export default function PartidoEnVivo({
 }
 
 function FilaJugador({
-  j, puesto, cond, ctx, onClick, marcado, lesionado, entrante, natural,
+  j, puesto, cond, ctx, onClick, marcado, lesionado, entrante, natural, penal,
 }: {
   j: Jugador; puesto: Posicion; cond: number; ctx: PartidoUI["ctx"];
   onClick: () => void; marcado?: boolean; lesionado?: boolean; entrante?: Jugador;
   /** Su puesto de verdad, cuando el de arriba es el casillero que va a ocupar. */
   natural?: Posicion;
+  /** Cuánto mete de penal, solo cuando el partido se puede ir a la tanda. */
+  penal?: number;
 }) {
   return (
     <button onClick={onClick}
@@ -1110,6 +1141,11 @@ function FilaJugador({
           {" · "}<span style={{ color: colorCondicion(cond) }}>{cond}%</span>
           {lesionado && <span className="ml-1.5 font-bold" style={{ color: "var(--bajo)" }}>LESIONADO</span>}
           {entrante && <span className="ml-1.5" style={{ color: "var(--ok)" }}>→ {entrante.apellido}</span>}
+          {penal !== undefined && (
+            <span className="ml-1.5 num font-bold" style={{ color: "var(--medio)" }}>
+              {Math.round(penal * 100)}% de penal
+            </span>
+          )}
         </span>
       </span>
       {/*

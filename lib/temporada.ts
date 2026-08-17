@@ -137,7 +137,10 @@ export type TipoHito =
   /** Pasaste de ronda en la copa: cuanto más adentro, más grande. */
   | "pasa_ronda";
 
-/** Un penal de la tanda: quién pateó y si la metió. */
+/** Los tres lugares del arco: adónde se patea y adónde se tira el arquero. */
+export type PaloPenal = "izq" | "centro" | "der";
+
+/** Un penal de la tanda: quién pateó, adónde y si la metió. */
 export interface PenalTanda {
   /** Apellido del que patea; vacío si es del rival. */
   quien: string;
@@ -145,6 +148,10 @@ export interface PenalTanda {
   quienId?: string;
   mio: boolean;
   entro: boolean;
+  /** Adónde fue: el palo que elegiste, o adónde se tiró tu arquero. */
+  palo?: PaloPenal;
+  /** En qué punto del arco cayó la del rival, para dibujarla en la barra. */
+  dondeCayo?: number;
 }
 
 /** Uno de los once que terminaron el partido, con lo que patea. */
@@ -171,8 +178,12 @@ export interface Tanda {
   rival: string;
   /** Los once que terminaron el partido: los únicos que pueden patear. */
   candidatos: Pateador[];
-  /** Lo que convierte el rival cada vez. */
+  /** Lo que convierte el rival cada vez, contra un arquero cualquiera. */
   chanceRival: number;
+  /** El tuyo, que es el que se tira adonde vos le digas. */
+  arquero: { apellido: string; numero: number; alcance: number };
+  /** Cuánto tapa el de ellos: es lo que hace que un palo valga más que otro. */
+  alcanceRival: number;
   /** Va adentro de cada tirada, para que dos partidas no pateen igual. */
   semilla: string;
 }
@@ -1254,10 +1265,15 @@ function tandaNueva(n: Partida, rivalNombre: string, onceFinal: string[]): Tanda
 
   const rival = (RIVALES as { id: string; fuerza: number }[])
     .find((x) => x.id === n.copa.rivalId);
+  /* El arquero que quedó en la cancha: si lo cambiaste, se tira el que pusiste. */
+  const arq = (enCancha.find((j) => j.posicion === "ARQ")
+    ?? plantelDe(n).find((j) => j.posicion === "ARQ" && !j.lesionado_hasta))!;
   return {
     penales: [],
     rival: rivalNombre,
     candidatos,
+    arquero: { apellido: arq.apellido, numero: arq.numero, alcance: alcanceDe(arq.nivel) },
+    alcanceRival: alcanceDe(rival?.fuerza ?? 72),
     chanceRival: clamp(0.73 + ((rival?.fuerza ?? 72) - 70) * 0.004, 0.60, 0.88),
     semilla: `penales-${n.semilla}-${n.copa.ronda}-${n.dia}-${n.copa.rivalId}` +
       `-${n.resultados.length}-${n.hinchada}-${n.ambiente}-${n.dineroUsd}`,
@@ -1303,34 +1319,186 @@ export function estadoTanda(t: Tanda) {
 }
 
 /**
- * Patea el que elegiste, y el rival contesta.
+ * El arco, partido en tres.
  *
- * Los dos penales de la vuelta se resuelven juntos porque no hay nada que
- * decidir entre uno y otro: se elige pateador y se mira. La tirada del rival
- * queda adentro de la misma llamada para que la semilla no dependa de cuántas
- * veces se dibujó la pantalla.
+ * Los mismos tres palos que el penal del partido, para que quien ya jugó un
+ * penal en el minuto 70 no tenga que aprender otro idioma en la tanda.
  */
-export function patearPenal(t: Tanda, jugadorId: string): Tanda {
+export const PALOS: PaloPenal[] = ["izq", "centro", "der"];
+
+/**
+ * El modelo, que es el mismo para los dos lados del arco.
+ *
+ * El arco son tres pedazos. El que patea elige uno y el arquero adivina otro.
+ * Si no coinciden es gol; si coinciden, la ataja según cuánto de ese pedazo
+ * alcanza a cubrir. Un arquero de 82 tapa casi todo el pedazo al que se tira;
+ * uno de 62, la mitad.
+ *
+ * Lo que hace que haya algo para leer es que el que patea tiene una querencia:
+ * este penal la va a buscar más de un lado, y eso se ve en los porcentajes. La
+ * decisión entonces no es "elegí el número más grande" sino la de verdad:
+ * ¿me tiro adonde la suele poner, o adonde llego mejor?
+ */
+const QUERENCIA = 0.46, OTROS = 0.27;
+
+/** Qué pedazo busca el que patea en ESTE penal, y cuánto busca cada uno. */
+function querencias(semilla: string, vuelta: number, mio: boolean): Record<PaloPenal, number> {
+  const r = new Rng(`${semilla}-querencia-${vuelta}-${mio ? "yo" : "el"}`);
+  const favorito = PALOS[Math.floor(r.next() * PALOS.length)];
+  return {
+    izq: favorito === "izq" ? QUERENCIA : OTROS,
+    centro: favorito === "centro" ? QUERENCIA : OTROS,
+    der: favorito === "der" ? QUERENCIA : OTROS,
+  };
+}
+
+/** Cuánto tapa un arquero de este nivel, de palo a palo. */
+function alcanceDe(nivel: number): number {
+  return clamp(0.166 + (nivel - 60) * 0.0075, 0.083, 0.35);
+}
+
+/**
+ * Qué parte del pedazo cubre el arquero si adivina.
+ *
+ * El medio se cubre mejor quedándose parado que tirándose a un palo, que es
+ * por qué a veces conviene no moverse.
+ */
+function cobertura(alcance: number, palo: PaloPenal): number {
+  /*
+   * El 1.9 no es decorativo: es lo que hace que la cuenta cierre. La atajada
+   * más probable tiene que quedar por debajo del 23%, porque si no `alArco`
+   * (que se despeja del total que convierte el rival) daría más de uno y
+   * habría que recortarlo, y ahí el arquero pasaría a atajar más de lo que el
+   * juego tiene calibrado. Con esto, un arquero de 73 cubre la mitad del
+   * pedazo al que se tira.
+   */
+  return Math.min(0.95, alcance * 1.9 * (palo === "centro" ? 1.15 : 1));
+}
+
+/**
+ * Adónde se tira tu arquero, y qué chance tiene con cada elección.
+ *
+ * La barra es el arco entero y el verde es lo que cubre: la misma que el penal
+ * en contra del partido, para no tener dos idiomas para lo mismo.
+ */
+export function zonasDeMiArquero(t: Tanda) {
+  const vuelta = t.penales.filter((p) => !p.mio).length;
+  const busca = querencias(t.semilla, vuelta, false);
+  const castigo = vuelta >= RONDAS_TANDA ? 0.92 : 1;
+
+  /*
+   * `chanceRival` es lo que el rival convierte, y ya trae adentro las atajadas
+   * de un arquero cualquiera. Acá se abre en dos: cuánto la mete al arco y
+   * cuánto se la tapan. Se escala contra la MEJOR elección, no contra el
+   * promedio, porque el que juega bien elige la mejor: así el rival convierte
+   * lo de siempre cuando adivinás bien, y más cuando adivinás mal.
+   */
+  const cruda = (palo: PaloPenal) => busca[palo] * cobertura(t.arquero.alcance, palo);
+  const mejor = Math.max(...PALOS.map(cruda));
+  const alArco = clamp((t.chanceRival * castigo) / (1 - mejor), 0.5, 0.99);
+
+  return PALOS.map((palo) => {
+    const ancho = cobertura(t.arquero.alcance, palo) / 3;
+    const centro = palo === "izq" ? 1 / 6 : palo === "der" ? 5 / 6 : 0.5;
+    return {
+      palo,
+      desde: Math.max(0, centro - ancho / 2),
+      hasta: Math.min(1, centro + ancho / 2),
+      /** Lo que de verdad ataja: que la tire al arco, que la busque ahí y que llegue. */
+      chance: alArco * cruda(palo),
+      alArco,
+      busca: busca[palo],
+    };
+  });
+}
+
+/**
+ * Adónde patea el tuyo, y cuánto vale cada palo.
+ *
+ * Los tres se escalan para que el MEJOR dé exactamente lo que dice la ficha
+ * del pateador. Esa es la cuenta con la que está calibrado el juego, y el que
+ * juega bien elige el mejor: si se normalizara contra el promedio, jugar bien
+ * daría de más y la copa se ganaría más seguido de lo que dice `balance.ts`.
+ */
+export function palosDeMiPenal(t: Tanda, jugadorId: string) {
+  const p = t.candidatos.find((x) => x.id === jugadorId);
+  const vuelta = t.penales.filter((x) => x.mio).length;
+  const adivina = querencias(t.semilla, vuelta, true);
+  const base = (p?.chance ?? 0.7) * (vuelta >= RONDAS_TANDA ? 0.92 : 1);
+
+  const crudo = PALOS.map((palo) => ({
+    palo,
+    /* Que el arquero adivine ese pedazo, y que además llegue. */
+    v: 1 - adivina[palo] * cobertura(t.alcanceRival, palo),
+  }));
+  const mejor = Math.max(...crudo.map((x) => x.v));
+  return crudo.map(({ palo, v }) => ({ palo, chance: clamp((base * v) / mejor, 0.05, 0.97) }));
+}
+
+/**
+ * Patea el tuyo, adonde vos le dijiste.
+ *
+ * Antes esto resolvía los dos penales de la vuelta de una sola vez, porque no
+ * había nada que decidir entre uno y otro. Ahora sí lo hay: el del rival lo
+ * ataja tu arquero y adónde se tira lo elegís vos, así que son dos momentos.
+ */
+export function patearPenal(t: Tanda, jugadorId: string, palo: PaloPenal): Tanda {
   const est = estadoTanda(t);
   if (est.termino || !est.meToca) return t;
   const p = t.candidatos.find((x) => x.id === jugadorId);
   if (!p) return t;
 
   const vuelta = t.penales.filter((x) => x.mio).length;
-  const rng = new Rng(`${t.semilla}-${vuelta}-${jugadorId}`);
-  /* En la muerte súbita se patea peor: es el tramo donde se falla. */
-  const castigo = vuelta >= RONDAS_TANDA ? 0.92 : 1;
-  const penales = [...t.penales, {
-    quien: p.apellido, quienId: p.id, mio: true,
-    entro: rng.chance(p.chance * castigo),
-  }];
+  const opcion = palosDeMiPenal(t, jugadorId).find((x) => x.palo === palo)!;
+  const rng = new Rng(`${t.semilla}-${vuelta}-${jugadorId}-${palo}`);
+  return { ...t, penales: [...t.penales, {
+    quien: p.apellido, quienId: p.id, mio: true, palo,
+    entro: rng.chance(opcion.chance),
+  }] };
+}
 
-  /* El rival contesta salvo que la tanda ya se haya terminado con lo tuyo. */
-  const tras = estadoTanda({ ...t, penales });
-  if (!tras.termino) {
-    penales.push({ quien: "", mio: false, entro: rng.chance(t.chanceRival * castigo) });
-  }
-  return { ...t, penales };
+/**
+ * Patea el rival y tu arquero se tira adonde vos le dijiste.
+ *
+ * La pelota cae en algún punto del arco y se ataja si cae adentro de la franja
+ * que cubre el arquero, que es exactamente lo que muestra la barra. Además el
+ * rival puede errarla solo, que es lo que le falta a cualquier tanda para no
+ * ser un duelo de arqueros.
+ */
+export function atajarPenal(t: Tanda, palo: PaloPenal): Tanda {
+  const est = estadoTanda(t);
+  if (est.termino || est.meToca) return t;
+
+  const vuelta = t.penales.filter((p) => !p.mio).length;
+  const z = zonasDeMiArquero(t).find((x) => x.palo === palo)!;
+  const rng = new Rng(`${t.semilla}-suyo-${vuelta}-${palo}`);
+
+  /*
+   * Se resuelve en el mismo orden en que se arma el número de la barra, para
+   * que la barra no pueda mentir: primero si la tira al arco, después a qué
+   * pedazo la busca, y recién ahí si el arquero llega.
+   */
+  const alArco = rng.chance(z.alArco);
+  const busca = rng.next();
+  const aDonde: PaloPenal = busca < z.busca ? palo
+    : busca < z.busca + (1 - z.busca) / 2 ? otroPalo(palo, 0) : otroPalo(palo, 1);
+  const llega = aDonde === palo && rng.chance(cobertura(t.arquero.alcance, palo));
+  const entro = alArco && !llega;
+
+  /* Dónde cayó, para dibujarla sobre el arco. */
+  const centro = aDonde === "izq" ? 1 / 6 : aDonde === "der" ? 5 / 6 : 0.5;
+  const dondeCayo = llega
+    ? z.desde + rng.next() * (z.hasta - z.desde)
+    : clamp(centro + (rng.next() - 0.5) / 3, 0.02, 0.98);
+
+  return { ...t, penales: [...t.penales, {
+    quien: "", mio: false, entro, palo, dondeCayo: alArco ? dondeCayo : undefined,
+  }] };
+}
+
+/** Los otros dos pedazos del arco, en orden, para repartir la querencia. */
+function otroPalo(palo: PaloPenal, i: number): PaloPenal {
+  return PALOS.filter((p) => p !== palo)[i];
 }
 
 /**
@@ -1344,9 +1512,18 @@ export function tandaAutomatica(p: Partida): Partida {
   let n = p;
   let vueltas = 0;
   while (n.tanda && !estadoTanda(n.tanda).termino && vueltas < 40) {
-    const mejor = pateadoresLibres(n.tanda)[0];
-    if (!mejor) break;
-    n = { ...n, tanda: patearPenal(n.tanda, mejor.id) };
+    const t = n.tanda;
+    if (estadoTanda(t).meToca) {
+      const mejor = pateadoresLibres(t)[0];
+      if (!mejor) break;
+      /* El bot patea al palo que más chance da, que es lo que haría cualquiera. */
+      const palo = palosDeMiPenal(t, mejor.id)
+        .sort((a, b) => b.chance - a.chance)[0].palo;
+      n = { ...n, tanda: patearPenal(t, mejor.id, palo) };
+    } else {
+      const palo = zonasDeMiArquero(t).sort((a, b) => b.chance - a.chance)[0].palo;
+      n = { ...n, tanda: atajarPenal(t, palo) };
+    }
     vueltas++;
   }
   return terminarTanda(n);
