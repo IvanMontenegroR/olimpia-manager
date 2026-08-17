@@ -39,6 +39,21 @@ export const ACTITUD: Record<Actitud, { nombre: string; color: string; sobre: st
                        "Rinde el doble si el rival llega cansado" },
 };
 
+/**
+ * Cómo se llama de verdad lo que queda en la cancha: "5-3-1" y no "5-3-2".
+ *
+ * Solo hace falta cuando hay un expulsado, porque ahí sobra un casillero y el
+ * nombre del molde deja de describir lo que se ve.
+ */
+function dibujoDe(slots: Posicion[]): string {
+  const cuenta = { DEF: 0, MED: 0, DEL: 0 };
+  for (const s of slots) {
+    const l = LINEA_DE[s];
+    if (l !== "ARQ") cuenta[l]++;
+  }
+  return [cuenta.DEF, cuenta.MED, cuenta.DEL].filter((n) => n > 0).join("-");
+}
+
 /** Cada tipo de evento con su color y su etiqueta, para que se lea de un golpe. */
 const ESTILO_EVENTO: Record<string, { color: string; etiqueta?: string; fuerte?: boolean }> = {
   gol:            { color: "#3fa76a", etiqueta: "GOL", fuerte: true },
@@ -403,7 +418,16 @@ export default function PartidoEnVivo({
    * ahí: el resto del equipo no se mueve.
    */
   const planDeFormacion = (f: string) => {
-    const slots = MOLDE_DE(f);
+    /*
+     * Con un expulsado hay más casilleros que jugadores, y ahí el dibujo se
+     * podía elegir pero no cambiar: el reparto devolvía diez para once
+     * casilleros y el botón no hacía absolutamente nada, sin decir por qué.
+     * Justo el momento en que uno más quiere reacomodarse.
+     *
+     * Los casilleros vienen ordenados de atrás para adelante, así que sacar
+     * los del final es sacar un delantero, que es como se juega con uno menos.
+     */
+    const slots = MOLDE_DE(f).slice(0, Math.min(once.length, MOLDE_DE(f).length));
     const ids = repartirEnMolde(once, slots, ctx).filter(Boolean) as string[];
     if (ids.length < slots.length) return null;
     const puestosNuevos = new Map<string, Posicion>();
@@ -431,7 +455,11 @@ export default function PartidoEnVivo({
       puestosNuevos.delete(t.j.id);
       puestosNuevos.set(mejor.id, t.slot);
     }
-    return { once: alineado.map((a) => a.j), puestos: puestosNuevos, entran };
+    return {
+      once: alineado.map((a) => a.j), puestos: puestosNuevos, entran,
+      /* Con diez, el 5-3-2 que elegís termina siendo un 5-3-1. Se dice. */
+      dibujo: slots.length === MOLDE_DE(f).length ? null : dibujoDe(slots),
+    };
   };
 
   /**
@@ -468,7 +496,7 @@ export default function PartidoEnVivo({
     }
     setVisibles((v) => [...v, {
       minuto, tipo: "cambio",
-      texto: `Olimpia se para en ${f}.` + (plan.entran.length
+      texto: `Olimpia se para en ${plan.dibujo ?? f}.` + (plan.entran.length
         ? " " + plan.entran.map((x) => `Sale ${x.sale.apellido}, entra ${x.entra.apellido}`).join("; ") + "."
         : ""),
       golesOlimpia: gO, golesRival: gR,
@@ -500,6 +528,7 @@ export default function PartidoEnVivo({
     if (Math.abs(dDf) >= 0.4) {
       chips.push({ texto: `Te llegan ${pct(dDf)}% ${dDf > 0 ? "menos" : "más"}`, bueno: dDf > 0 });
     }
+    if (plan.dibujo) chips.push({ texto: `Queda ${plan.dibujo}`, bueno: false });
     // lo que cuesta, que es parte de la decisión y no un detalle
     if (plan.entran.length) {
       chips.push({
