@@ -11,9 +11,10 @@
 
 import { CUPOS, participantesDelAno, type CupoParaguayo } from "../lib/copas.ts";
 import {
-  esPlaceholder, grupoQueEspera, nombreDe, resolverLlave,
+  dondeEsta, esPlaceholder, grupoQueEspera, nombreDe, resolverLlave,
   sortearLibertadores, sortearSudamericana, type CuadroCopa,
 } from "../lib/sorteo.ts";
+import { ganarLlaveDeCopa, partidaNueva, temporadaSiguiente } from "../lib/temporada.ts";
 
 const fallas: string[] = [];
 const probar = (que: string, ok: boolean) => {
@@ -183,6 +184,34 @@ probar("resolver una llave borra su cartel del cuadro",
 probar("y no toca los otros carteles",
   tras.grupos.flatMap((g) => g.equipos).filter(esPlaceholder).length ===
   lib.grupos.flatMap((g) => g.equipos).filter(esPlaceholder).length - 1);
+
+
+// ------------------- y lo mismo pero pasando por la partida de verdad
+console.log(`\n  === desde la partida: ganar la llave revela el grupo del cartel ===\n`);
+/*
+ * Lo de arriba prueba la función suelta. Esto prueba el camino que recorre el
+ * juego: la partida guarda el cuadro, Olimpia gana su llave y el grupo que se
+ * muestra a pantalla completa tiene que ser el que decía el cartel en enero.
+ */
+{
+  const p0 = temporadaSiguiente({ ...partidaNueva("revela"), fechaActual: 23, torneo: "clausura" as const });
+  for (const torneo of ["libertadores", "sudamericana"] as const) {
+    const cuadro = p0.copas![torneo];
+    const donde = dondeEsta(cuadro, "olimpia");
+    if (!donde.llave) continue;
+    const esperaba = grupoQueEspera(cuadro, donde.llave.id);
+    const p1 = ganarLlaveDeCopa(p0, torneo, donde.llave.id);
+
+    probar(`${torneo}: al ganar la llave queda marcado el grupo`, !!p1.caeElGrupo);
+    probar(`${torneo}: el grupo marcado es el del cartel`,
+      p1.caeElGrupo?.letra === esperaba?.letra);
+    const enElCuadro = p1.copas![torneo].grupos.find((g) =>
+      g.equipos.some((x) => !esPlaceholder(x) && (x as { id: string }).id === "olimpia"));
+    probar(`${torneo}: y en el cuadro Olimpia quedó en ese mismo grupo`,
+      enElCuadro?.letra === esperaba?.letra);
+    console.log(`  ${torneo}: ganó ${donde.llave.id} y entra al Grupo ${p1.caeElGrupo?.letra}`);
+  }
+}
 
 console.log();
 if (fallas.length) {

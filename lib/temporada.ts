@@ -14,7 +14,11 @@ import {
   type PrimerSemestre,
 } from "./anual.ts";
 import { participantesDelAno } from "./copas.ts";
-import { sortearLibertadores, sortearSudamericana, type CuadroCopa } from "./sorteo.ts";
+import {
+  grupoQueEspera, resolverLlave, sortearLibertadores, sortearSudamericana,
+  type CuadroCopa,
+} from "./sorteo.ts";
+import type { Participante } from "./copas.ts";
 import equiposJson from "@/data/equipos_2026.json";
 import fixtureJson from "@/data/fixture_clausura2026_final.json";
 import rivalesJson from "@/data/rivales_internacionales.json";
@@ -321,6 +325,14 @@ export interface Partida {
    * pantalla, el cartel no significaría nada.
    */
   copas?: { libertadores: CuadroCopa; sudamericana: CuadroCopa; vistos: string[] };
+  /**
+   * El grupo que le tocó a Olimpia al ganar una fase previa, hasta que lo mire.
+   *
+   * No es un sorteo nuevo: es el lugar que su cartel ya ocupaba en el cuadro
+   * de enero. Se guarda acá para poder mostrarlo a pantalla completa antes de
+   * seguir, igual que un hito.
+   */
+  caeElGrupo?: { torneo: "libertadores" | "sudamericana"; letra: string; desdeLlave: string } | null;
 
   /**
    * La oportunidad de fichaje que está sobre la mesa, si hay alguna. Tiene
@@ -1887,6 +1899,39 @@ export function temporadaSiguiente(p: Partida): Partida {
       texto: `${r.apellido} se retiró a los ${r.edad}.` });
   }
   return n;
+}
+
+/**
+ * Olimpia ganó una llave de fase previa.
+ *
+ * Se le pone su nombre al cartel en el cuadro, que es lo que hace que el
+ * sorteo de enero valga: si el lugar decía "Ganador F3-2" en el Grupo B,
+ * Olimpia entra al Grupo B. Y si esa llave era la última antes de los grupos,
+ * se deja marcado para mostrarlo a pantalla completa.
+ */
+export function ganarLlaveDeCopa(
+  p: Partida, torneo: "libertadores" | "sudamericana", llave: string,
+): Partida {
+  if (!p.copas) return p;
+  const cuadro = p.copas[torneo];
+  const yo: Participante = {
+    id: "olimpia", nombre: "Olimpia", pais: "PAR",
+    fuerza: ovrDe(p).hoy, fase: "grupos",
+  };
+  const nuevo = resolverLlave(cuadro, llave, yo);
+  const grupo = grupoQueEspera(cuadro, llave);
+
+  return {
+    ...p,
+    copas: { ...p.copas, [torneo]: nuevo } as Partida["copas"],
+    caeElGrupo: grupo
+      ? { torneo, letra: grupo.letra, desdeLlave: llave }
+      : p.caeElGrupo ?? null,
+    bitacora: [...p.bitacora, { dia: p.dia, marca: "victoria" as const,
+      texto: grupo
+        ? `Olimpia ganó la ${llave} y entra al Grupo ${grupo.letra}.`
+        : `Olimpia ganó la ${llave} y sigue a la llave que viene.` }],
+  };
 }
 
 export function terminarTanda(p: Partida): Partida {

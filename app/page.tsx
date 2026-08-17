@@ -8,6 +8,7 @@ import PantallaHito from "@/components/PantallaHito.tsx";
 import FinDeTemporada from "@/components/FinDeTemporada.tsx";
 import Pretemporada from "@/components/Pretemporada.tsx";
 import SorteoCopa from "@/components/SorteoCopa.tsx";
+import CaeElGrupo from "@/components/CaeElGrupo.tsx";
 import Penales from "@/components/Penales.tsx";
 import PartidoEnVivo from "@/components/PartidoEnVivo.tsx";
 import Escritorio from "@/components/Escritorio.tsx";
@@ -97,6 +98,21 @@ export default function Page() {
         onCerrar={() => setPartida((p) => (p ? { ...p, cerrada: true } : p))}
         onSiguiente={() => setPartida((p) => (p ? temporadaSiguiente(p) : p))} />
     );
+  }
+
+  /*
+   * Ganaste la previa y el grupo que te esperaba se destapa. Va antes que el
+   * hito porque es la consecuencia directa del partido que acabás de jugar.
+   */
+  if (partida.caeElGrupo && partida.copas) {
+    const c = partida.caeElGrupo;
+    const grupo = partida.copas[c.torneo].grupos.find((g) => g.letra === c.letra);
+    if (grupo) {
+      return (
+        <CaeElGrupo torneo={c.torneo} grupo={grupo} desdeLlave={c.desdeLlave}
+          onSeguir={() => setPartida((p) => (p ? { ...p, caeElGrupo: null } : p))} />
+      );
+    }
   }
 
   /*
