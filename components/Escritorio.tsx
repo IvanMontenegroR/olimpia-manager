@@ -539,7 +539,7 @@ export default function Escritorio({
             if (!u) return null;
             return (
               <div className="mt-1.5 shrink-0">
-                <LineaBitacora b={u} onClick={() => setVista("bitacora")} />
+                <LineaBitacora b={u} unaLinea onClick={() => setVista("bitacora")} />
               </div>
             );
           })()}
@@ -1476,9 +1476,15 @@ const MARCA: Record<string, { color: string; icono: string; etiqueta: string }> 
  * en gris, así que lo último que pasó se leía distinto según por dónde lo
  * miraras y ni se notaba que era lo mismo que hay adentro de la bitácora.
  */
-function LineaBitacora({ b, onClick }: { b: EntradaDiario; onClick?: () => void }) {
+function LineaBitacora({ b, unaLinea, onClick }: {
+  b: EntradaDiario;
+  /** En la home entra un renglón y se corta; adentro del diario va entero. */
+  unaLinea?: boolean;
+  onClick?: () => void;
+}) {
   const m = b.marca ? MARCA[b.marca] : null;
   const Caja = (onClick ? "button" : "div") as "div";
+  const corte = unaLinea ? " truncate" : "";
 
   // Lo que pasó de verdad va en tarjeta, con su color y su marcador.
   if (m) {
@@ -1505,7 +1511,7 @@ function LineaBitacora({ b, onClick }: { b: EntradaDiario; onClick?: () => void 
           <span className="block text-[8px] uppercase tracking-[0.16em]" style={{ color: m.color }}>
             {m.etiqueta}
           </span>
-          <span className="block truncate text-[11px] leading-snug">{b.texto}</span>
+          <span className={`block text-[11px] leading-snug${corte}`}>{b.texto}</span>
         </span>
         <span className="num shrink-0 text-[9px]" style={{ color: "var(--apagado)" }}>
           {b.dia.slice(8, 10)}/{b.dia.slice(5, 7)}
@@ -1521,7 +1527,7 @@ function LineaBitacora({ b, onClick }: { b: EntradaDiario; onClick?: () => void 
       <span className="num shrink-0" style={{ color: "var(--apagado)" }}>
         {b.dia.slice(8, 10)}/{b.dia.slice(5, 7)}
       </span>
-      <span className="min-w-0 flex-1 truncate" style={{ color: "var(--tenue)" }}>{b.texto}</span>
+      <span className={`min-w-0 flex-1${corte}`} style={{ color: "var(--tenue)" }}>{b.texto}</span>
     </Caja>
   );
 }
