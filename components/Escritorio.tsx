@@ -590,8 +590,11 @@ export default function Escritorio({
                 }}>
                 <Escudo id={partido.rivalId} nombre={partido.rivalNombre} tam={30} />
                 <span className="min-w-0 flex-1 text-left">
+                  {/* Siempre "Hoy se juega". Con la etiqueta de la copa el
+                      rótulo se iba a dos renglones y estiraba el botón, y
+                      además ya lo dice la card de la Sudamericana de arriba. */}
                   <span className="block text-[9px] uppercase tracking-[0.14em] opacity-60">
-                    {esPartidoDeCopa(partido) ? partido.etiqueta : "Hoy se juega"}
+                    Hoy se juega
                   </span>
                   <span className="apellido block truncate text-[14px] leading-tight">
                     {nombreCorto(partido.rivalId, partido.rivalNombre)}
