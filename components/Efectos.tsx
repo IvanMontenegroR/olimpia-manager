@@ -47,6 +47,8 @@ export interface EfectoVisible {
   seVa?: string;
   /** Lo que suma llegar aclimatado, ya medido en nivel. */
   aclimatacion?: number;
+  /** Cuánto menos se cansa el equipo, en porcentaje. */
+  menosCansancio?: number;
   /** Los números del otro desenlace, si la opción era una apuesta. */
   siSaleMal?: EfectoVisible;
 }
@@ -78,6 +80,9 @@ export function chipsDe(e: EfectoVisible): { texto: string; bueno: boolean }[] {
       texto: `${e.dineroUsd > 0 ? "+" : "−"}${miles(Math.abs(e.dineroUsd))}`,
       bueno: e.dineroUsd > 0,
     });
+  }
+  if (e.menosCansancio) {
+    chips.push({ texto: `${e.menosCansancio}% menos cansancio`, bueno: e.menosCansancio > 0 });
   }
   if (e.paciencia) {
     chips.push({ texto: `${signo(e.paciencia)} dirigencia`, bueno: e.paciencia > 0 });

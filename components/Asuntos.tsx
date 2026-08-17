@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import {
-  AFORO, miles, nivelConAclimatacion, nivelSi, ocupacionDe, plantelDe, salioBienLaApuesta,
+  AFORO, menosCansancioPorViajar, miles, nivelConAclimatacion, nivelSi, ocupacionDe,
+  plantelDe, salioBienLaApuesta,
   type Asunto, type Partida,
 } from "@/lib/temporada.ts";
 import type { Efecto } from "@/engine/situaciones.ts";
@@ -288,6 +289,12 @@ function crudas(a: Asunto, p: Partida): OpcionUI[] {
      */
     const base = nivelConAclimatacion(p, 0);
     const gana = (acl: number) => nivelConAclimatacion(p, acl) - base;
+    /*
+     * Y cuánto menos se cansan, que era la otra mitad de lo que paga el plan y
+     * no se veía. En un viaje corto es casi todo lo que da; en La Paz es lo de
+     * menos al lado de lo que recorta la altura.
+     */
+    const menos = (acl: number) => menosCansancioPorViajar(p, acl);
     return [
       { id: "vispera", etiqueta: "Viajar la víspera",
         detalle: altura
@@ -297,12 +304,12 @@ function crudas(a: Asunto, p: Partida): OpcionUI[] {
         detalle: altura
           ? "Media adaptación: la altura pega bastante menos"
           : "El plantel llega descansado",
-        efecto: { dineroUsd: -60_000, aclimatacion: gana(0.55) } },
+        efecto: { dineroUsd: -60_000, aclimatacion: gana(0.55), menosCansancio: menos(0.55) } },
       { id: "semana", etiqueta: "Concentrar en destino",
         detalle: altura
           ? "Adaptación completa, pero una semana lejos de casa pesa adentro"
           : "Llegan enteros, aunque se hace largo",
-        efecto: { dineroUsd: -150_000, ambiente: -3, aclimatacion: gana(1) } },
+        efecto: { dineroUsd: -150_000, ambiente: -3, aclimatacion: gana(1), menosCansancio: menos(1) } },
     ];
   }
 

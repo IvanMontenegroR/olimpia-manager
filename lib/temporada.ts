@@ -5,7 +5,8 @@ import {
   repartirEnMolde, salidaAutomatica, type PartidoUI,
 } from "./juego.ts";
 import {
-  P, clamp, desgloseOvr, factorCondicion, ovrDelOnce, recuperar, type DesgloseOvr,
+  P, clamp, desgastePorPartido, desgloseOvr, factorCondicion, ovrDelOnce, recuperar,
+  type DesgloseOvr,
 } from "@/engine/motor.ts";
 import { Rng } from "@/engine/rng.ts";
 import equiposJson from "@/data/equipos_2026.json";
@@ -1780,6 +1781,27 @@ export function nivelConAclimatacion(p: Partida, aclimatacion: number): number {
   if (!s.once.length) return 0;
   return ovrDelOnce(
     { once: s.once, suplentes: s.suplentes, actitud: "equilibrado", puestos: s.puestos }, ctx);
+}
+
+/**
+ * Cuánto menos se cansan viajando antes, en porcentaje del desgaste total.
+ *
+ * El plan ahorra la mitad del desgaste DEL VUELO, pero el vuelo es una parte
+ * chica de lo que gasta un partido: jugar noventa minutos gasta 36 y un vuelo
+ * a Brasil suma 6.6, o sea el 15%. Así que el ahorro real ronda el 8% y no el
+ * 50%, y decir "la mitad del viaje" sería inflarlo. Esto devuelve lo que de
+ * verdad se ahorra sobre el total, que es lo que se siente en la cancha.
+ */
+export function menosCansancioPorViajar(p: Partida, aclimatacion: number): number {
+  const partido = partidoDe(p);
+  if (!partido) return 0;
+  const j = plantelDe(p).find((x) => x.posicion !== "ARQ");
+  if (!j) return 0;
+  const con = (acl: number) =>
+    desgastePorPartido(j, 90, { ...partido.ctx, aclimatacion: acl }, "equilibrado");
+  const sin = con(0);
+  if (!sin) return 0;
+  return Math.round((1 - con(aclimatacion) / sin) * 100);
 }
 
 /**
