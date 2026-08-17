@@ -5,7 +5,7 @@
  *   npx tsx scripts/eventos.ts [temporadas]
  */
 import {
-  TOTAL_FECHAS, avanzarUnDia, cerrarPartido, ficharEstrella, hayPartidoHoy,
+  TOTAL_FECHAS, avanzarUnDia, cerrarPartido, tandaAutomatica, ficharEstrella, hayPartidoHoy,
   partidaNueva, partidoDe, plantelDe, rechazarEstrella, resolverAsunto,
   type CierrePartido, type Partida,
 } from "../lib/temporada.ts";
@@ -52,6 +52,8 @@ for (let s = 0; s < temporadas; s++) {
         amarillas: [], rojas: [], lesionados: [], goleadores: [],
       };
       p = cerrarPartido(p, partido, c);
+      // el simulador no tiene a nadie que elija pateador: la juega solo
+      if (p.tanda) p = tandaAutomatica(p);
       continue;
     }
     p = avanzarUnDia(p).partida;

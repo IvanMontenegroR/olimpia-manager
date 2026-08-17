@@ -179,12 +179,27 @@ export function generarMercado(
 const clampNivel = (n: number) => Math.max(50, Math.min(78, n));
 
 /** Llegan ofertas por los mejores, que es cuando duele decidir. */
-export function sortearOferta(plantel: Jugador[], semilla: string) {
+/** Cuánto más lo llaman al que pusiste en la lista. */
+export const PESO_TRANSFERIBLE = 4;
+
+export function sortearOferta(plantel: Jugador[], semilla: string, transferibles: string[] = []) {
   const rng = new Rng(`oferta-${semilla}`);
-  const candidatos = plantel.filter((j) => j.nivel >= 63 && !j.lesionado_hasta);
+  const enLista = new Set(transferibles);
+  /*
+   * Al de la lista lo llaman aunque no sea de los mejores: ese es el punto de
+   * ponerlo. Sin esta excepción, listar a un suplente de 61 no servía para
+   * nada porque el corte de nivel lo dejaba afuera del sorteo igual.
+   */
+  const candidatos = plantel.filter(
+    (j) => (j.nivel >= 63 || enLista.has(j.id)) && !j.lesionado_hasta);
   if (!candidatos.length) return null;
 
-  const peso = (j: Jugador) => Math.pow(2, (j.nivel - 60) / 4);
+  /*
+   * Y pesa cuatro veces más. Cuatro y no cien: ofrecerlo hace que suene el
+   * teléfono por él, no que el mercado se olvide de que existe el resto.
+   */
+  const peso = (j: Jugador) =>
+    Math.pow(2, (j.nivel - 60) / 4) * (enLista.has(j.id) ? PESO_TRANSFERIBLE : 1);
   const total = candidatos.reduce((s, j) => s + peso(j), 0);
   let r = rng.next() * total;
   let elegido = candidatos[candidatos.length - 1];
@@ -198,8 +213,10 @@ export function sortearOferta(plantel: Jugador[], semilla: string) {
    */
   const joven = elegido.edad <= 24;
   const dolido = (elegido.animo ?? 70) < 55;
-  const chanceDeQuererse = (joven ? 0.35 : 0.15) + (dolido ? 0.35 : 0);
-  const quiereIrse = rng.chance(Math.min(0.85, chanceDeQuererse));
+  /* Al que pusiste en la lista ya le dijiste que sobra: casi siempre quiere ir. */
+  const chanceDeQuererse = (joven ? 0.35 : 0.15) + (dolido ? 0.35 : 0)
+    + (enLista.has(elegido.id) ? 0.45 : 0);
+  const quiereIrse = rng.chance(Math.min(0.9, chanceDeQuererse));
 
   const base = precioDe(elegido.nivel, elegido.edad);
   return {

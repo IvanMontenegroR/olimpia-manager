@@ -184,6 +184,21 @@ export interface PartidoUI {
   estadio: string;
   ciudad: string;
   etiqueta: string;
+  /**
+   * En qué anda la llave, cuando el partido es de copa.
+   *
+   * Sin esto el partido no sabe que es la vuelta de un cruce: el marcador
+   * mostraba el 1-0 de la noche como si fuera todo, y al terminar decía
+   * "Empate" con la misma cara que un empate de liga, cuando en un mata-mata
+   * un empate te manda a los penales o te deja afuera.
+   */
+  llave?: {
+    /** Lo que va del global ANTES de este partido. */
+    globalO: number;
+    globalR: number;
+    esVuelta: boolean;
+    esFinal: boolean;
+  };
 }
 
 /** Partidos de Olimpia en el Clausura, en orden. */

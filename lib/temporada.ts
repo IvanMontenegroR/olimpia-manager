@@ -141,17 +141,40 @@ export type TipoHito =
 export interface PenalTanda {
   /** Apellido del que patea; vacío si es del rival. */
   quien: string;
+  /** El id, para no dejarlo patear dos veces antes que el resto. */
+  quienId?: string;
   mio: boolean;
   entro: boolean;
 }
 
-/** La tanda completa, para poder verla patada por patada. */
+/** Uno de los once que terminaron el partido, con lo que patea. */
+export interface Pateador {
+  id: string;
+  apellido: string;
+  numero: number;
+  /** La chance de que la meta, de 0 a 1. Es la que decide, no un adorno. */
+  chance: number;
+  /** Por qué patea mejor o peor que el resto, en dos palabras. */
+  nota: string;
+}
+
+/**
+ * La tanda, mientras se juega.
+ *
+ * Antes esto era el resultado ya cocinado: `avanzarLlave` sorteaba los diez
+ * penales de una y la pantalla los pasaba como una película. Lo que decide la
+ * temporada lo miraba el DT desde afuera. Ahora es estado: patea el que vos
+ * elegís, y el que elegís cambia la chance.
+ */
 export interface Tanda {
   penales: PenalTanda[];
-  mios: number;
-  suyos: number;
-  gana: boolean;
   rival: string;
+  /** Los once que terminaron el partido: los únicos que pueden patear. */
+  candidatos: Pateador[];
+  /** Lo que convierte el rival cada vez. */
+  chanceRival: number;
+  /** Va adentro de cada tirada, para que dos partidas no pateen igual. */
+  semilla: string;
 }
 
 export interface Hito {
@@ -207,6 +230,16 @@ export interface Partida {
   tanda?: Tanda | null;
   /** Los que vendiste: se van del plantel y no vuelven. */
   vendidos?: string[];
+  /**
+   * Los que pusiste en la lista de transferibles.
+   *
+   * Vender era algo que te pasaba: llegaba una oferta por el que el sorteo
+   * quisiera y vos decidías sí o no. Un DT que quiere sacarse a alguien de
+   * encima no tiene por qué esperar a que suene el teléfono. Ponerlo en la
+   * lista hace que llamen más seguido y que llamen por él, y cuesta: el tipo
+   * se entera de que no lo querés y se le cae el ánimo.
+   */
+  transferibles?: string[];
 
   /**
    * La oportunidad de fichaje que está sobre la mesa, si hay alguna. Tiene
@@ -357,6 +390,36 @@ export function guardarEquipo(
   return i >= 0 ? equipos.map((x, k) => (k === i ? nuevo : x)) : [...equipos, nuevo];
 }
 
+/** Lo que se le cae el ánimo al que se entera de que lo pusiste en la lista. */
+export const ANIMO_POR_OFRECERLO = 12;
+
+/**
+ * Poner o sacar a alguien de la lista de transferibles.
+ *
+ * Ofrecerlo cuesta: el tipo se entera de que no lo querés y se le cae el
+ * ánimo, que es nivel de verdad en la cancha. Sin ese costo la lista sería
+ * gratis y lo racional sería ofrecer al plantel entero todas las semanas.
+ *
+ * Sacarlo de la lista no le devuelve el ánimo. Ya se enteró.
+ */
+export function ofrecerJugador(p: Partida, id: string): Partida {
+  const lista = p.transferibles ?? [];
+  if (lista.includes(id)) {
+    return { ...p, transferibles: lista.filter((x) => x !== id) };
+  }
+  const e = p.plantel[id];
+  return {
+    ...p,
+    transferibles: [...lista, id],
+    plantel: e
+      ? { ...p.plantel, [id]: { ...e, animo: clamp(e.animo - ANIMO_POR_OFRECERLO, 0, 100) } }
+      : p.plantel,
+    bitacora: [...p.bitacora, { dia: p.dia, marca: "aviso" as const,
+      texto: `${plantelDe(p).find((j) => j.id === id)?.apellido ?? "El jugador"} ` +
+        `quedó en la lista de transferibles.` }],
+  };
+}
+
 /**
  * Un equipo guardado, de vuelta en los casilleros donde lo dejaste.
  *
@@ -418,6 +481,7 @@ export function partidaNueva(semilla: string = semillaNueva()): Partida {
     estrella: null,
     estrellasVistas: [],
     copa: { ronda: "octavos", rivalId: "vasco_da_gama", globalO: 0, globalR: 0, jugadosEnRonda: 0 },
+    transferibles: [],
     ofertas: [],
     fichajes: generarMercado(DIA_INICIAL, 6, [], PLANTEL),
     pendientes: [],
@@ -482,6 +546,14 @@ export function cargar(): Partida {
     p.enReserva ??= PLANTEL.filter((j) => j.reserva).map((j) => j.id);
     p.aclimatacion ??= 0;
     p.hito ??= null;
+    p.transferibles ??= [];
+    /*
+     * Una tanda guardada por una versión anterior no tiene pateadores adentro,
+     * porque antes venía toda sorteada: la pantalla nueva le pediría la lista
+     * de candidatos y se rompería la app en la peor pantalla posible. Se tira
+     * y la llave se resuelve por el global, que es lo que hay.
+     */
+    if (p.tanda && !Array.isArray((p.tanda as Partial<Tanda>).candidatos)) p.tanda = null;
     p.estrella ??= null;
     p.estrellasVistas ??= [];
     p.incorporados ??= [];
@@ -575,6 +647,7 @@ export function partidoCopaDe(p: Partida): PartidoUI | null {
     estadio: esFinal ? "Cancha neutral" : esLocal ? "Defensores del Chaco" : r.estadio,
     ciudad: esFinal ? "sede única" : esLocal ? "Asunción" : r.ciudad,
     etiqueta: `Sudamericana · ${nombreRonda}${esFinal ? "" : c.jugadosEnRonda === 0 ? " ida" : " vuelta"}`,
+    llave: { globalO: c.globalO, globalR: c.globalR, esVuelta: c.jugadosEnRonda === 1, esFinal },
     ctx: {
       fecha: dia,
       competencia: "sudamericana",
@@ -721,6 +794,12 @@ export interface CierrePartido {
   hinchadaExtra?: number;
   /** Lo que le quedó a cada uno por hacerse cargo de un penal, o por errarlo. */
   animoExtra?: Record<string, number>;
+  /**
+   * Los once que terminaron el partido. Son los únicos que pueden patear en la
+   * tanda, como en el fútbol de verdad: sacar al que mejor patea para meter un
+   * central en el minuto 89 ahora te lo cobra la definición.
+   */
+  onceFinal?: string[];
 }
 
 const AMARILLAS_PARA_SUSPENSION = 5;
@@ -1122,67 +1201,163 @@ const RIVALES_POR_RONDA: Record<string, string[]> = {
 };
 
 /**
- * La tanda, jugada de verdad.
+ * Cuánto convierte cada uno desde los doce pasos.
  *
- * Patean los cinco de mejor pie que tenés disponibles, con la misma chance que
- * usa el penal del partido: pesa el nivel, pesa ser definidor y pesan los
- * partidos internacionales, porque en una tanda lo que más falla es la cabeza.
- * Del otro lado el rival convierte según lo que vale.
+ * En una tanda se mete alrededor de tres de cada cuatro, de los dos lados. Las
+ * diferencias entre pateadores existen pero son chicas: por eso las tandas se
+ * parecen a una moneda aunque un equipo sea mejor. Lo que más pesa no es el
+ * nivel sino la cabeza, y eso son los partidos internacionales encima: por eso
+ * un veterano de copas patea mejor que un pibe con mejor ficha.
  */
-function tandaDePenales(n: Partida, rng: Rng): Omit<Tanda, "rival"> {
-  const disponibles = plantelDe(n)
-    .filter((j) => !j.suspendido && !j.lesionado_hasta && !j.reserva);
-  const valor = (j: Jugador) =>
-    j.nivel + (j.rasgos.includes("definidor") ? 8 : 0)
-    + Math.min(6, j.partidos_internacionales * 0.1)
-    - (j.posicion === "ARQ" ? 40 : 0);
-  const pateadores = [...disponibles].sort((a, b) => valor(b) - valor(a)).slice(0, 5);
+export function chanceDePenal(j: Jugador): number {
+  let p = 0.705 + (j.nivel - 65) * 0.004;
+  if (j.rasgos.includes("definidor")) p += 0.05;
+  if (j.rasgos.includes("definicion_irregular")) p -= 0.05;
+  /* Al que ya pateó en una noche así no le tiembla igual. */
+  if (j.rasgos.includes("veterano_de_copas")) p += 0.03;
+  p += Math.min(0.05, j.partidos_internacionales * 0.001);
+  if (j.edad <= 21) p -= 0.05;
+  // al arquero le pedís que patee y patea, pero no es lo suyo
+  if (j.posicion === "ARQ") p -= 0.10;
+  return clamp(p, 0.45, 0.90);
+}
 
-  /*
-   * En una tanda se convierte alrededor de tres de cada cuatro, de los dos
-   * lados. Las diferencias entre pateadores existen pero son chicas: por eso
-   * las tandas se parecen a una moneda aunque un equipo sea mejor. Con las
-   * pendientes de un penal común Olimpia pasaba el 76%, que no es una tanda,
-   * es un trámite.
-   */
-  const chanceMia = (j: Jugador) => {
-    let p = 0.705 + (j.nivel - 65) * 0.004;
-    if (j.rasgos.includes("definidor")) p += 0.05;
-    if (j.rasgos.includes("definicion_irregular")) p -= 0.05;
-    // la experiencia internacional es lo que sostiene en una tanda
-    p += Math.min(0.05, j.partidos_internacionales * 0.001);
-    if (j.edad <= 21) p -= 0.05;
-    return clamp(p, 0.55, 0.90);
-  };
+/** Por qué patea mejor o peor que el resto, en dos palabras. */
+function notaDePenal(j: Jugador): string {
+  if (j.posicion === "ARQ") return "es el arquero";
+  if (j.rasgos.includes("definidor")) return "definidor";
+  if (j.rasgos.includes("definicion_irregular")) return "irregular";
+  if (j.partidos_internacionales >= 40) return `${j.partidos_internacionales} internacionales`;
+  if (j.edad <= 21) return `${j.edad} años`;
+  if (j.edad >= 33) return "veterano";
+  return "";
+}
+
+/**
+ * La tanda recién armada, todavía sin patear.
+ *
+ * Patean los once que terminaron el partido, que es la regla de verdad y hace
+ * que los cambios del final tengan una consecuencia más: si sacaste al que
+ * mejor patea para meter un central, ahora se nota.
+ */
+function tandaNueva(n: Partida, rivalNombre: string, onceFinal: string[]): Tanda {
+  const porId = new Map(plantelDe(n).map((j) => [j.id, j]));
+  const enCancha = onceFinal.map((id) => porId.get(id)).filter(Boolean) as Jugador[];
+  /* Si el partido no dijo quiénes terminaron, se cae a los que estén sanos. */
+  const candidatos = (enCancha.length ? enCancha
+    : plantelDe(n).filter((j) => !j.suspendido && !j.lesionado_hasta && !j.reserva).slice(0, 11))
+    .map((j) => ({
+      id: j.id, apellido: j.apellido, numero: j.numero,
+      chance: chanceDePenal(j), nota: notaDePenal(j),
+    }))
+    .sort((a, b) => b.chance - a.chance);
+
   const rival = (RIVALES as { id: string; fuerza: number }[])
     .find((x) => x.id === n.copa.rivalId);
-  const chanceSuya = clamp(0.73 + ((rival?.fuerza ?? 72) - 70) * 0.004, 0.60, 0.88);
+  return {
+    penales: [],
+    rival: rivalNombre,
+    candidatos,
+    chanceRival: clamp(0.73 + ((rival?.fuerza ?? 72) - 70) * 0.004, 0.60, 0.88),
+    semilla: `penales-${n.semilla}-${n.copa.ronda}-${n.dia}-${n.copa.rivalId}` +
+      `-${n.resultados.length}-${n.hinchada}-${n.ambiente}-${n.dineroUsd}`,
+  };
+}
 
-  const penales: PenalTanda[] = [];
-  let mios = 0, suyos = 0;
-  for (let i = 0; i < 5; i++) {
-    const j = pateadores[i % Math.max(1, pateadores.length)];
-    const mia = j ? rng.chance(chanceMia(j)) : false;
-    if (mia) mios++;
-    penales.push({ quien: j?.apellido ?? "—", mio: true, entro: mia });
+/** Cuántos penales de los cinco de arranque le quedan a cada uno. */
+const RONDAS_TANDA = 5;
 
-    const suya = rng.chance(chanceSuya);
-    if (suya) suyos++;
-    penales.push({ quien: "", mio: false, entro: suya });
+/**
+ * Cómo va la tanda: es todo derivado de los penales pateados, así que no hay
+ * un marcador guardado que se pueda desincronizar de la lista.
+ */
+export function estadoTanda(t: Tanda) {
+  const mios = t.penales.filter((p) => p.mio && p.entro).length;
+  const suyos = t.penales.filter((p) => !p.mio && p.entro).length;
+  const pateeYo = t.penales.filter((p) => p.mio).length;
+  const pateoEl = t.penales.filter((p) => !p.mio).length;
+  /* Se alterna: primero yo, después él. */
+  const meToca = pateeYo === pateoEl;
+
+  const meQuedan = Math.max(0, RONDAS_TANDA - pateeYo);
+  const leQuedan = Math.max(0, RONDAS_TANDA - pateoEl);
+  const enSubita = pateeYo >= RONDAS_TANDA && pateoEl >= RONDAS_TANDA;
+
+  /*
+   * Dentro de los cinco se corta cuando el otro ya no llega aunque meta todos
+   * los que le quedan. Sin esto se pateaban los cinco siempre, incluso 4-0 con
+   * dos por patear: no cambia quién pasa, pero se ven tres penales de adorno.
+   *
+   * En la muerte súbita esa cuenta NO vale, y ahí estaba el error: como los
+   * dos ya patearon sus cinco, "no le quedan" daba cero y meter el sexto
+   * terminaba la tanda sin dejar contestar al rival. Olimpia patea primero,
+   * así que el error regalaba llaves de un lado solo. En la súbita se patea de
+   * a dos y recién con la vuelta completa se mira quién quedó arriba.
+   */
+  const termino = enSubita
+    ? pateeYo === pateoEl && mios !== suyos
+    : mios > suyos + leQuedan || suyos > mios + meQuedan;
+
+  return { mios, suyos, meToca, termino, gana: mios > suyos,
+           ronda: pateeYo + 1, enSubita };
+}
+
+/**
+ * Patea el que elegiste, y el rival contesta.
+ *
+ * Los dos penales de la vuelta se resuelven juntos porque no hay nada que
+ * decidir entre uno y otro: se elige pateador y se mira. La tirada del rival
+ * queda adentro de la misma llamada para que la semilla no dependa de cuántas
+ * veces se dibujó la pantalla.
+ */
+export function patearPenal(t: Tanda, jugadorId: string): Tanda {
+  const est = estadoTanda(t);
+  if (est.termino || !est.meToca) return t;
+  const p = t.candidatos.find((x) => x.id === jugadorId);
+  if (!p) return t;
+
+  const vuelta = t.penales.filter((x) => x.mio).length;
+  const rng = new Rng(`${t.semilla}-${vuelta}-${jugadorId}`);
+  /* En la muerte súbita se patea peor: es el tramo donde se falla. */
+  const castigo = vuelta >= RONDAS_TANDA ? 0.92 : 1;
+  const penales = [...t.penales, {
+    quien: p.apellido, quienId: p.id, mio: true,
+    entro: rng.chance(p.chance * castigo),
+  }];
+
+  /* El rival contesta salvo que la tanda ya se haya terminado con lo tuyo. */
+  const tras = estadoTanda({ ...t, penales });
+  if (!tras.termino) {
+    penales.push({ quien: "", mio: false, entro: rng.chance(t.chanceRival * castigo) });
   }
-  // muerte súbita hasta que uno falle y el otro no
-  let vuelta = 0;
-  while (mios === suyos && vuelta < 8) {
-    const j = pateadores[(5 + vuelta) % Math.max(1, pateadores.length)];
-    const mia = j ? rng.chance(chanceMia(j) * 0.92) : false;
-    if (mia) mios++;
-    penales.push({ quien: j?.apellido ?? "—", mio: true, entro: mia });
-    const suya = rng.chance(chanceSuya * 0.92);
-    if (suya) suyos++;
-    penales.push({ quien: "", mio: false, entro: suya });
-    vuelta++;
+  return { ...t, penales };
+}
+
+/**
+ * La tanda jugada sola, dándosela siempre al que mejor patea.
+ *
+ * Es lo que hace el simulador, que no tiene a nadie que elija, y también el
+ * piso de lo que el juego debería darte: si elegir a mano rindiera menos que
+ * esto, elegir sería un castigo.
+ */
+export function tandaAutomatica(p: Partida): Partida {
+  let n = p;
+  let vueltas = 0;
+  while (n.tanda && !estadoTanda(n.tanda).termino && vueltas < 40) {
+    const mejor = pateadoresLibres(n.tanda)[0];
+    if (!mejor) break;
+    n = { ...n, tanda: patearPenal(n.tanda, mejor.id) };
+    vueltas++;
   }
-  return { penales, mios, suyos, gana: mios > suyos };
+  return terminarTanda(n);
+}
+
+/** A quién le toca patear: los que todavía no patearon en esta tanda. */
+export function pateadoresLibres(t: Tanda): Pateador[] {
+  const usados = new Set(t.penales.filter((p) => p.mio).map((p) => p.quienId));
+  const libres = t.candidatos.filter((c) => !usados.has(c.id));
+  // cuando patearon los once, vuelve a empezar la lista
+  return libres.length ? libres : t.candidatos;
 }
 
 function avanzarLlave(n: Partida, c: CierrePartido, partido: PartidoUI) {
@@ -1199,29 +1374,51 @@ function avanzarLlave(n: Partida, c: CierrePartido, partido: PartidoUI) {
     return;
   }
 
-  const rng = new Rng(`copa-${n.semilla}-${copa.ronda}-${n.dia}`);
-  const rondaJugada = copa.ronda;
   /*
    * Sin gol de visitante y sin alargue: el global empatado va a penales.
    *
-   * La tanda se juega de verdad y se guarda para poder mostrarla. Antes era un
-   * rng.chance(0.5) que decidía la temporada adentro de una línea de bitácora:
-   * salías de la final empatado y te enterabas de que habías quedado afuera
-   * sin ver un solo penal.
+   * Acá se corta. La tanda ya no se sortea de una para después mostrarla como
+   * una película: se deja armada y el juego se detiene hasta que el DT la
+   * juegue. `cerrarLlave` sigue desde donde quedó, con el resultado que salga.
    */
-  const empatados = copa.globalO === copa.globalR;
-  /*
-   * La tanda tiene su propia semilla y lleva adentro cómo te fue la temporada.
-   * Con la semilla de la llave (ronda y día, iguales para todos) la final del
-   * 21 de noviembre daba siempre el mismo 3-4: cualquier partida que llegara
-   * empatada perdía la misma tanda, sin importar lo que hubieras hecho.
-   */
-  const rngTanda = new Rng(
-    `penales-${n.semilla}-${copa.ronda}-${n.dia}-${copa.rivalId}-${copa.globalO}-${copa.globalR}` +
-    `-${n.resultados.length}-${n.hinchada}-${n.ambiente}-${n.dineroUsd}`);
-  const tanda = empatados ? tandaDePenales(n, rngTanda) : null;
-  const pasa = copa.globalO > copa.globalR || (tanda ? tanda.gana : false);
-  if (tanda) n.tanda = { ...tanda, rival: partido.rivalNombre };
+  if (copa.globalO === copa.globalR) {
+    n.tanda = tandaNueva(n, partido.rivalNombre, c.onceFinal ?? []);
+    return;
+  }
+  cerrarLlave(n, copa.globalO > copa.globalR, partido.rivalNombre,
+    `${c.golesOlimpia} - ${c.golesRival}`);
+}
+
+/**
+ * La tanda terminó: se sigue la llave con lo que salió.
+ *
+ * Esto es lo que antes pasaba adentro de `avanzarLlave` en la misma línea en
+ * que se sorteaban los penales. Ahora vuelve por acá cuando el DT terminó de
+ * patear, y de ahí para abajo es exactamente el mismo camino.
+ */
+export function terminarTanda(p: Partida): Partida {
+  if (!p.tanda) return p;
+  const est = estadoTanda(p.tanda);
+  if (!est.termino) return p;
+  const n: Partida = structuredClone(p);
+  const rival = n.tanda!.rival;
+  n.tanda = null;
+  cerrarLlave(n, est.gana, rival, `${est.mios} - ${est.suyos} en penales`);
+  return n;
+}
+
+/**
+ * Lo que pasa con la llave una vez que se sabe quién pasa.
+ *
+ * Está separado de `avanzarLlave` porque hay un camino donde el resultado no
+ * se sabe todavía: el global empatado abre la tanda, el DT la juega y recién
+ * ahí se vuelve por acá.
+ */
+function cerrarLlave(n: Partida, pasa: boolean, rivalNombre: string, cifraFinal: string) {
+  const copa = n.copa;
+  const rng = new Rng(`copa-${n.semilla}-${copa.ronda}-${n.dia}`);
+  const rondaJugada = copa.ronda;
+  const partido = { rivalNombre };
 
   n.bitacora.push({
     dia: n.dia,
@@ -1289,7 +1486,7 @@ function avanzarLlave(n: Partida, c: CierrePartido, partido: PartidoUI) {
       tipo: "campeon_copa",
       titulo: "Campeón de América",
       detalle: `Olimpia le ganó la final a ${partido.rivalNombre} en el Defensores del Chaco.`,
-      cifra: `${c.golesOlimpia} - ${c.golesRival}`,
+      cifra: cifraFinal,
       pie: "la final",
       intensidad: 3,
     };
@@ -1520,10 +1717,18 @@ export function avanzarUnDia(p: Partida): ResultadoAvance {
 
   // Ofertas por los mejores. Estaban en 14% diario, o sea una cada semana, y
   // terminaban siendo casi todo lo que pasaba fuera de la cancha.
+  /*
+   * Ofrecer gente acelera el mercado: con la lista puesta llaman más seguido y
+   * el teléfono descansa menos. Los topes están para que ofrecer a medio
+   * plantel no convierta el juego en una subasta diaria.
+   */
+  const enLista = (n.transferibles ?? []).filter((id) => !(n.vendidos ?? []).includes(id));
+  const espera = Math.max(6, 12 - enLista.length * 2);
+  const chance = 0.05 + Math.min(0.09, enLista.length * 0.03);
   const descansoDeOfertas = n.ultimaOfertaEl
-    ? diasEntre(n.ultimaOfertaEl, n.dia) < 12 : false;
-  if (!n.ofertas.length && !descansoDeOfertas && rng.chance(0.05)) {
-    const o = sortearOferta(plantelDe(n), n.dia);
+    ? diasEntre(n.ultimaOfertaEl, n.dia) < espera : false;
+  if (!n.ofertas.length && !descansoDeOfertas && rng.chance(chance)) {
+    const o = sortearOferta(plantelDe(n), n.dia, enLista);
     if (o) {
       n.ofertas.push({
         id: `of-${n.dia}`, jugadorId: o.jugadorId, club: o.club,
@@ -1539,7 +1744,9 @@ export function avanzarUnDia(p: Partida): ResultadoAvance {
         id: `ofp-${n.dia}`, tipo: "oferta", dia: n.dia,
         titulo: "Llegó una oferta",
         detalle: `${o.club} ofrece ${miles(o.montoUsd)} por ${j.apellido}. ` +
-          (o.quiereIrse
+          (enLista.includes(j.id)
+            ? `Lo tenías en la lista, así que nadie se va a sorprender.`
+            : o.quiereIrse
             ? `${j.apellido} quiere ir: dice que es la chance de su carrera.`
             : `${j.apellido} está cómodo acá y no pidió salir.`),
         datos: { ofertaId: `of-${n.dia}` },

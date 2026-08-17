@@ -157,7 +157,7 @@ for (const [que, p2] of escritorios) {
     renderToStaticMarkup(
       <Escritorio partida={p2} onAvanzar={() => {}} onDirigir={() => {}}
                   onResolver={() => {}} onFichar={() => {}} onReiniciar={() => {}}
-                  onGuardarEquipos={() => {}} onMoverReserva={() => {}}
+                  onGuardarEquipos={() => {}} onMoverReserva={() => {}} onOfrecer={() => {}}
                   onFicharEstrella={() => {}} onRechazarEstrella={() => {}} />,
     );
   });

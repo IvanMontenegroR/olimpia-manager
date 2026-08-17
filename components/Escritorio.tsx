@@ -92,7 +92,7 @@ const AYUDAS: Record<Ayuda, { titulo: string; texto: string; mueve: string[] }> 
 
 export default function Escritorio({
   partida, onAvanzar, onDirigir, onResolver, onFichar, onReiniciar, onGuardarEquipos,
-  onMoverReserva, onFicharEstrella, onRechazarEstrella,
+  onMoverReserva, onOfrecer, onFicharEstrella, onRechazarEstrella,
 }: {
   partida: Partida;
   onAvanzar: () => void;
@@ -100,6 +100,7 @@ export default function Escritorio({
   onResolver: (asuntoId: string, opcionId: string) => void;
   onGuardarEquipos: (e: EquipoGuardado[]) => void;
   onMoverReserva: (id: string, aReserva: boolean) => void;
+  onOfrecer: (id: string) => void;
   onFicharEstrella: () => void;
   onRechazarEstrella: () => void;
   onFichar: (fichajeId: string) => void;
@@ -193,7 +194,7 @@ export default function Escritorio({
           */}
         {vista === "plantel" && (
           <VistaPlantel plantel={plantel} partida={partida} onGuardarEquipos={onGuardarEquipos}
-                        onMoverReserva={onMoverReserva} />
+                        onMoverReserva={onMoverReserva} onOfrecer={onOfrecer} />
         )}
         {vista === "fixture" && <VistaFixture partida={partida} tabla={tabla} />}
         {vista === "mercado" && <Mercado partida={partida} onFichar={onFichar} />}
@@ -904,6 +905,9 @@ const COPAS = {
   },
 } as const;
 
+/** El azul de la Sudamericana, que es el de la card de la pantalla principal. */
+const SUDA = COPAS.sudamericana;
+
 function CardCopa({ copa, ronda, rival, escudo, onClick }: {
   copa: keyof typeof COPAS;
   ronda: string; rival: string | null; escudo?: string;
@@ -1028,12 +1032,14 @@ const SECCIONES = [
   { clave: "reserva", titulo: "Reserva", pie: "subilos con ↑ para poder usarlos" },
 ] as const;
 
-function VistaPlantel({ plantel, partida, onGuardarEquipos, onMoverReserva }: {
+function VistaPlantel({ plantel, partida, onGuardarEquipos, onMoverReserva, onOfrecer }: {
   plantel: ReturnType<typeof plantelDe>;
   partida: Partida;
   onGuardarEquipos: (e: EquipoGuardado[]) => void;
   onMoverReserva: (id: string, aReserva: boolean) => void;
+  onOfrecer: (id: string) => void;
 }) {
+  const enVenta = new Set(partida.transferibles ?? []);
   const orden = ["ARQ", "DEF", "MED", "DEL"];
   const [pestana, setPestana] = useState<"lista" | "equipos">("lista");
   const [ficha, setFicha] = useState<string | null>(null);
@@ -1105,6 +1111,11 @@ function VistaPlantel({ plantel, partida, onGuardarEquipos, onMoverReserva }: {
                   {" · "}<span className="num">{fuera}</span> {fuera === 1 ? "baja" : "bajas"}
                 </span>
               )}
+              {enVenta.size > 0 && (
+                <span style={{ color: "var(--ladrillo)" }}>
+                  {" · "}<span className="num">{enVenta.size}</span> en venta
+                </span>
+              )}
             </span>
             <span style={{ color: "var(--apagado)" }}>tocá a uno para ver su ficha</span>
           </div>
@@ -1164,6 +1175,10 @@ function VistaPlantel({ plantel, partida, onGuardarEquipos, onMoverReserva }: {
                     <span className="ml-1.5 rounded px-1 text-[8px] font-extrabold"
                           style={{ background: "#3fa76a", color: "#0a120d" }}>S18</span>
                   )}
+                  {enVenta.has(j.id) && (
+                    <span className="ml-1.5 rounded px-1 text-[8px] font-extrabold uppercase"
+                          style={{ background: "var(--ladrillo)", color: "#0a120d" }}>En venta</span>
+                  )}
                 </span>
                 <span className="text-[9px]" style={{ color: "var(--apagado)" }}>
                   {j.edad} años · {e?.minutos ?? 0} min
@@ -1201,6 +1216,8 @@ function VistaPlantel({ plantel, partida, onGuardarEquipos, onMoverReserva }: {
         const j = plantel.find((x) => x.id === ficha);
         return j ? (
           <FichaJugador jugador={j} estado={partida.plantel[j.id]} ctx={ctxFicha}
+                        enVenta={enVenta.has(j.id)}
+                        onOfrecer={() => onOfrecer(j.id)}
                         onCerrar={() => setFicha(null)} />
         ) : null;
       })()}
@@ -1343,16 +1360,23 @@ function VistaFixture({ partida, tabla }: {
             : r.golesOlimpia === r.golesRival ? "#8fa396" : "#c0392b"
           : null;
         const esCopa = p.competencia === "copa";
+        /*
+          * La copa se pintaba de dorado acá y de azul en la pantalla
+          * principal, o sea que la misma llave se leía como dos torneos
+          * distintos según por dónde entraras. El dorado es de la
+          * Libertadores; la Sudamericana es azul en todos lados.
+          */
         return (
           <div key={p.clave} className="mb-1 flex items-center gap-2 rounded-md px-2 py-1.5"
             style={{
               background: p.esProximo
                 ? "color-mix(in srgb, #ffffff 15%, var(--carbon))"
-                : esCopa ? "color-mix(in srgb, #d9a832 10%, var(--carbon))" : "var(--carbon)",
+                : esCopa ? SUDA.fondo : "var(--carbon)",
+              boxShadow: esCopa && !p.esProximo ? `inset 0 0 0 1px ${SUDA.halo}` : undefined,
               opacity: r ? 0.75 : esCopa && eliminado ? 0.4 : 1,
             }}>
             <span className="num w-8 shrink-0 text-[10px]"
-                  style={{ color: esCopa ? "#d9a832" : "var(--apagado)" }}>
+                  style={{ color: esCopa ? SUDA.acento : "var(--apagado)" }}>
               {p.etiqueta}
             </span>
             <span className="w-4 shrink-0 text-center text-[9px] font-bold"
@@ -1402,8 +1426,9 @@ function VistaCopa({ partida }: { partida: Partida }) {
 
   return (
     <>
-      <div className="mb-3 rounded-xl p-3" style={{ background: "color-mix(in srgb, #d9a832 14%, var(--carbon))" }}>
-        <div className="text-[9px] uppercase tracking-[0.16em]" style={{ color: "#d9a832" }}>
+      <div className="mb-3 rounded-xl p-3"
+           style={{ background: SUDA.fondo, boxShadow: `inset 0 0 0 1px ${SUDA.halo}` }}>
+        <div className="text-[9px] uppercase tracking-[0.16em]" style={{ color: SUDA.acento }}>
           Copa Sudamericana 2026
         </div>
         <div className="apellido mt-1 text-[18px]">
@@ -1425,7 +1450,8 @@ function VistaCopa({ partida }: { partida: Partida }) {
         return (
           <div key={r} className="mb-1.5 rounded-lg p-2.5"
                style={{
-                 background: actual ? "color-mix(in srgb, #d9a832 18%, var(--carbon))" : "var(--carbon)",
+                 background: actual ? SUDA.fondo : "var(--carbon)",
+                 boxShadow: actual ? `inset 0 0 0 1px ${SUDA.halo}` : undefined,
                  opacity: !actual && !pasada && c.ronda !== "eliminado" ? 0.55 : 1,
                }}>
             <div className="flex items-center gap-2">
@@ -1443,7 +1469,7 @@ function VistaCopa({ partida }: { partida: Partida }) {
               )}
               {actual && c.ronda !== "eliminado" && (
                 <span className="rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase"
-                      style={{ background: "#d9a832", color: "#0a120d" }}>Ahora</span>
+                      style={{ background: SUDA.acento, color: "#0a120d" }}>Ahora</span>
               )}
             </div>
           </div>

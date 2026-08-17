@@ -11,6 +11,7 @@ import Escritorio from "@/components/Escritorio.tsx";
 import {
   avanzarUnDia, cargar, cerrarPartido, fichar, ficharEstrella, guardar, guardarEquipo,
   hayPartidoHoy,
+  ofrecerJugador, patearPenal, terminarTanda,
   partidaNueva, partidoDe, plantelDe, rechazarEstrella, resolverAsunto, TOTAL_FECHAS,
   type CierrePartido, type Partida,
 } from "@/lib/temporada.ts";
@@ -69,7 +70,11 @@ export default function Page() {
   if (partida.tanda) {
     return (
       <Penales tanda={partida.tanda}
-        onCerrar={() => setPartida((p) => (p ? { ...p, tanda: null } : p))} />
+        onPatear={(id) => setPartida((p) => (p?.tanda
+          ? { ...p, tanda: patearPenal(p.tanda, id) } : p))}
+        /* Cerrar la tanda es lo que sigue la llave: recién ahí se sabe si
+           Olimpia pasa, y se dispara el hito de campeón o de eliminado. */
+        onCerrar={() => setPartida((p) => (p ? terminarTanda(p) : p))} />
     );
   }
 
@@ -129,6 +134,7 @@ export default function Page() {
       onGuardarEquipos={(equipos) => setPartida((p) => (p ? { ...p, equipos } : p))}
       onFicharEstrella={() => setPartida((p) => (p ? ficharEstrella(p) : p))}
       onRechazarEstrella={() => setPartida((p) => (p ? rechazarEstrella(p) : p))}
+      onOfrecer={(id) => setPartida((p) => (p ? ofrecerJugador(p, id) : p))}
       onMoverReserva={(id, aReserva) => setPartida((p) => (p ? {
         ...p,
         enReserva: aReserva

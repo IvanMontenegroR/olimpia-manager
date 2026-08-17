@@ -5,7 +5,7 @@ import {
   COORD, TEXTO_ANIMO, animoDe,
   type ContextoPartido, type Jugador, type Posicion,
 } from "@/engine/tipos.ts";
-import type { EstadoPlantel } from "@/lib/temporada.ts";
+import { ANIMO_POR_OFRECERLO, type EstadoPlantel } from "@/lib/temporada.ts";
 import Dorsal from "./Dorsal.tsx";
 
 /** Los puestos que existen en alguna formación, para no listar los trece. */
@@ -36,11 +36,14 @@ const EXPLICA_RASGO: Record<string, string> = {
 };
 
 export default function FichaJugador({
-  jugador, estado, ctx, onCerrar,
+  jugador, estado, ctx, enVenta, onOfrecer, onCerrar,
 }: {
   jugador: Jugador;
   estado: EstadoPlantel | undefined;
   ctx: ContextoPartido;
+  /** Si está en la lista de transferibles. Sin `onOfrecer` no se muestra nada. */
+  enVenta?: boolean;
+  onOfrecer?: () => void;
   onCerrar: () => void;
 }) {
   const j = jugador;
@@ -202,8 +205,35 @@ export default function FichaJugador({
           </>
         )}
 
+        {/*
+          * Ofrecerlo al mercado.
+          *
+          * Va acá y no en la fila del plantel porque tiene un costo y el costo
+          * hay que poder leerlo antes de tocar: el tipo se entera de que no lo
+          * querés y se le cae el ánimo, que en la cancha es nivel. En la lista
+          * queda la etiqueta para verlo de un vistazo.
+          */}
+        {onOfrecer && (
+          <button onClick={onOfrecer}
+            className="mt-3 w-full rounded-lg px-3 py-2.5 text-left"
+            style={{
+              background: enVenta
+                ? "color-mix(in srgb, var(--ladrillo) 20%, var(--carbon))" : "var(--carbon)",
+            }}>
+            <span className="block text-[11px] font-bold uppercase tracking-[0.12em]"
+                  style={{ color: enVenta ? "var(--ladrillo)" : "var(--blanco)" }}>
+              {enVenta ? "Sacarlo de la lista" : "Ponerlo en la lista de transferibles"}
+            </span>
+            <span className="mt-0.5 block text-[10px] leading-snug" style={{ color: "var(--tenue)" }}>
+              {enVenta
+                ? "Dejan de llamar por él. El ánimo que perdió no vuelve"
+                : `Los clubes van a llamar por él. Se entera y pierde ${ANIMO_POR_OFRECERLO} de ánimo`}
+            </span>
+          </button>
+        )}
+
         <button onClick={onCerrar}
-          className="mt-3 w-full rounded-lg py-2.5 text-[11px] font-bold uppercase tracking-[0.14em]"
+          className="mt-1.5 w-full rounded-lg py-2.5 text-[11px] font-bold uppercase tracking-[0.14em]"
           style={{ background: "var(--carbon)", color: "var(--tenue)" }}>
           Cerrar
         </button>

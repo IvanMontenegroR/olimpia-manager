@@ -8,7 +8,7 @@
  */
 
 import {
-  TOTAL_FECHAS, avanzarUnDia, cerrarPartido, fichar, ficharEstrella, hayPartidoHoy,
+  TOTAL_FECHAS, avanzarUnDia, cerrarPartido, tandaAutomatica, fichar, ficharEstrella, hayPartidoHoy,
   partidaNueva, partidoDe, plantelDe, rechazarEstrella, resolverAsunto, tablaDe,
   type CierrePartido, type Partida,
 } from "../lib/temporada.ts";
@@ -157,7 +157,9 @@ function jugar(p: Partida, rng: Rng, semilla: number): Partida {
     goleadores: [rng.elegir(jugadores).id],
     hinchadaExtra: rng.chance(0.2) ? 9 : 0,
   };
-  return cerrarPartido(p, partido, c);
+  const tras = cerrarPartido(p, partido, c);
+  // el bot no elige pateador: la tanda se juega sola con el mejor disponible
+  return tras.tanda ? tandaAutomatica(tras) : tras;
 }
 
 if (fallas.length) {

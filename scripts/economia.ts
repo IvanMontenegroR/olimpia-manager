@@ -9,7 +9,7 @@
  */
 
 import {
-  TOTAL_FECHAS, avanzarUnDia, cerrarPartido, fichar, ficharEstrella, hayPartidoHoy,
+  TOTAL_FECHAS, avanzarUnDia, cerrarPartido, tandaAutomatica, fichar, ficharEstrella, hayPartidoHoy,
   partidaNueva, partidoDe, plantelDe, rechazarEstrella, resolverAsunto,
   type CierrePartido, type Partida,
 } from "../lib/temporada.ts";
@@ -88,6 +88,7 @@ for (let s = 0; s < temporadas; s++) {
         amarillas: [], rojas: [], lesionados: [], goleadores: [],
       };
       p = cerrarPartido(p, m, c);
+      if (p.tanda) p = tandaAutomatica(p);
       registrar(m.ctx.esLocal ? "recaudación de local" : "premios y visitante", p.dineroUsd);
       continue;
     }

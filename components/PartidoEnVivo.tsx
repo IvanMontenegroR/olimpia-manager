@@ -576,6 +576,43 @@ export default function PartidoEnVivo({
     return { mio: Math.round(mio), suyo: Math.round(suyo) };
   }, [once, banco, actitud, puestos, ctx, minuto, visibles.length]);
 
+  /**
+   * El global de la llave, con lo de esta noche adentro.
+   *
+   * Solo en la vuelta: en la ida el global y el marcador son el mismo número y
+   * mostrarlo dos veces no agrega nada.
+   */
+  const global = partido.llave?.esVuelta
+    ? { o: partido.llave.globalO + gO, r: partido.llave.globalR + gR }
+    : null;
+
+  /**
+   * Cómo termina esto, dicho en el idioma de la competencia.
+   *
+   * En la liga un empate es un empate y se reparten los puntos. En un
+   * mata-mata no existe: o el global te deja adentro, o te deja afuera, o
+   * empata y hay que ir a los penales. Decir "Empate" en la vuelta de unos
+   * octavos es decirle al jugador algo que no pasó.
+   */
+  const cierre = (() => {
+    const ll = partido.llave;
+    if (!ll) {
+      return gO > gR ? { texto: "Victoria", color: "var(--ok)" }
+        : gO < gR ? { texto: "Derrota", color: "var(--critico)" }
+        : { texto: "Empate", color: "var(--tenue)" };
+    }
+    // en la ida no se define nada: lo que importa es con qué te vas a la vuelta
+    if (!ll.esVuelta && !ll.esFinal) {
+      return gO > gR ? { texto: "Se gana la ida", color: "var(--ok)" }
+        : gO < gR ? { texto: "Hay que darla vuelta", color: "var(--critico)" }
+        : { texto: "Todo se define en la vuelta", color: "var(--tenue)" };
+    }
+    const o = (global?.o ?? gO), r = (global?.r ?? gR);
+    if (o > r) return { texto: ll.esFinal ? "CAMPEÓN" : "Pasa Olimpia", color: "var(--ok)" };
+    if (o < r) return { texto: "Olimpia queda afuera", color: "var(--critico)" };
+    return { texto: "Se define por penales", color: "var(--medio)" };
+  })();
+
   // Cuánto mejor es Olimpia que el rival hoy, normalizado. Sesga el pulso para
   // que un partido contra Rubio Ñu no se vea igual que uno contra Cerro.
   const tendencia = useMemo(() => {
@@ -672,6 +709,8 @@ export default function PartidoEnVivo({
       // los golazos de los momentos levantan a la gente más allá del resultado
       hinchadaExtra: hinchadaPorGolazos.current,
       animoExtra: animoPorPenales.current,
+      // los que quedaron en la cancha: son los que patean la tanda
+      onceFinal: once.map((j) => j.id),
     };
   };
 
@@ -722,6 +761,21 @@ export default function PartidoEnVivo({
                  style={{ color: "var(--tenue)" }}>
               {Math.min(minuto, 90)}'
             </div>
+            {/* En la vuelta, el marcador de la noche no dice quién pasa: lo
+                dice el global. Va abajo y chico porque lo que se sigue jugada
+                a jugada es el partido, pero tiene que estar a la vista. */}
+            {global && (
+              <div className="num mt-1 rounded px-1.5 py-0.5 text-[10px] font-extrabold leading-none"
+                   style={{
+                     background: global.o > global.r ? "color-mix(in srgb, var(--cesped) 26%, transparent)"
+                       : global.o < global.r ? "color-mix(in srgb, var(--ladrillo) 26%, transparent)"
+                       : "var(--linea)",
+                     color: global.o > global.r ? "var(--cesped)"
+                       : global.o < global.r ? "var(--ladrillo)" : "var(--tenue)",
+                   }}>
+                global {global.o}-{global.r}
+              </div>
+            )}
           </div>
 
           <div className="flex flex-col items-center gap-1">
@@ -1019,9 +1073,8 @@ export default function PartidoEnVivo({
       {terminado && (
         <div className="border-t px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3"
              style={{ borderColor: "var(--linea)" }}>
-          <div className="apellido mb-2 text-center text-[13px]"
-               style={{ color: gO > gR ? "var(--ok)" : gO < gR ? "var(--critico)" : "var(--tenue)" }}>
-            {gO > gR ? "Victoria" : gO < gR ? "Derrota" : "Empate"}
+          <div className="apellido mb-2 text-center text-[13px]" style={{ color: cierre.color }}>
+            {cierre.texto}
           </div>
           <button onClick={() => onTerminar(armarCierre())}
             className="w-full rounded-lg py-3.5 text-[15px] font-extrabold uppercase tracking-[0.14em]"
