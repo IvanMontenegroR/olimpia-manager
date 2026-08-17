@@ -1,3 +1,4 @@
+import { esCopaInternacional } from "./tipos.ts";
 import { Rng } from "./rng.ts";
 import { P, clamp, desgastePorPartido, nivelEfectivo, recuperar, simularPartido } from "./motor.ts";
 import { armarOnce, CUPO_EXTRANJEROS, esSub18, type Estrategia, MOLDE_433, SUB18_META_MINUTOS } from "./dt.ts";
@@ -7,7 +8,7 @@ const AMARILLAS_PARA_SUSPENSION = 5;
 
 export interface Evento {
   fecha: string;
-  competencia: "clausura" | "sudamericana";
+  competencia: "apertura" | "clausura" | "sudamericana" | "libertadores";
   ronda: string;
   rivalId: string;
   rivalNombre: string;
@@ -122,7 +123,7 @@ export function simularTemporada(
 
   for (let i = 0; i < eventos.length; i++) {
     const ev = eventos[i];
-    if (ev.competencia === "sudamericana" && !sigueEnCopa) continue;
+    if (esCopaInternacional(ev.competencia) && !sigueEnCopa) continue;
 
     const descanso = fechaAnterior ? diasEntre(fechaAnterior, ev.fecha) : 7;
     for (const j of plantel) {

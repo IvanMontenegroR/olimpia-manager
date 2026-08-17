@@ -1,7 +1,7 @@
 import { Rng } from "./rng.ts";
 import {
   COORD, LINEA_DE,
-  aprieta,
+  aprieta, esCopaInternacional,
   type Actitud, type Alineacion, type ContextoPartido, type Jugador,
   type Linea, type Posicion, type ResultadoPartido,
 } from "./tipos.ts";
@@ -442,7 +442,7 @@ export function desgloseOvr(a: Alineacion, ctx: ContextoPartido): DesgloseOvr {
  */
 export function bonoLocalia(ctx: ContextoPartido): number {
   if (!ctx.esLocal || ctx.neutral) return 0;
-  const base = ctx.competencia === "sudamericana" ? P.localiaCopa : P.localiaLiga;
+  const base = esCopaInternacional(ctx.competencia) ? P.localiaCopa : P.localiaLiga;
   const aliento = factorAliento(ctx.hinchada ?? 70, ctx.ocupacion ?? 0.7);
   return Math.max(0, base + (aliento - 1) * P.alientoPeso);
 }
@@ -575,11 +575,11 @@ function marcador(lambda: number, mu: number, rng: Rng): [number, number] {
  * con lo que después pasa en la cancha.
  */
 export function fuerzaRival(ctx: ContextoPartido): number {
-  const localiaRival = ctx.competencia === "sudamericana" ? P.localiaCopaRival : P.localiaLiga;
+  const localiaRival = esCopaInternacional(ctx.competencia) ? P.localiaCopaRival : P.localiaLiga;
   return (
     ctx.rivalFuerza * factorCondicion(ctx.rivalCondicion ?? 100) +
     (ctx.esLocal || ctx.neutral ? 0 : localiaRival) +
-    (ctx.competencia === "sudamericana" ? 0 : P.ajusteRival)
+    (esCopaInternacional(ctx.competencia) ? 0 : P.ajusteRival)
   );
 }
 

@@ -1,5 +1,6 @@
 import { nivelEfectivo } from "./motor.ts";
 import { LINEA_DE, type Alineacion, type ContextoPartido, type Jugador, type Linea, type Posicion } from "./tipos.ts";
+import { esCopaInternacional } from "./tipos.ts";
 
 /** El 4-3-3 con el que arma el DT automático del simulador. */
 export const MOLDE_433: Posicion[] =
@@ -50,7 +51,7 @@ export function armarOnce(
     let v = nivelEfectivo(j, puesto, ctx);
     // Cuánto pesa este partido. Contra Rubio Ñu conviene guardar gente; en la
     // copa se juega con lo mejor que haya aunque llegue tocado.
-    const peso = ctx.competencia === "sudamericana" ? 1
+    const peso = esCopaInternacional(ctx.competencia) ? 1
       : ctx.esClasico ? 0.8
       : ctx.rivalFuerza >= 60 ? 0.55
       : 0.3;
@@ -63,7 +64,7 @@ export function armarOnce(
     const exceso = Math.max(0, (j.minutosRecientes ?? 0) - 300) / 120;
     v -= exceso * 12 * (1 - peso);
     // en copa se prioriza al que aguanta el ambiente
-    if (ctx.competencia === "sudamericana" && !ctx.esLocal &&
+    if (esCopaInternacional(ctx.competencia) && !ctx.esLocal &&
         j.rasgos.includes("veterano_de_copas")) v += 3;
     return v;
   };
@@ -136,7 +137,7 @@ export function armarOnce(
   // De visitante en copa se aguanta y se define en casa. De local en copa se sale
   // a buscarlo, que es donde el Defensores pesa. Salir a buscarlo ya implica
   // apretar arriba: no son dos decisiones distintas.
-  const actitud = ctx.competencia === "sudamericana"
+  const actitud = esCopaInternacional(ctx.competencia)
     ? (ctx.esLocal ? "ofensivo" : "defensivo")
     : (ctx.esLocal && ctx.rivalFuerza < 66 ? "ofensivo" : "equilibrado");
 

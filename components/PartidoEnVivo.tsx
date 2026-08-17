@@ -14,6 +14,7 @@ import {
 } from "@/lib/juego.ts";
 import { LINEA_DE, type Actitud, type Alineacion, type Jugador, type Posicion } from "@/engine/tipos.ts";
 import { chanceDePenal } from "@/lib/temporada.ts";
+import { esCopaInternacional } from "@/engine/tipos.ts";
 import type { Salida } from "./ArmarOnce.tsx";
 import PanelPartido, { type EstadoJugador } from "./PanelPartido.tsx";
 import { onceRival } from "@/engine/rival.ts";
@@ -108,7 +109,7 @@ export default function PartidoEnVivo({
    * del Clausura: se ven jugada por jugada. El resto del torneo son veintidós
    * partidos y adelantarlos es lo normal, así que arrancan al doble.
    */
-  const grande = ctx.competencia === "sudamericana" || ctx.esClasico;
+  const grande = esCopaInternacional(ctx.competencia) || ctx.esClasico;
   const [vel, setVel] = useState(grande ? 0 : 1);
   /*
    * Cinco cambios en tres ventanas, como se juega ahora.
@@ -570,10 +571,10 @@ export default function PartidoEnVivo({
       animo: Math.max(0, Math.min(100, j.animo + (animoPorPenales.current[j.id] ?? 0))),
     }));
     const mio = ovrDelOnce({ once: cansados, suplentes: banco, actitud, puestos }, ctx);
-    const localiaRival = ctx.competencia === "sudamericana" ? P.localiaCopaRival : P.localiaLiga;
+    const localiaRival = esCopaInternacional(ctx.competencia) ? P.localiaCopaRival : P.localiaLiga;
     const suyo = ctx.rivalFuerza * factorCondicion(ctx.rivalCondicion ?? 100)
       + (ctx.esLocal || ctx.neutral ? 0 : localiaRival)
-      + (ctx.competencia === "sudamericana" ? 0 : P.ajusteRival);
+      + (esCopaInternacional(ctx.competencia) ? 0 : P.ajusteRival);
     return { mio: Math.round(mio), suyo: Math.round(suyo) };
   }, [once, banco, actitud, puestos, ctx, minuto, visibles.length]);
 
@@ -629,7 +630,7 @@ export default function PartidoEnVivo({
   // que un partido contra Rubio Ñu no se vea igual que uno contra Cerro.
   const tendencia = useMemo(() => {
     const f = fuerzas(alineacion, ctx);
-    const localiaRival = ctx.competencia === "sudamericana" ? P.localiaCopaRival : P.localiaLiga;
+    const localiaRival = esCopaInternacional(ctx.competencia) ? P.localiaCopaRival : P.localiaLiga;
     const rival = ctx.rivalFuerza + (ctx.esLocal || ctx.neutral ? 0 : localiaRival);
     return Math.max(-1, Math.min(1, ((f.ataque + f.defensa) / 2 - rival) / 12));
   }, [alineacion, ctx]);
@@ -732,7 +733,7 @@ export default function PartidoEnVivo({
   const act = ACTITUD[actitud];
   /** El color del partido, si es de los que valen distinto. */
   const acento = ctx.esClasico ? "#c0392b"
-    : ctx.competencia === "sudamericana" ? "#5fb0e8" : null;
+    : esCopaInternacional(ctx.competencia) ? "#5fb0e8" : null;
   const faltaAsignar = salen.some((s) => !entran[s]);
 
   return (

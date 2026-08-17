@@ -194,3 +194,15 @@ export interface ResultadoPartido {
   amarillas: string[];
   rojas: string[];
 }
+
+/**
+ * Las dos copas de la Conmebol, que para el motor son la misma cosa.
+ *
+ * Mientras la única copa era la Sudamericana, medio código preguntaba
+ * `competencia === "sudamericana"` para decir "esto no es la liga". Al aparecer
+ * la Libertadores esa pregunta pasó a estar mal en veinte lugares a la vez: un
+ * partido de Libertadores contaba como fecha del torneo local, sumaba a la
+ * tabla y adelantaba el calendario.
+ */
+export const esCopaInternacional = (c: string | undefined) =>
+  c === "sudamericana" || c === "libertadores";

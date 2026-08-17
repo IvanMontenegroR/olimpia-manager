@@ -2,6 +2,7 @@ import plantelJson from "@/data/plantel_olimpia_2026.json";
 import equiposJson from "@/data/equipos_2026.json";
 import { partidosDelTorneo } from "./calendario.ts";
 import { nivelEfectivo } from "@/engine/motor.ts";
+import { esCopaInternacional } from "@/engine/tipos.ts";
 import type { Actitud, ContextoPartido, Jugador, Posicion } from "@/engine/tipos.ts";
 
 export const PLANTEL = plantelJson as unknown as Jugador[];
@@ -15,7 +16,7 @@ const EQUIPOS = equiposJson as any[];
  */
 export const CUPO_EXTRANJEROS = 4;
 export const cupoDe = (competencia: string) =>
-  competencia === "sudamericana" ? Infinity : CUPO_EXTRANJEROS;
+  esCopaInternacional(competencia) ? Infinity : CUPO_EXTRANJEROS;
 export const SUB18_DESDE = "2007-01-01";
 export const esSub18 = (j: Jugador) => j.fecha_nacimiento >= SUB18_DESDE;
 

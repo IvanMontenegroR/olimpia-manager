@@ -3,6 +3,7 @@ import { P, clamp, desgasteEnCancha, fuerzas, nivelEfectivo } from "./motor.ts";
 import { generarMomento, type Momento } from "./momentos.ts";
 import type { JugadorRival } from "./rival.ts";
 import { LINEA_DE, type Alineacion, type ContextoPartido, type Jugador, type Posicion , aprieta } from "./tipos.ts";
+import { esCopaInternacional } from "./tipos.ts";
 
 export type TipoEvento =
   | "inicio" | "gol" | "gol_rival" | "ocasion" | "ocasion_rival"
@@ -192,9 +193,9 @@ export function ambienteDe(ctx: ContextoPartido): string {
   if (ctx.esClasico) return "Clásico. Se juega más al roce que al fútbol.";
   if (!ctx.esLocal && ctx.alturaM > 1500)
     return "La pelota vuela distinto acá arriba. A Olimpia le está costando respirar.";
-  if (!ctx.esLocal && ctx.competencia === "sudamericana")
+  if (!ctx.esLocal && esCopaInternacional(ctx.competencia))
     return "El estadio es una caldera. No se escucha nada.";
-  if (ctx.esLocal && ctx.competencia === "sudamericana")
+  if (ctx.esLocal && esCopaInternacional(ctx.competencia))
     return "El Defensores está lleno y empuja. Se siente en la cancha.";
   if (ctx.viajeKm > 300) return "Se nota el viaje: el equipo llega cansado.";
   return "Olimpia sale a la cancha.";
@@ -263,7 +264,7 @@ export function relatarTramo(
     })),
   };
   const f = fuerzas(cansados, ctx);
-  const localiaRival = ctx.competencia === "sudamericana" ? P.localiaCopaRival : P.localiaLiga;
+  const localiaRival = esCopaInternacional(ctx.competencia) ? P.localiaCopaRival : P.localiaLiga;
   const rival = ctx.rivalFuerza + (ctx.esLocal || ctx.neutral ? 0 : localiaRival);
   const parte = Math.max(hasta - desde, 0) / 90;
 
@@ -403,7 +404,7 @@ export function relatarTramo(
    * tiene que además pedirte más: si te frena lo mismo que un miércoles contra
    * Rubio Ñú, la diferencia es solo el escudo.
    */
-  const peso = ctx.esClasico ? 1.9 : ctx.competencia === "sudamericana" ? 1.7 : 1;
+  const peso = ctx.esClasico ? 1.9 : esCopaInternacional(ctx.competencia) ? 1.7 : 1;
   const posibles: [Parameters<typeof generarMomento>[0], number][] = [
     ["penal_favor", 0.09],
     ["penal_contra", 0.08],

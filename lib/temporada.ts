@@ -19,6 +19,13 @@ import {
   type CuadroCopa,
 } from "./sorteo.ts";
 import type { Participante } from "./copas.ts";
+import { esCopaInternacional } from "@/engine/tipos.ts";
+import {
+  NOMBRE_ETAPA, diaDe, etapaInicial, etapaSiguiente, faltanPrevias, grupoDeOlimpia,
+  bajarDeLaLibertadores, llaveDeOlimpia, rivalDeCopa, rivalDeFaseFinal,
+  rivalDeLaEtapa, simularPrevias,
+  tablaDelGrupo, type EtapaCopa,
+} from "./copaEnJuego.ts";
 import equiposJson from "@/data/equipos_2026.json";
 import fixtureJson from "@/data/fixture_clausura2026_final.json";
 import rivalesJson from "@/data/rivales_internacionales.json";
@@ -66,6 +73,19 @@ export interface EstadoCopa {
   globalO: number;
   globalR: number;
   jugadosEnRonda: number;
+  /**
+   * En qué copa y en qué etapa está Olimpia, contra el cuadro sorteado.
+   *
+   * `ronda` es el modelo viejo, que iba de octavos a final con un rival de una
+   * lista. Se queda mientras los guardados del 2026 sigan vivos; del 2027 en
+   * adelante manda esto, que sabe de fases previas y de grupos.
+   */
+  torneo?: "libertadores" | "sudamericana";
+  etapa?: EtapaCopa;
+  /** Cuántos partidos lleva jugados de la etapa. */
+  jugadosEnEtapa?: number;
+  /** Lo que hizo Olimpia en su grupo, para armar la tabla. */
+  grupo?: { rivalId: string; gf: number; gc: number }[];
 }
 
 /** Calendario real de las fases finales, de data/sudamericana_2026.json. */
@@ -731,7 +751,76 @@ export function partidoLigaDe(p: Partida): PartidoUI | null {
   return fixtureDeOlimpia(p).find((x) => x.etiqueta.endsWith(`Fecha ${p.fechaActual}`)) ?? null;
 }
 
+/**
+ * El próximo partido de copa de Olimpia, leído del cuadro.
+ *
+ * Del 2027 en adelante la copa no es una escalera fija: Olimpia arranca donde
+ * la dejó la tabla anual, puede tener que ganar tres llaves antes de los
+ * grupos, y el rival de cada partido sale del cuadro que se sorteó en enero.
+ */
+function partidoDelCuadro(p: Partida): PartidoUI | null {
+  const c = p.copa;
+  const etapa = c.etapa;
+  const torneo = c.torneo;
+  if (!etapa || !torneo || !p.copas) return null;
+  if (etapa === "eliminado" || etapa === "campeon") return null;
+
+  const cuadro = p.copas[torneo];
+  const i = c.jugadosEnEtapa ?? 0;
+  const dia = diaDe(p.ano, etapa, i);
+  /* Un partido atrasado sigue estando: se juega en cuanto se pueda. */
+  if (!dia) return null;
+  /*
+   * Si el rival todavía es un cartel, es que las previas de los demás no se
+   * jugaron: no hay partido hasta que se resuelvan. `avanzarUnDia` las
+   * resuelve al pasar la última fecha de las previas.
+   */
+
+  /* En las fases finales el rival se sortea entre los que siguen vivos. */
+  const cruce = etapa === "octavos" || etapa === "cuartos" || etapa === "semis" || etapa === "final"
+    ? { id: rivalDeFaseFinal(cuadro, etapa, `${p.semilla}-${p.ano}`).id, esLocal: i === 1 }
+    : rivalDeLaEtapa(cuadro, etapa, i);
+  if (!cruce || !cruce.id) return null;
+
+  const r = rivalDeCopa(cruce.id, fuerzaLocal(cruce.id));
+  const esFinal = etapa === "final";
+  const esLocal = !esFinal && cruce.esLocal;
+  /* El play-off nacional de la Sudamericana es a partido único. */
+  const unico = esFinal || (etapa === "fase 1" && torneo === "sudamericana");
+  const nombre = torneo === "libertadores" ? "Libertadores" : "Sudamericana";
+
+  return {
+    rivalId: cruce.id,
+    rivalNombre: r.nombre,
+    estadio: esFinal ? "Cancha neutral" : esLocal ? "Defensores del Chaco" : `Estadio de ${r.nombre}`,
+    ciudad: esFinal ? "sede única" : esLocal ? "Asunción" : "",
+    etiqueta: `${nombre} · ${NOMBRE_ETAPA[etapa]}` +
+      (etapa === "grupos" ? ` · fecha ${i + 1}` : unico ? "" : i === 0 ? " ida" : " vuelta"),
+    llave: etapa === "grupos" || unico ? undefined
+      : { globalO: c.globalO, globalR: c.globalR, esVuelta: i === 1, esFinal },
+    ctx: {
+      fecha: dia,
+      competencia: torneo,
+      esLocal,
+      neutral: esFinal,
+      rivalFuerza: r.fuerza,
+      rivalNombre: r.nombre,
+      viajeKm: esFinal ? 1200 : esLocal ? 0 : r.km,
+      alturaM: esFinal ? 200 : esLocal ? 43 : r.altura,
+      diasDescanso: 3,
+      esClasico: false,
+    },
+  };
+}
+
+/** La fuerza de un club paraguayo, para los play-off nacionales. */
+function fuerzaLocal(id: string): number | undefined {
+  return (EQUIPOS as { id: string; fuerza: number }[]).find((e) => e.id === id)?.fuerza;
+}
+
 export function partidoCopaDe(p: Partida): PartidoUI | null {
+  /* Del 2027 en adelante manda el cuadro. */
+  if (p.copa.etapa && p.copas) return partidoDelCuadro(p);
   const c = p.copa;
   if (c.ronda === "eliminado" || c.ronda === "campeon") return null;
   const cal = CALENDARIO_COPA[c.ronda];
@@ -807,9 +896,24 @@ export function viajeExigente(m: PartidoUI): boolean {
   return !m.ctx.esLocal && (m.ctx.viajeKm >= 800 || m.ctx.alturaM >= 1500);
 }
 
-export const esPartidoDeCopa = (m: PartidoUI | null) => m?.ctx.competencia === "sudamericana";
+export const esPartidoDeCopa = (m: PartidoUI | null) => esCopaInternacional(m?.ctx.competencia);
 
-export const hayPartidoHoy = (p: Partida) => partidoDe(p)?.ctx.fecha === p.dia;
+/**
+ * Si hoy se juega, o si quedó un partido atrasado.
+ *
+ * El `<=` no es un detalle: la liga y la copa comparten calendario y a veces
+ * caen el mismo día. `partidoDe` elige uno solo, se juega ese, el día avanza y
+ * el otro queda con fecha de ayer. Con la comparación exacta ese partido no se
+ * jugaba NUNCA: el torneo se quedaba clavado en esa fecha y el día seguía
+ * corriendo solo, hasta 2029 con el Apertura 2027 sin terminar.
+ *
+ * Con esto, el que quedó atrasado se juega al día siguiente. Es lo que hace la
+ * APF cuando dos cosas chocan: se reprograma, no se borra.
+ */
+export const hayPartidoHoy = (p: Partida) => {
+  const m = partidoDe(p);
+  return !!m && m.ctx.fecha <= p.dia;
+};
 
 /**
  * Qué parte del estadio se llena. Manda el precio: una popular accesible llena
@@ -1071,7 +1175,7 @@ export function ovrDe(p: Partida): OvrDelClub {
   const rival = partidoDe(p)
     ? partido.ctx.rivalFuerza + (ctx.esLocal || ctx.neutral
         ? 0
-        : ctx.competencia === "sudamericana" ? P.localiaCopaRival : P.localiaLiga)
+        : esCopaInternacional(ctx.competencia) ? P.localiaCopaRival : P.localiaLiga)
     : null;
   return { hoy, plantel, rival, partes, ctx,
            once: salida.once, puestos: salida.puestos, formacion: salida.formacion };
@@ -1153,7 +1257,7 @@ export function estadoSub18(p: Partida) {
 
 export function cerrarPartido(p: Partida, partido: PartidoUI, c: CierrePartido): Partida {
   const n: Partida = estructurado(p);
-  const esCopa = partido.ctx.competencia === "sudamericana";
+  const esCopa = esCopaInternacional(partido.ctx.competencia);
   // el plan de viaje valía para este partido y se agota acá
   n.aclimatacion = 0;
 
@@ -1321,7 +1425,8 @@ export function cerrarPartido(p: Partida, partido: PartidoUI, c: CierrePartido):
   }
 
   if (esCopa) {
-    avanzarLlave(n, c, partido);
+    if (n.copa.etapa && n.copas) avanzarPorElCuadro(n, c, partido);
+    else avanzarLlave(n, c, partido);
   } else {
     n.fechaActual = p.fechaActual + 1;
 
@@ -1380,6 +1485,142 @@ export function cerrarPartido(p: Partida, partido: PartidoUI, c: CierrePartido):
     }
   }
   return avanzarUnDia(n).partida;
+}
+
+/**
+ * Avanzar por el cuadro sorteado, que es el camino del 2027 en adelante.
+ *
+ * Tres formas de avanzar según dónde estés, y las tres son distintas:
+ *
+ *   - En una llave se juega ida y vuelta (o un partido solo en el play-off
+ *     nacional) y se suma el global. Si ganás, tu cartel del cuadro pasa a
+ *     tener tu nombre, y si ese cartel estaba en un grupo, se destapa.
+ *   - En el grupo se juegan seis fechas y pasan los dos primeros.
+ *   - En las fases finales, ida y vuelta hasta la final, que es a partido único.
+ */
+function avanzarPorElCuadro(n: Partida, c: CierrePartido, partido: PartidoUI) {
+  const copa = n.copa;
+  const etapa = copa.etapa!;
+  const torneo = copa.torneo!;
+  const i = copa.jugadosEnEtapa ?? 0;
+  copa.jugadosEnEtapa = i + 1;
+
+  const nombre = torneo === "libertadores" ? "Libertadores" : "Sudamericana";
+  const gano = c.golesOlimpia > c.golesRival;
+
+  // ------------------------------------------------------------- el grupo
+  if (etapa === "grupos") {
+    copa.grupo = [...(copa.grupo ?? []),
+      { rivalId: partido.rivalId, gf: c.golesOlimpia, gc: c.golesRival }];
+    n.bitacora.push({ dia: n.dia,
+      marca: gano ? "victoria" : c.golesOlimpia === c.golesRival ? "empate" : "derrota",
+      cifra: `${c.golesOlimpia}-${c.golesRival}`,
+      texto: `${nombre}, fecha ${i + 1} del grupo, contra ${partido.rivalNombre}.` });
+
+    if (copa.jugadosEnEtapa < 6) return;
+
+    const tabla = tablaDelGrupo(n.copas![torneo], copa.grupo, `${n.semilla}-${n.ano}`);
+    const puesto = tabla.findIndex((f) => f.id === "olimpia") + 1;
+    const pasa = puesto > 0 && puesto <= 2;
+    n.bitacora.push({ dia: n.dia, marca: pasa ? "victoria" : "golpe",
+      cifra: `${puesto}°`,
+      texto: `Olimpia terminó ${puesto}° en su grupo de la ${nombre}. ` +
+        (pasa ? "Va a octavos." : "Queda afuera.") });
+    if (!pasa) { cerrarCopa(n, false, nombre, `${puesto}° del grupo`); return; }
+    copa.etapa = "octavos";
+    copa.jugadosEnEtapa = 0;
+    copa.globalO = 0; copa.globalR = 0;
+    n.hito = { tipo: "pasa_ronda", titulo: "A octavos",
+      detalle: `Olimpia terminó ${puesto}° en su grupo de la ${nombre}.`,
+      cifra: `${puesto}°`, pie: "en el grupo", intensidad: 0 };
+    return;
+  }
+
+  // --------------------------------------------------- las llaves y la final
+  copa.globalO += c.golesOlimpia;
+  copa.globalR += c.golesRival;
+
+  const unico = etapa === "final" ||
+    (etapa === "fase 1" && torneo === "sudamericana");
+  if (!unico && copa.jugadosEnEtapa < 2) {
+    n.bitacora.push({ dia: n.dia, texto:
+      `${nombre}, ida: Olimpia ${c.golesOlimpia} - ${c.golesRival} ${partido.rivalNombre}.` });
+    return;
+  }
+
+  /* Empatados van a penales, con la tanda que se juega de verdad. */
+  if (copa.globalO === copa.globalR) {
+    n.tanda = tandaNueva(n, partido.rivalNombre, c.onceFinal ?? []);
+    return;
+  }
+  resolverEtapa(n, copa.globalO > copa.globalR, partido.rivalNombre);
+}
+
+/**
+ * Se resolvió una llave: o seguís, o te fuiste.
+ *
+ * Cuando ganás una fase previa el cuadro pasa a tener tu nombre donde decía tu
+ * cartel, y si ese cartel estaba en un grupo, se destapa a pantalla completa.
+ */
+export function resolverEtapa(n: Partida, pasa: boolean, rivalNombre: string) {
+  const copa = n.copa;
+  const etapa = copa.etapa!;
+  const torneo = copa.torneo!;
+  const nombre = torneo === "libertadores" ? "Libertadores" : "Sudamericana";
+
+  if (!pasa) {
+    n.bitacora.push({ dia: n.dia, marca: "golpe",
+      cifra: `${copa.globalO}-${copa.globalR}`,
+      texto: `${rivalNombre} eliminó a Olimpia en ${NOMBRE_ETAPA[etapa]} de la ${nombre}.` });
+    cerrarCopa(n, false, nombre, NOMBRE_ETAPA[etapa]);
+    return;
+  }
+
+  if (etapa === "final") {
+    cerrarCopa(n, true, nombre, `${copa.globalO} - ${copa.globalR}`);
+    return;
+  }
+
+  /* Si era una fase previa, el cartel del cuadro pasa a decir Olimpia. */
+  const llave = llaveDeOlimpia(n.copas![torneo], etapa);
+  if (llave) {
+    const tras = ganarLlaveDeCopa(n, torneo, llave.id);
+    n.copas = tras.copas;
+    n.caeElGrupo = tras.caeElGrupo;
+    n.bitacora = tras.bitacora;
+  } else {
+    n.bitacora.push({ dia: n.dia, marca: "victoria",
+      cifra: `${copa.globalO}-${copa.globalR}`,
+      texto: `Olimpia pasó a ${NOMBRE_ETAPA[etapaSiguiente(etapa)]} de la ${nombre}.` });
+  }
+
+  copa.etapa = etapaSiguiente(etapa);
+  copa.jugadosEnEtapa = 0;
+  copa.globalO = 0; copa.globalR = 0;
+  copa.grupo = [];
+}
+
+/** El final del camino: campeón o afuera. */
+function cerrarCopa(n: Partida, campeon: boolean, nombre: string, pie: string) {
+  const copa = n.copa;
+  copa.etapa = campeon ? "campeon" : "eliminado";
+  copa.ronda = campeon ? "campeon" : "eliminado";
+  if (campeon) {
+    n.hinchada = clamp(n.hinchada + 12, 0, 100);
+    n.ambiente = clamp(n.ambiente + 8, 0, 100);
+    n.dineroUsd += nombre === "Libertadores" ? 6_000_000 : 2_200_000;
+    if (n.sponsorConBonus) pagarBonus(n, `la ${nombre}`);
+    n.bitacora.push({ dia: n.dia, marca: "titulo",
+      texto: `Olimpia campeón de la Copa ${nombre}.` });
+    n.hito = { tipo: "campeon_copa", titulo: "Campeón de América",
+      detalle: `Olimpia ganó la Copa ${nombre}.`, cifra: pie, pie: "la final",
+      intensidad: 3 };
+  } else {
+    n.hinchada = clamp(n.hinchada - 8, 0, 100);
+    n.ambiente = clamp(n.ambiente - 5, 0, 100);
+    n.hito = { tipo: "eliminado_copa", titulo: `Afuera de la ${nombre}`,
+      detalle: `Olimpia quedó eliminado en ${pie}.`, cifra: pie, pie: "" };
+  }
 }
 
 const SIGUIENTE: Record<string, RondaCopa> = {
@@ -1880,7 +2121,18 @@ export function temporadaSiguiente(p: Partida): Partida {
      * la ronda que le tocó y el resto de la llave se arma como siempre; el
      * cuadro completo con las fases previas de verdad viene con el sorteo.
      */
-    copa: { ronda: "octavos", rivalId: p.copa.rivalId, globalO: 0, globalR: 0, jugadosEnRonda: 0 },
+    /*
+     * Olimpia arranca la copa donde la dejó la tabla anual: puede ser la fase
+     * de grupos o puede ser tres llaves antes. Si no clasificó a ninguna, el
+     * año es solo de liga.
+     */
+    copa: {
+      ronda: "octavos", rivalId: "", globalO: 0, globalR: 0, jugadosEnRonda: 0,
+      torneo: copa?.torneo,
+      etapa: copa ? etapaInicial(copa.torneo === "libertadores" ? libertadores : sudamericana)
+                  : "eliminado",
+      jugadosEnEtapa: 0, grupo: [],
+    },
     /* El Apertura ya no es de otro: lo dirigís vos. */
     semestre: undefined,
     copas: { libertadores, sudamericana, vistos: [] },
@@ -1941,7 +2193,9 @@ export function terminarTanda(p: Partida): Partida {
   const n: Partida = structuredClone(p);
   const rival = n.tanda!.rival;
   n.tanda = null;
-  cerrarLlave(n, est.gana, rival, `${est.mios} - ${est.suyos} en penales`);
+  /* Del 2027 en adelante la tanda define una etapa del cuadro, no una ronda. */
+  if (n.copa.etapa && n.copas) resolverEtapa(n, est.gana, rival);
+  else cerrarLlave(n, est.gana, rival, `${est.mios} - ${est.suyos} en penales`);
   return n;
 }
 
@@ -2106,6 +2360,23 @@ export function avanzarUnDia(p: Partida): ResultadoAvance {
   const rng = new Rng(`dia-${n.semilla}-${n.dia}-${n.fechaActual}`);
 
   /*
+   * Pasadas las fases previas, los carteles del cuadro pasan a tener nombre.
+   *
+   * Las llaves de Olimpia las juega él; las otras treinta se resuelven de una
+   * acá, que es cuando en la realidad ya se jugaron. Hasta que esto no pasa, un
+   * grupo con un cartel adentro tiene una fecha que no se puede jugar.
+   */
+  if (n.copas && n.dia > `${n.ano}-03-18`
+      && (faltanPrevias(n.copas.libertadores) || faltanPrevias(n.copas.sudamericana))) {
+    const semilla = `${n.semilla}-${n.ano}`;
+    const libertadores = simularPrevias(n.copas.libertadores, semilla);
+    /* Y recién ahí bajan a la Sudamericana los que perdieron la fase 3. */
+    const sudamericana = bajarDeLaLibertadores(
+      simularPrevias(n.copas.sudamericana, semilla), libertadores);
+    n.copas = { ...n.copas, libertadores, sudamericana };
+  }
+
+  /*
    * El mercado se renueva cada quince días y se arma contra el plantel que
    * tenés HOY. Antes se sorteaba una sola vez al empezar la partida y del
    * catálogo entero: veías los mismos seis nombres toda la temporada, y la
@@ -2188,14 +2459,14 @@ export function avanzarUnDia(p: Partida): ResultadoAvance {
    */
   if (alPartido === 1 && !n.pendientes.some((a) => a.tipo === "marketing")) {
     const m = partidoDe(n);
-    const especial = !!m?.ctx.esClasico || m?.ctx.competencia === "sudamericana";
+    const especial = !!m?.ctx.esClasico || esCopaInternacional(m?.ctx.competencia);
     if (m?.ctx.esLocal && (especial || n.resultados.length === 0)) {
       n.pendientes.push({
         id: `mkt-${n.dia}`, tipo: "marketing", dia: n.dia,
         titulo: "Precio de la entrada",
         detalle: m.ctx.esClasico
           ? `Mañana es el clásico en ${m.estadio}. La gente va a venir igual. ¿A cuánto se vende?`
-          : m.ctx.competencia === "sudamericana"
+          : esCopaInternacional(m.ctx.competencia)
             ? `Mañana es noche de copa en ${m.estadio}. ¿A cuánto se vende?`
             : `Mañana se juega en ${m.estadio}. Lo que pongas queda para el resto del torneo.`,
       });
