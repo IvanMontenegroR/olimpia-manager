@@ -39,6 +39,18 @@ const ESCALA_MINIMA = 0.62;
  */
 const AIRE = 1.14;
 
+/**
+ * Entre qué profundidades se reparten las líneas, de arco a arco.
+ *
+ * No van de borde a borde: el rectángulo de la cancha está dibujado adentro,
+ * y llevando a los delanteros al 100% el dorsal les quedaba montado sobre la
+ * raya de arriba y a veces la pasaba. Con esto la línea de arriba entra en el
+ * área grande sin tocar la línea de fondo, y el arquero queda parado en su
+ * área chica, que es donde tiene que estar.
+ */
+const ABAJO = 0.04;
+const ARRIBA = 0.92;
+
 export function repartirCancha(formacion: string, ancho: number, alto: number): Reparto {
   const casillas = casillasDe(formacion);
   if (ancho <= 0 || alto <= 0) return { ubicados: [], escala: 1 };
@@ -81,17 +93,18 @@ export function repartirCancha(formacion: string, ancho: number, alto: number): 
    * que los once se apretaban dentro del 80% del alto y el 20% de arriba
    * quedaba de adorno.
    *
-   * Las líneas se reparten parejo de un borde al otro. La distancia exacta que
-   * hay entre el arquero y los centrales no dice nada que no diga ya el dibujo
-   * (son cuatro líneas y siempre son cuatro), y repartir parejo le da a cada
-   * una el hueco más grande posible, que es lo único que se ve.
+   * Las líneas se reparten parejo entre ARRIBA y ABAJO. La distancia exacta
+   * que hay entre el arquero y los centrales no dice nada que no diga ya el
+   * dibujo (son cuatro líneas y siempre son cuatro), y repartir parejo le da a
+   * cada una el hueco más grande posible, que es lo único que se ve.
    */
   const profundidades = [...porLinea.keys()].sort((a, b) => a - b);
   const orden = new Map(profundidades.map((x, i) => [x, i]));
   const ultima = profundidades.length - 1;
-  const estirada = (x: number) => (ultima ? (orden.get(x) ?? 0) / ultima : 0.5);
+  const estirada = (x: number) =>
+    (ultima ? ABAJO + ((orden.get(x) ?? 0) / ultima) * (ARRIBA - ABAJO) : 0.5);
 
-  const hueco = ultima ? 1 / ultima : 1;
+  const hueco = ultima ? (ARRIBA - ABAJO) / ultima : 1;
   const cabeEnAlto = ultima ? (hueco * alto) / (BLOQUE_ALTO * (AIRE + hueco)) : 1;
 
   const escala = Math.max(ESCALA_MINIMA, Math.min(1, cabeEnAlto, cabeEnAncho));

@@ -44,11 +44,29 @@ for (const molde of MOLDES) {
       const w = ANCHO * escala;
       const h = ALTO * escala;
 
-      /* Que ninguno se salga de la cancha. */
+      /*
+       * Que ninguno se monte sobre las rayas.
+       *
+       * El rectángulo de la cancha está dibujado al 1% de cada borde, así que
+       * "no salirse del div" no alcanza: los delanteros pueden quedar dentro
+       * del contenedor y arriba de la línea de fondo igual. Se pide que el
+       * bloque termine bien adentro, con la raya a la vista.
+       */
+      const RAYA = 0.03;
       for (const u of ubicados) {
-        if (u.x - w / 2 < -0.5 || u.x + w / 2 > ancho + 0.5 ||
-            u.y - h / 2 < -0.5 || u.y + h / 2 > alto + 0.5) {
-          fallas.push(`${molde.nombre} en ${ancho}×${alto}: el slot ${u.slot} se sale de la cancha`);
+        if (u.x - w / 2 < -0.5 || u.x + w / 2 > ancho + 0.5) {
+          fallas.push(`${molde.nombre} en ${ancho}×${alto}: el slot ${u.slot} se sale de costado`);
+          break;
+        }
+        if (u.y - h / 2 < alto * RAYA) {
+          fallas.push(`${molde.nombre} en ${ancho}×${alto}: el slot ${u.slot} se monta sobre la ` +
+            `raya de arriba (le quedan ${(u.y - h / 2).toFixed(0)}px y hacen falta ` +
+            `${(alto * RAYA).toFixed(0)})`);
+          break;
+        }
+        if (u.y + h / 2 > alto * (1 - RAYA)) {
+          fallas.push(`${molde.nombre} en ${ancho}×${alto}: el slot ${u.slot} se monta sobre la ` +
+            `raya de abajo`);
           break;
         }
       }
