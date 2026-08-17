@@ -9,7 +9,11 @@ import Asuntos from "./Asuntos.tsx";
 import CanchaHome from "./CanchaHome.tsx";
 import Mercado from "./Mercado.tsx";
 import { colorDe } from "./Dorsal.tsx";
-import { colorCondicion, esSub18, nombreCorto, partidosDeOlimpia } from "@/lib/juego.ts";
+import {
+  aroDe, colorComoLlega, comoLlegaAlPartido, deltaNivel, esSub18, nombreCorto,
+  partidosDeOlimpia,
+} from "@/lib/juego.ts";
+import Delta from "./Delta.tsx";
 import RIVALES_COPA from "@/data/rivales_internacionales.json";
 import {
   CALENDARIO_COPA, OBJETIVO, TOTAL_FECHAS, borrar, diasAlPartido, esPartidoDeCopa,
@@ -24,7 +28,6 @@ import FichaJugador from "./FichaJugador.tsx";
 import PantallaEstrella from "./PantallaEstrella.tsx";
 import { ESTRELLAS } from "@/engine/estrellas.ts";
 import { comoLlega, estadoRival } from "@/lib/rivales.ts";
-import { TEXTO_ANIMO, animoDe } from "@/engine/tipos.ts";
 import { mejorMolde, MOLDE_DE, repartirEnMolde } from "@/lib/juego.ts";
 
 type Vista = "escritorio" | "plantel" | "fixture" | "mercado" | "bitacora"
@@ -1141,7 +1144,29 @@ function VistaPlantel({ plantel, partida, onGuardarEquipos, onMoverReserva }: {
               className="mb-1 flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left"
               style={{ background: fuera
                 ? "color-mix(in srgb, #c0392b 16%, var(--carbon))" : "var(--carbon)" }}>
-              <Dorsal numero={j.numero} tam={24} />
+              {/*
+                * El mismo aro que las canchas: cómo llega, de un vistazo.
+                *
+                * Acá había un tercer idioma para decir lo mismo que ya se dice
+                * en otras dos pantallas: "100%" y "bien" por un lado, el aro
+                * por otro y el nivel efectivo por otro. Ahora es uno solo en
+                * todo el juego: el aro dice cómo llega y el número al lado del
+                * nivel dice cuánto vale eso en puntos.
+                */}
+              <span className="relative flex shrink-0 items-center justify-center"
+                    style={{ width: 30, height: 30 }}>
+                <span className="absolute inset-0 rounded-full"
+                      style={{
+                        background: `conic-gradient(from -90deg, ${
+                          colorComoLlega(comoLlegaAlPartido(j, j.posicion, ctxFicha))} ${
+                          aroDe(comoLlegaAlPartido(j, j.posicion, ctxFicha)) * 360}deg,
+                          rgba(255,255,255,0.14) ${
+                          aroDe(comoLlegaAlPartido(j, j.posicion, ctxFicha)) * 360}deg)`,
+                      }} />
+                <span className="absolute rounded-full"
+                      style={{ inset: 3, background: "var(--carbon)" }} />
+                <span className="relative"><Dorsal numero={j.numero} tam={22} /></span>
+              </span>
               <span className="min-w-0 flex-1">
                 <span className="apellido block truncate text-[12px]">
                   {j.apellido}
@@ -1160,18 +1185,13 @@ function VistaPlantel({ plantel, partida, onGuardarEquipos, onMoverReserva }: {
                 <span className="rounded px-1 text-[8px] font-extrabold uppercase"
                       style={{ background: "#c0392b", color: "#0a120d" }}>{fuera}</span>
               )}
-              <span className="w-10 text-right">
-                <span className="num block text-[11px]" style={{ color: colorCondicion(j.condicion) }}>
-                  {j.condicion}%
+              {/* El de la ficha, quieto, y al lado lo que se mueve hoy. */}
+              <span className="flex shrink-0 items-baseline gap-1">
+                <span className="num text-[15px]"
+                      style={{ color: j.aRevelar ? "var(--medio)" : undefined }}>
+                  {j.aRevelar ? "?" : j.nivel}
                 </span>
-                <span className="block text-[8px]"
-                      style={{ color: (e?.animo ?? 70) < 45 ? "var(--medio)" : "var(--apagado)" }}>
-                  {TEXTO_ANIMO[animoDe(e?.animo ?? 70)].toLowerCase()}
-                </span>
-              </span>
-              <span className="num w-6 text-right text-[15px]"
-                    style={{ color: j.aRevelar ? "var(--medio)" : undefined }}>
-                {j.aRevelar ? "?" : j.nivel}
+                {!j.aRevelar && <Delta valor={deltaNivel(j, j.posicion, ctxFicha)} tam={9} />}
               </span>
               <span
                 role="button" tabIndex={0}
