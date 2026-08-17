@@ -5,6 +5,7 @@ import ArmarOnce, { type Salida } from "@/components/ArmarOnce.tsx";
 import Arranque from "@/components/Arranque.tsx";
 import { useAtras, useAtrasTrabado } from "@/lib/atras.ts";
 import PantallaHito from "@/components/PantallaHito.tsx";
+import FinDeTemporada from "@/components/FinDeTemporada.tsx";
 import Penales from "@/components/Penales.tsx";
 import PartidoEnVivo from "@/components/PartidoEnVivo.tsx";
 import Escritorio from "@/components/Escritorio.tsx";
@@ -77,6 +78,21 @@ export default function Page() {
         /* Cerrar la tanda es lo que sigue la llave: recién ahí se sabe si
            Olimpia pasa, y se dispara el hito de campeón o de eliminado. */
         onCerrar={() => setPartida((p) => (p ? terminarTanda(p) : p))} />
+    );
+  }
+
+  /*
+   * El resumen del año, que es lo último que se ve.
+   *
+   * Va DESPUÉS del hito de la última fecha a propósito: primero te dicen si
+   * saliste campeón, con su pantalla, y recién ahí a qué copa vas. Al revés se
+   * te adelantaría el final del año antes de contarte el final del torneo.
+   */
+  if (partida.fechaActual > TOTAL_FECHAS && !partida.hito && !partida.cerrada
+      && !partida.despedido) {
+    return (
+      <FinDeTemporada partida={partida}
+        onCerrar={() => setPartida((p) => (p ? { ...p, cerrada: true } : p))} />
     );
   }
 

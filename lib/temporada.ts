@@ -9,6 +9,10 @@ import {
   type DesgloseOvr,
 } from "@/engine/motor.ts";
 import { Rng } from "@/engine/rng.ts";
+import {
+  repartirCupos, simularApertura, sorteoSudamericana, tablaAcumulativa,
+  type PrimerSemestre,
+} from "./anual.ts";
 import equiposJson from "@/data/equipos_2026.json";
 import fixtureJson from "@/data/fixture_clausura2026_final.json";
 import rivalesJson from "@/data/rivales_internacionales.json";
@@ -235,6 +239,13 @@ export interface Partida {
   paciencia: number;
   /** Si te echaron, por qué. */
   despedido: string | null;
+  /**
+   * Si ya se cerró el año.
+   *
+   * El resumen final se muestra una sola vez, después del hito de la última
+   * fecha: primero te dicen si saliste campeón y recién después a qué copa vas.
+   */
+  cerrada?: boolean;
   /** Lo que hay que mostrar a pantalla completa antes de seguir. */
   hito: Hito | null;
   /** La tanda de penales recién jugada, hasta que la mirás. */
@@ -251,6 +262,15 @@ export interface Partida {
    * se entera de que no lo querés y se le cae el ánimo.
    */
   transferibles?: string[];
+  /**
+   * El primer semestre, que ya pasó cuando vos llegás.
+   *
+   * Los cupos a las copas del año que viene se reparten por la tabla del AÑO,
+   * así que lo que hizo Olimpia en el Apertura entra en la cuenta aunque no lo
+   * hayas dirigido vos: podés salir cuarto en el Clausura y entrar igual a la
+   * Libertadores, o salir tercero y quedarte afuera.
+   */
+  semestre?: PrimerSemestre;
 
   /**
    * La oportunidad de fichaje que está sobre la mesa, si hay alguna. Tiene
@@ -493,6 +513,7 @@ export function partidaNueva(semilla: string = semillaNueva()): Partida {
     estrellasVistas: [],
     copa: { ronda: "octavos", rivalId: "vasco_da_gama", globalO: 0, globalR: 0, jugadosEnRonda: 0 },
     transferibles: [],
+    semestre: simularApertura(semilla),
     ofertas: [],
     fichajes: generarMercado(DIA_INICIAL, 6, [], PLANTEL),
     pendientes: [],
@@ -746,6 +767,43 @@ export interface FilaTabla {
   id: string; nombre: string;
   pj: number; g: number; e: number; p: number;
   gf: number; gc: number; dg: number; pts: number;
+}
+
+/**
+ * Cómo terminó el año, con todo lo que hace falta para el resumen final.
+ *
+ * Se calcula de una sola vez y de una sola manera: si la pantalla armara la
+ * tabla anual por su cuenta y la bitácora dijera otra cosa, el año tendría dos
+ * versiones. Acá el año tiene una.
+ */
+export function balanceDelAno(p: Partida) {
+  const clausura = tablaDe(p);
+  const semestre = p.semestre ?? simularApertura(p.semilla);
+  const acumulada = tablaAcumulativa(semestre.apertura, clausura);
+
+  const puestoClausura = clausura.findIndex((f) => f.id === "olimpia") + 1;
+  const puestoApertura = semestre.apertura.findIndex((f) => f.id === "olimpia") + 1;
+  const puestoAnual = acumulada.findIndex((f) => f.id === "olimpia") + 1;
+
+  const cupos = repartirCupos(
+    acumulada, semestre.campeonApertura, clausura[0].id, semestre.campeonCopaParaguay,
+    p.copa.ronda === "campeon" ? "olimpia" : undefined);
+  const cruces = sorteoSudamericana(cupos, p.semilla);
+
+  /* Lo que Olimpia ganó de verdad este año, para poder decirlo sin vueltas. */
+  const titulos: string[] = [];
+  if (puestoClausura === 1) titulos.push("Clausura");
+  if (semestre.campeonApertura === "olimpia") titulos.push("Apertura");
+  if (p.copa.ronda === "campeon") titulos.push("Copa Sudamericana");
+
+  return {
+    clausura, acumulada, semestre, cupos, cruces, titulos,
+    puestoClausura, puestoApertura, puestoAnual,
+    /** El cupo de Olimpia para el año que viene, si le tocó alguno. */
+    miCupo: cupos.find((c) => c.id === "olimpia") ?? null,
+    /** Contra quién juega Olimpia la fase previa, si le tocó ir por ahí. */
+    miCruce: cruces.find((l) => l.local === "olimpia" || l.visita === "olimpia") ?? null,
+  };
 }
 
 export function tablaDe(p: Partida): FilaTabla[] {
