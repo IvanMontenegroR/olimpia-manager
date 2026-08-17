@@ -25,11 +25,18 @@ const COLOR_TORNEO = {
                   halo: "rgba(120,190,255,0.28)", nombre: "Copa Sudamericana" },
 } as const;
 
-/** Qué le espera a cada uno según por dónde entra. */
+/**
+ * Qué le espera a cada uno según por dónde entra.
+ *
+ * La Libertadores tiene TRES fases previas, no dos: el que entra en fase 2
+ * todavía tiene que ganar la 2 y la 3, y el que entra en fase 1 tiene que ganar
+ * las tres. Acá decía una y dos, que es contar las fases que faltan y no las
+ * llaves que hay que ganar, y es justo lo que el jugador necesita saber.
+ */
 const EXPLICA_FASE: Record<Cupo["fase"], string> = {
   grupos: "entra directo",
-  "fase 2": "una llave antes de los grupos",
-  "fase 1": "dos llaves antes de los grupos",
+  "fase 2": "dos llaves antes de los grupos",
+  "fase 1": "tres llaves antes de los grupos",
   "fase previa": "un partido, y el que gana entra",
 };
 
