@@ -256,13 +256,23 @@ export function factorAliento(hinchada: number, ocupacion: number): number {
   return P.alientoMin + base * (P.alientoMax - P.alientoMin);
 }
 
-/** Distancia entre dos puestos, normalizada a 0..1. */
+/**
+ * Distancia entre dos puestos, normalizada a 0..1.
+ *
+ * Cambiar de BANDA es barato; cambiar de LÍNEA es caro. Es la diferencia entre
+ * hacer el mismo trabajo del otro lado y hacer otro trabajo.
+ *
+ * La lateralidad pesaba 0.75 contra 1 de la profundidad, o sea casi lo mismo,
+ * y eso daba una matriz que no se parecía al fútbol: un extremo derecho puesto
+ * de extremo izquierdo rendía 0.67 y puesto de CENTRAL rendía 0.62. Con esa
+ * cuenta, mandar al wing a la otra punta era casi tan grave como mandarlo al
+ * área propia, cuando el extremo cambiado de pie es de lo más común que hay.
+ * Con 0.30 el mismo cruce da 0.87 y el central sigue dando 0.63.
+ */
 export function distanciaPuestos(a: Posicion, b: Posicion): number {
   const p = COORD[a], q = COORD[b];
-  // la lateralidad pesa un poco menos que la profundidad: un lateral derecho
-  // se arregla mejor de lateral izquierdo que de delantero
   const dx = (p.x - q.x) / 100;
-  const dy = ((p.y - q.y) / 100) * 0.75;
+  const dy = ((p.y - q.y) / 100) * 0.30;
   return Math.min(1, Math.hypot(dx, dy));
 }
 
