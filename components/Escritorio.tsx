@@ -19,7 +19,7 @@ import {
   CALENDARIO_COPA, OBJETIVO, TOTAL_FECHAS, borrar, diasAlPartido, esPartidoDeCopa,
   diasEntre, estadoSub18, formatoDia, hayPartidoHoy, miles, ocupacionDe, ovrDe, partidoDe, plantelDe,
   posicionDe, sumarDias,
-  tablaDe, type EquipoGuardado, type Partida,
+  tablaDe, type EntradaDiario, type EquipoGuardado, type Partida,
   comoLoDejaste, guardarEquipo,
 } from "@/lib/temporada.ts";
 import { useAtras } from "@/lib/atras.ts";
@@ -403,7 +403,7 @@ export default function Escritorio({
           const hoy = i === 0;
           return (
             <div key={dia}
-              className={`flex w-[38px] shrink-0 flex-col items-center gap-0.5 rounded-md py-1 ${
+              className={`flex w-[38px] shrink-0 flex-col items-center rounded-md py-0.5 ${
                 hoy ? "pasa-el-dia relieve-alto" : "relieve"}`}
               style={{
                 background: hoy ? "var(--blanco)"
@@ -416,12 +416,12 @@ export default function Escritorio({
                     style={{ color: hoy ? "var(--negro)" : "var(--apagado)" }}>
                 {formatoDia(dia).slice(0, 3)}
               </span>
-              <span className="num text-[13px] leading-none">{dia.slice(8, 10)}</span>
-              <span className="flex h-3.5 items-center">
+              <span className="num text-[12px] leading-none">{dia.slice(8, 10)}</span>
+              <span className="flex h-3 items-center">
                 {copaHoy && rivalCopa
-                  ? <Escudo id={rivalCopa.id} nombre={rivalCopa.nombre} tam={13} />
+                  ? <Escudo id={rivalCopa.id} nombre={rivalCopa.nombre} tam={12} />
                   : copaHoy ? <Punto color={azul} />
-                  : m ? <Escudo id={m.rivalId} nombre={m.rivalNombre} tam={13} />
+                  : m ? <Escudo id={m.rivalId} nombre={m.rivalNombre} tam={12} />
                   : null}
               </span>
             </div>
@@ -452,7 +452,7 @@ export default function Escritorio({
               * que son números que se pueden mover.
               */}
             <button onClick={() => setAyuda("ovr")}
-              className="relieve-alto relative overflow-hidden rounded-lg px-2.5 py-2 text-left"
+              className="relieve-alto relative overflow-hidden rounded-lg px-2.5 py-1.5 text-left"
               style={{ background: "linear-gradient(160deg, #16201b, #0c120f 70%)",
                        boxShadow: `inset 0 0 0 1.5px color-mix(in srgb, ${colorOvr} 55%, transparent),
                                    0 0 20px color-mix(in srgb, ${colorOvr} 16%, transparent)` }}>
@@ -464,7 +464,7 @@ export default function Escritorio({
               <span className="flex items-baseline gap-2">
                 <Numero valor={ovr.hoy} formato={(n) => String(Math.round(n))}
                         className="apellido block leading-[0.8]"
-                        style={{ fontSize: 34, color: colorOvr,
+                        style={{ fontSize: 30, color: colorOvr,
                                  textShadow: `0 0 26px color-mix(in srgb, ${colorOvr} 50%, transparent)` }} />
                 <span className="flex items-baseline gap-1">
                   {/* el plantel se pinta con la misma vara que el OVR: así se ve
@@ -480,7 +480,7 @@ export default function Escritorio({
               </span>
 
               {/* cada cosa que lo mueve, en su propia fichita del color que le toca */}
-              <span className="mt-1.5 flex gap-1">
+              <span className="mt-1 flex gap-1">
                 {aportes.lista.slice(0, 3).map((a) => (
                   <Aporte key={a.etiqueta} etiqueta={a.etiqueta} valor={a.valor} />
                 ))}
@@ -491,7 +491,7 @@ export default function Escritorio({
                   juego. Lo del Sub-18 se queda porque tiene fecha de
                   vencimiento y si te lo pasás son tres puntos menos. */}
               {!sub18.alcanza && (
-                <span className="mt-1.5 flex flex-wrap gap-1">
+                <span className="mt-1 flex flex-wrap gap-1">
                   <span className="rounded px-1.5 py-[1px] text-[9px] font-extrabold uppercase"
                         style={{ background: "#e0902a", color: "#0a120d" }}>
                     Sub-18: {sub18.faltan}'
@@ -537,25 +537,10 @@ export default function Escritorio({
           {(() => {
             const u = partida.bitacora[partida.bitacora.length - 1];
             if (!u) return null;
-            const m = u.marca ? MARCA[u.marca] : null;
             return (
-              <button onClick={() => setVista("bitacora")}
-                className="mt-1.5 flex shrink-0 items-center gap-2 rounded-md px-2.5 py-1.5 text-left"
-                style={{ background: m
-                  ? `color-mix(in srgb, ${m.color} 14%, var(--carbon))` : "var(--carbon)" }}>
-                {m && (
-                  <span className="shrink-0 text-[10px] font-extrabold leading-none"
-                        style={{ color: m.color }}>{m.icono}</span>
-                )}
-                <span className="min-w-0 flex-1 truncate text-[10px]"
-                      style={{ color: "var(--tenue)" }}>
-                  {u.texto}
-                </span>
-                {u.cifra && (
-                  <span className="num shrink-0 text-[11px] font-extrabold"
-                        style={{ color: m?.color ?? "var(--blanco)" }}>{u.cifra}</span>
-                )}
-              </button>
+              <div className="mt-1.5 shrink-0">
+                <LineaBitacora b={u} onClick={() => setVista("bitacora")} />
+              </div>
             );
           })()}
         </div>
@@ -925,7 +910,7 @@ function CardCopa({ copa, ronda, rival, escudo, onClick }: {
   const c = COPAS[copa];
   return (
     <button onClick={onClick}
-      className="relieve relative flex items-center gap-2 overflow-hidden rounded-lg px-2.5 py-2 text-left"
+      className="relieve relative flex items-center gap-2 overflow-hidden rounded-lg px-2.5 py-1.5 text-left"
       style={{ background: c.fondo, boxShadow: `inset 0 0 0 1px ${c.halo}` }}>
       <span className="absolute -left-8 -top-10 h-24 w-28 rounded-full"
             style={{ background: `radial-gradient(closest-side, ${c.halo}, transparent)`,
@@ -934,7 +919,7 @@ function CardCopa({ copa, ronda, rival, escudo, onClick }: {
         <span className="block text-[9px] uppercase tracking-[0.14em]" style={{ color: c.acento }}>
           {c.nombre}
         </span>
-        <span className="apellido mt-1 block truncate text-[17px] leading-none">{ronda}</span>
+        <span className="apellido mt-0.5 block truncate text-[16px] leading-none">{ronda}</span>
         <span className="mt-0.5 block truncate text-[10px]" style={{ color: "var(--tenue)" }}>
           {rival ? `vs ${rival}` : "sin rival"}
         </span>
@@ -942,7 +927,7 @@ function CardCopa({ copa, ronda, rival, escudo, onClick }: {
       {/* el escudo del rival, grande y al medio: es la cara del cruce */}
       {escudo && (
         <span className="relative shrink-0">
-          <Escudo id={escudo} nombre={rival ?? ""} tam={44} />
+          <Escudo id={escudo} nombre={rival ?? ""} tam={40} />
         </span>
       )}
     </button>
@@ -1477,60 +1462,74 @@ const MARCA: Record<string, { color: string; icono: string; etiqueta: string }> 
   empate:   { color: "#8fa396", icono: "=", etiqueta: "Empató" },
   derrota:  { color: "#c0392b", icono: "✕", etiqueta: "Perdió" },
   titulo:   { color: "#e8c25a", icono: "★", etiqueta: "Título" },
+  fichaje:  { color: "#e8c25a", icono: "✎", etiqueta: "Fichaje" },
+  crece:    { color: "#3fa76a", icono: "↑", etiqueta: "Plantel" },
   golpe:    { color: "#c0392b", icono: "!", etiqueta: "Golpe" },
   plata:    { color: "#e0902a", icono: "$", etiqueta: "Caja" },
   aviso:    { color: "#d9a832", icono: "!", etiqueta: "Atención" },
 };
 
+/**
+ * Una línea del diario, la misma acá y en la home.
+ *
+ * En la home era otra cosa: un renglón chiquito con el ícono suelto y el texto
+ * en gris, así que lo último que pasó se leía distinto según por dónde lo
+ * miraras y ni se notaba que era lo mismo que hay adentro de la bitácora.
+ */
+function LineaBitacora({ b, onClick }: { b: EntradaDiario; onClick?: () => void }) {
+  const m = b.marca ? MARCA[b.marca] : null;
+  const Caja = (onClick ? "button" : "div") as "div";
+
+  // Lo que pasó de verdad va en tarjeta, con su color y su marcador.
+  if (m) {
+    return (
+      <Caja onClick={onClick}
+        className="relieve mb-1.5 flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left"
+        style={{
+          background: `linear-gradient(160deg,
+            color-mix(in srgb, ${m.color} 22%, var(--carbon-alto)),
+            color-mix(in srgb, ${m.color} 7%, var(--carbon)))`,
+        }}>
+        {b.cifra ? (
+          <span className="num shrink-0 rounded-md px-2 py-1 text-[15px] leading-none"
+                style={{ background: m.color, color: "#0a120d" }}>
+            {b.cifra}
+          </span>
+        ) : (
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[13px] font-extrabold"
+                style={{ background: m.color, color: "#0a120d" }}>
+            {m.icono}
+          </span>
+        )}
+        <span className="min-w-0 flex-1">
+          <span className="block text-[8px] uppercase tracking-[0.16em]" style={{ color: m.color }}>
+            {m.etiqueta}
+          </span>
+          <span className="block truncate text-[11px] leading-snug">{b.texto}</span>
+        </span>
+        <span className="num shrink-0 text-[9px]" style={{ color: "var(--apagado)" }}>
+          {b.dia.slice(8, 10)}/{b.dia.slice(5, 7)}
+        </span>
+      </Caja>
+    );
+  }
+
+  return (
+    <Caja onClick={onClick}
+      className="mb-1 flex w-full gap-2 rounded-md px-2 py-1.5 text-left text-[11px]"
+      style={{ background: "var(--carbon)" }}>
+      <span className="num shrink-0" style={{ color: "var(--apagado)" }}>
+        {b.dia.slice(8, 10)}/{b.dia.slice(5, 7)}
+      </span>
+      <span className="min-w-0 flex-1 truncate" style={{ color: "var(--tenue)" }}>{b.texto}</span>
+    </Caja>
+  );
+}
+
 function VistaBitacora({ partida }: { partida: Partida }) {
   return (
     <>
-      {[...partida.bitacora].reverse().map((b, i) => {
-        const m = b.marca ? MARCA[b.marca] : null;
-
-        // Lo que pasó de verdad va en tarjeta, con su color y su marcador.
-        if (m) {
-          return (
-            <div key={i} className="relieve mb-1.5 flex items-center gap-2.5 rounded-lg px-2.5 py-2"
-                 style={{
-                   background: `linear-gradient(160deg,
-                     color-mix(in srgb, ${m.color} 22%, var(--carbon-alto)),
-                     color-mix(in srgb, ${m.color} 7%, var(--carbon)))`,
-                 }}>
-              {b.cifra ? (
-                <span className="num shrink-0 rounded-md px-2 py-1 text-[15px] leading-none"
-                      style={{ background: m.color, color: "#0a120d" }}>
-                  {b.cifra}
-                </span>
-              ) : (
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[13px] font-extrabold"
-                      style={{ background: m.color, color: "#0a120d" }}>
-                  {m.icono}
-                </span>
-              )}
-              <span className="min-w-0 flex-1">
-                <span className="block text-[8px] uppercase tracking-[0.16em]" style={{ color: m.color }}>
-                  {m.etiqueta}
-                </span>
-                <span className="block text-[11px] leading-snug">{b.texto}</span>
-              </span>
-              <span className="num shrink-0 text-[9px]" style={{ color: "var(--apagado)" }}>
-                {b.dia.slice(8, 10)}/{b.dia.slice(5, 7)}
-              </span>
-            </div>
-          );
-        }
-
-        return (
-          <div key={i} className="mb-1 flex gap-2 rounded-md px-2 py-1.5 text-[11px]"
-               style={{ background: "var(--carbon)" }}>
-            <span className="num shrink-0" style={{ color: "var(--apagado)" }}>
-              {b.dia.slice(8, 10)}/{b.dia.slice(5, 7)}
-            </span>
-            <span style={{ color: "var(--tenue)" }}>{b.texto}</span>
-          </div>
-        );
-      })}
+      {[...partida.bitacora].reverse().map((b, i) => <LineaBitacora key={i} b={b} />)}
     </>
   );
 }

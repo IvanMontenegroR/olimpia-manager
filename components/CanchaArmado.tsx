@@ -55,6 +55,7 @@ export default function CanchaArmado({
   const [ref, caja] = useMedida();
   const { ubicados, escala } = repartirCancha(formacion, caja.ancho, caja.alto);
   const tamDorsal = Math.round(32 * escala);
+  const aro = Math.round(10 * escala);
 
   return (
     <div ref={ref} className="relative mx-3 flex-1 overflow-hidden rounded-lg"
@@ -101,7 +102,7 @@ export default function CanchaArmado({
                   * pantalla y ninguna de las dos mostraba el estado completo.
                   */}
                 <span className="relative flex items-center justify-center"
-                      style={{ width: tamDorsal + 10, height: tamDorsal + 10 }}>
+                      style={{ width: tamDorsal + aro, height: tamDorsal + aro }}>
                   <span className="absolute inset-0 rounded-full"
                         style={{
                           background: `conic-gradient(from -90deg, ${
@@ -111,7 +112,7 @@ export default function CanchaArmado({
                             aroDe(comoLlegaAlPartido(j, c.puesto, ctx)) * 360}deg)`,
                           transition: "background 400ms ease-out",
                         }} />
-                  <span className="absolute rounded-full" style={{ inset: 4, background: "#10231a" }} />
+                  <span className="absolute rounded-full" style={{ inset: aro / 2.5, background: "#10231a" }} />
                   <span className="relative" style={{
                           borderRadius: 999,
                           boxShadow: esDestino

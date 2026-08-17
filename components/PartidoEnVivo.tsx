@@ -123,6 +123,16 @@ export default function PartidoEnVivo({
       diasFuera?: number } | null>(null);
   const [momento, setMomento] = useState<Momento | null>(null);
   const [resueltoMomento, setResuelto] = useState<ResueltoMomento | null>(null);
+  /**
+   * Lo que el momento ya decidió pero todavía no pasó en la pantalla.
+   *
+   * El penal subía el marcador en el instante en que tocabas el palo, o sea
+   * ANTES de que la bolilla cayera: mirabas para arriba, veías el 1-0 y la
+   * tirada se volvía un trámite con el resultado ya escrito. Todo lo que se ve
+   * (el marcador, la línea del relato, el expulsado que sale de la cancha, el
+   * cambio que se gasta) espera acá adentro hasta que se toca Seguir.
+   */
+  const porAplicar = useRef<(() => void) | null>(null);
 
   // Varios cambios a la vez: se marcan los que salen y se les asigna quién entra.
   const [salen, setSalen] = useState<string[]>([]);
@@ -292,73 +302,84 @@ export default function PartidoEnVivo({
     const r = resolverMomento(momento, opcionId, alineacion, ctx,
                               new Rng(`${ctx.semilla ?? ""}-${ctx.fecha}-${momento.minuto}-${opcionId}`));
     setResuelto(r);
-    // un golazo se paga aunque el partido ya estuviera resuelto
-    if (r.levantaHinchada) hinchadaPorGolazos.current += r.levantaHinchada;
-    if (r.golpeAnimo) {
-      animoPorPenales.current[r.golpeAnimo.id] =
-        (animoPorPenales.current[r.golpeAnimo.id] ?? 0) + r.golpeAnimo.delta;
-    }
-    // un festejo que se pudre levanta a los once, no solo al que hizo el gol
-    if (r.cansaAlRival) setRivalGastado((v) => v + r.cansaAlRival!);
-    if (r.enciendeAlEquipo) {
-      for (const j of once) {
-        animoPorPenales.current[j.id] =
-          (animoPorPenales.current[j.id] ?? 0) + r.enciendeAlEquipo;
+
+    /*
+     * De acá para abajo nada pasa todavía: se deja armado y se ejecuta cuando
+     * la tirada terminó. La cuenta se hace igual ahora, con los valores de este
+     * render, porque entre elegir y seguir el partido está frenado y no hay
+     * nada más que pueda mover el marcador ni el equipo.
+     */
+    porAplicar.current = () => {
+      // un golazo se paga aunque el partido ya estuviera resuelto
+      if (r.levantaHinchada) hinchadaPorGolazos.current += r.levantaHinchada;
+      if (r.golpeAnimo) {
+        animoPorPenales.current[r.golpeAnimo.id] =
+          (animoPorPenales.current[r.golpeAnimo.id] ?? 0) + r.golpeAnimo.delta;
       }
-    }
+      // un festejo que se pudre levanta a los once, no solo al que hizo el gol
+      if (r.cansaAlRival) setRivalGastado((v) => v + r.cansaAlRival!);
+      if (r.enciendeAlEquipo) {
+        for (const j of once) {
+          animoPorPenales.current[j.id] =
+            (animoPorPenales.current[j.id] ?? 0) + r.enciendeAlEquipo;
+        }
+      }
 
-    const nuevoO = gO + (r.golOlimpia ? 1 : 0);
-    const nuevoR = gR + (r.golRival ? 1 : 0);
-    setGO(nuevoO);
-    setGR(nuevoR);
+      const nuevoO = gO + (r.golOlimpia ? 1 : 0);
+      const nuevoR = gR + (r.golRival ? 1 : 0);
+      setGO(nuevoO);
+      setGR(nuevoR);
 
-    setVisibles((v) => [...v, {
-      minuto: momento.minuto,
-      tipo: r.golOlimpia ? "gol" : r.golRival ? "gol_rival"
-        : r.rojaA ? "roja" : r.amarillaA ? "amarilla" : "cambio",
-      texto: r.texto,
-      jugadorId: r.amarillaA ?? r.rojaA,
-      golesOlimpia: nuevoO, golesRival: nuevoR,
-    }]);
+      setVisibles((v) => [...v, {
+        minuto: momento.minuto,
+        tipo: r.golOlimpia ? "gol" : r.golRival ? "gol_rival"
+          : r.rojaA ? "roja" : r.amarillaA ? "amarilla" : "cambio",
+        texto: r.texto,
+        jugadorId: r.amarillaA ?? r.rojaA,
+        golesOlimpia: nuevoO, golesRival: nuevoR,
+      }]);
 
-    // consecuencias que tocan al equipo
-    let nuevoOnce = once;
-    let nuevoBanco = banco;
-    const nuevosPuestos = new Map(puestos);
-    if (r.rojaA) {
-      nuevoOnce = once.filter((j) => j.id !== r.rojaA);
-      setOnce(nuevoOnce);
-    }
-    if (r.gastaCambio) {
-      const entra = banco.find((j) => j.posicion !== "ARQ");
-      if (entra && cambios > 0 && ventanas > 0) {
-        nuevoOnce = once.map((j) => (j.id === r.gastaCambio ? entra : j));
-        nuevoBanco = banco.filter((j) => j.id !== entra.id);
-        nuevosPuestos.set(entra.id, puestos.get(r.gastaCambio) ?? entra.posicion);
+      // consecuencias que tocan al equipo
+      let nuevoOnce = once;
+      let nuevoBanco = banco;
+      const nuevosPuestos = new Map(puestos);
+      if (r.rojaA) {
+        nuevoOnce = once.filter((j) => j.id !== r.rojaA);
         setOnce(nuevoOnce);
-        setBanco(nuevoBanco);
-        setPuestos(nuevosPuestos);
-        setCambios((c) => c - 1);
-        setVentanas((v) => v - 1);
       }
-    }
+      if (r.gastaCambio) {
+        const entra = banco.find((j) => j.posicion !== "ARQ");
+        if (entra && cambios > 0 && ventanas > 0) {
+          nuevoOnce = once.map((j) => (j.id === r.gastaCambio ? entra : j));
+          nuevoBanco = banco.filter((j) => j.id !== entra.id);
+          nuevosPuestos.set(entra.id, puestos.get(r.gastaCambio) ?? entra.posicion);
+          setOnce(nuevoOnce);
+          setBanco(nuevoBanco);
+          setPuestos(nuevosPuestos);
+          setCambios((c) => c - 1);
+          setVentanas((v) => v - 1);
+        }
+      }
 
-    // hay momentos que cambian cómo te parás para lo que queda
-    const nuevaActitud = r.cambiaActitud ?? actitud;
-    if (r.cambiaActitud && r.cambiaActitud !== actitud) setActitud(r.cambiaActitud);
+      // hay momentos que cambian cómo te parás para lo que queda
+      const nuevaActitud = r.cambiaActitud ?? actitud;
+      if (r.cambiaActitud && r.cambiaActitud !== actitud) setActitud(r.cambiaActitud);
 
-    // el resto del partido se vuelve a simular con el marcador y el equipo nuevos
-    semilla.current++;
-    cursor.current = 0;
-    setPendientes(relatarTramo(
-      conLoDelPartido(
-        { once: nuevoOnce, suplentes: nuevoBanco, actitud: nuevaActitud, puestos: nuevosPuestos }),
-      ctx, new Rng(`${ctx.semilla ?? ""}-${ctx.fecha}-${ctx.rivalNombre}-${semilla.current}`),
-      momento.minuto, 90, nuevoO, nuevoR, amonestados, rival11, yaVistos.current,
-      entradas.current));
+      // el resto del partido se vuelve a simular con el marcador y el equipo nuevos
+      semilla.current++;
+      cursor.current = 0;
+      setPendientes(relatarTramo(
+        conLoDelPartido(
+          { once: nuevoOnce, suplentes: nuevoBanco, actitud: nuevaActitud, puestos: nuevosPuestos }),
+        ctx, new Rng(`${ctx.semilla ?? ""}-${ctx.fecha}-${ctx.rivalNombre}-${semilla.current}`),
+        momento.minuto, 90, nuevoO, nuevoR, amonestados, rival11, yaVistos.current,
+        entradas.current));
+    };
   };
 
   const seguirTrasMomento = () => {
+    porAplicar.current?.();
+    porAplicar.current = null;
     setMomento(null);
     setResuelto(null);
     setCorriendo(true);

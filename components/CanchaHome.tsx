@@ -67,6 +67,10 @@ export default function CanchaHome({
   const [ref, caja] = useMedida();
   const { ubicados, escala } = repartirCancha(formacion, caja.ancho, caja.alto);
   const tam = Math.round(30 * escala);
+  /* el aro va afuera del dorsal, y tiene que encoger con él: si queda fijo en
+     10 el bloque real se vuelve más alto que el que mide `repartirCancha`
+     justo cuando hay que apretar, que es cuando se pisan */
+  const aro = Math.round(10 * escala);
 
   return (
     <div ref={ref} className="relieve relative min-h-0 flex-1 overflow-hidden rounded-lg"
@@ -102,7 +106,7 @@ export default function CanchaHome({
             {/* El aro se llena con cuánto de lo suyo está rindiendo: entero y
                 enchufado lo llena, fundido o dolido lo vacía. */}
             <span className="relative flex items-center justify-center"
-                  style={{ width: tam + 10, height: tam + 10, opacity: baja ? 0.5 : 1 }}>
+                  style={{ width: tam + aro, height: tam + aro, opacity: baja ? 0.5 : 1 }}>
               <span className="absolute inset-0 rounded-full"
                     style={{
                       background: `conic-gradient(from -90deg, ${color} ${lleno * 360}deg,
@@ -110,7 +114,7 @@ export default function CanchaHome({
                       transition: "background 500ms ease-out",
                     }} />
               <span className="absolute rounded-full"
-                    style={{ inset: 4, background: "#10231a" }} />
+                    style={{ inset: aro / 2.5, background: "#10231a" }} />
               <span className="relative" style={{ boxShadow: "0 2px 6px rgba(0,0,0,0.55)", borderRadius: 999 }}>
                 <Dorsal numero={j.numero} tam={tam} />
               </span>

@@ -110,7 +110,11 @@ export interface Asunto {
  * iguales, que era lo que hacía que todo pareciera lo mismo.
  */
 export type MarcaDiario =
-  | "victoria" | "derrota" | "empate" | "titulo" | "golpe" | "plata" | "aviso";
+  | "victoria" | "derrota" | "empate" | "titulo" | "golpe" | "plata" | "aviso"
+  // Buenas noticias que NO son un título. Antes todo lo bueno entraba como
+  // "titulo", así que la línea de un pibe que subió de nivel se dibujaba con
+  // la estrella y el rótulo "Título", como si Olimpia hubiera salido campeón.
+  | "crece" | "fichaje";
 
 export interface EntradaDiario {
   dia: string;
@@ -942,7 +946,7 @@ export function cerrarPartido(p: Partida, partido: PartidoUI, c: CierrePartido):
         const antesEntero = Math.floor(e.crecimiento);
         e.crecimiento = Math.min(margen, e.crecimiento + (min / 90) * (margen / 20));
         if (Math.floor(e.crecimiento) > antesEntero) {
-          n.bitacora.push({ dia: p.dia, marca: "titulo",
+          n.bitacora.push({ dia: p.dia, marca: "crece",
             texto: `${j.apellido} dio un salto: ahora es nivel ${j.nivel + Math.floor(e.crecimiento)}.` });
         }
       }
@@ -961,7 +965,7 @@ export function cerrarPartido(p: Partida, partido: PartidoUI, c: CierrePartido):
           cifra: String(traido.nivel),
           pie: "de nivel",
         };
-        n.bitacora.push({ dia: p.dia, marca: bueno ? "titulo" : undefined,
+        n.bitacora.push({ dia: p.dia, marca: bueno ? "crece" : undefined,
           texto: `Debutó ${traido.apellido}: resultó ser nivel ${traido.nivel}.` });
       }
       if (j.fecha_nacimiento >= "2007-01-01" && min >= 90) n.minutosSub18 += 90;
@@ -1575,7 +1579,7 @@ export function ficharEstrella(p: Partida): Partida {
   n.paciencia = clamp(n.paciencia + imp.prestigio, 0, 100);
   n.estrella = null;
 
-  n.bitacora.push({ dia: n.dia, marca: "titulo",
+  n.bitacora.push({ dia: n.dia, marca: "fichaje",
     texto: `${e.nombre} ${e.apellido} firmó en Olimpia. Asunción es una fiesta.` });
   n.hito = {
     tipo: "fichaje",

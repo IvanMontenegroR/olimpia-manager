@@ -23,9 +23,21 @@ export interface Reparto {
   escala: number;
 }
 
-const BLOQUE_ALTO = 58;
+/*
+ * Lo que ocupa cada jugador en la cancha, medido de verdad: el aro con el
+ * dorsal adentro (40), el apellido (11) y el renglón del nivel (10).
+ */
+const BLOQUE_ALTO = 62;
 const BLOQUE_ANCHO = 66;
 const ESCALA_MINIMA = 0.62;
+
+/**
+ * Cuánto más que el bloque tiene que medir el hueco entre dos vecinos.
+ *
+ * Con 1 quedan pegados: técnicamente no se pisan, pero el apellido de uno
+ * arranca donde termina el del otro y la línea se lee como una sola mancha.
+ */
+const AIRE = 1.14;
 
 export function repartirCancha(formacion: string, ancho: number, alto: number): Reparto {
   const casillas = casillasDe(formacion);
@@ -43,12 +55,11 @@ export function repartirCancha(formacion: string, ancho: number, alto: number): 
    *
    * Lo que hay que resolver es la separación entre vecinos:
    *
-   *     d × (ancho − BLOQUE × e)  ≥  BLOQUE × e
+   *     d × (ancho − BLOQUE × e)  ≥  BLOQUE × e × AIRE
    *
    * donde d es la fracción de ancho que hay entre dos vecinos. Despejando e
-   * sale lo de abajo. El 0.94 es aire para que se separen y no se toquen.
+   * sale lo de abajo.
    */
-  const lineas = new Set(casillas.map((c) => c.x)).size;
   const porLinea = new Map<number, number>();
   for (const c of casillas) porLinea.set(c.x, (porLinea.get(c.x) ?? 0) + 1);
   const maxPorLinea = Math.max(...porLinea.values());
@@ -57,13 +68,33 @@ export function repartirCancha(formacion: string, ancho: number, alto: number): 
   const abanico = maxPorLinea === 1 ? 0 : maxPorLinea === 2 ? 0.34 : 0.76;
   const d = maxPorLinea > 1 ? abanico / (maxPorLinea - 1) : 1;
   const cabeEnAncho = maxPorLinea > 1
-    ? (d * ancho) / (BLOQUE_ANCHO * (1 + d)) * 0.94
+    ? (d * ancho) / (BLOQUE_ANCHO * (AIRE + d))
     : 1;
 
-  const escala = Math.max(
-    ESCALA_MINIMA,
-    Math.min(1, alto / (lineas * BLOQUE_ALTO), cabeEnAncho),
-  );
+  /*
+   * A lo alto era la misma cuenta mal hecha, y por eso las líneas se pisaban
+   * en la cancha de la home.
+   *
+   * Era `alto / (líneas × BLOQUE_ALTO)`, que también supone bloques pegados de
+   * borde a borde. Peor todavía: las profundidades escritas en la formación no
+   * llegan a los extremos (el arquero está en 3 y los delanteros en 83), así
+   * que los once se apretaban dentro del 80% del alto y el 20% de arriba
+   * quedaba de adorno.
+   *
+   * Las líneas se reparten parejo de un borde al otro. La distancia exacta que
+   * hay entre el arquero y los centrales no dice nada que no diga ya el dibujo
+   * (son cuatro líneas y siempre son cuatro), y repartir parejo le da a cada
+   * una el hueco más grande posible, que es lo único que se ve.
+   */
+  const profundidades = [...porLinea.keys()].sort((a, b) => a - b);
+  const orden = new Map(profundidades.map((x, i) => [x, i]));
+  const ultima = profundidades.length - 1;
+  const estirada = (x: number) => (ultima ? (orden.get(x) ?? 0) / ultima : 0.5);
+
+  const hueco = ultima ? 1 / ultima : 1;
+  const cabeEnAlto = ultima ? (hueco * alto) / (BLOQUE_ALTO * (AIRE + hueco)) : 1;
+
+  const escala = Math.max(ESCALA_MINIMA, Math.min(1, cabeEnAlto, cabeEnAncho));
 
   // margen para que el bloque no se corte contra el borde de la cancha
   const mx = (BLOQUE_ANCHO * escala) / 2;
@@ -75,7 +106,7 @@ export function repartirCancha(formacion: string, ancho: number, alto: number): 
       slot,
       x: mx + (c.y / 100) * (ancho - mx * 2),
       // se ataca hacia arriba: más profundidad es más arriba en pantalla
-      y: alto - my - (c.x / 100) * (alto - my * 2),
+      y: alto - my - estirada(c.x) * (alto - my * 2),
     })),
   };
 }
