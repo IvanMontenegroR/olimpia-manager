@@ -215,7 +215,13 @@ const PLANTILLAS: Plantilla[] = [
       efectos: {
         recibir: { hinchada: 8, ambiente: -6, paciencia: 8,
           texto: "Se habló y bajó la tensión. Arriba respiraron." },
-        ignorar: { hinchada: -4, ambiente: 2, texto: "El club no dijo nada. Siguió el ruido." },
+        /*
+         * El −4 de hinchada y el +2 de vestuario se anulaban en el nivel, así
+         * que la opción se mostraba pelada al lado de dos que sí decían algo.
+         * Y no es que no pase nada: no atender al que vino a hablar deja el
+         * ruido afuera intacto, que es lo único que pasa.
+         */
+        ignorar: { hinchada: -3, texto: "El club no dijo nada. Siguió el ruido." },
         denunciar: { hinchada: -10, ambiente: 8, paciencia: -11,
           texto: "El club denunció el aprieto. El plantel se sintió protegido y arriba, expuesto." },
       },
@@ -411,7 +417,16 @@ const PLANTILLAS: Plantilla[] = [
       efectos: {
         jugar: { dineroUsd: 220_000, condicionTodos: -9, hinchada: 2,
           texto: "Se jugó el amistoso. Entró plata y el plantel quedó cansado." },
-        rechazar: { dineroUsd: 0, texto: "Se rechazó el amistoso. La semana queda para trabajar." },
+        /*
+         * Rechazarlo no era "nada". Es una semana entera para entrenar, que es
+         * justo lo que el amistoso te saca, y son doscientos mil que arriba ya
+         * habían anotado en la planilla. Lo de la condición solo se nota si
+         * venís cansado (al empezar la temporada están todos al 100 y el +5 no
+         * mueve nada), así que el que hace que la opción SIEMPRE diga algo es
+         * el enojo de la dirigencia.
+         */
+        rechazar: { condicionTodos: 5, paciencia: -4,
+          texto: "Se rechazó el amistoso. La semana queda para trabajar." },
       },
     }),
   },
@@ -661,7 +676,10 @@ const PLANTILLAS: Plantilla[] = [
             siSaleMal: { moralDe: { id: j.id, delta: -14 }, ambiente: -8, subirDeReserva: j.id,
               texto: `${j.apellido} subió y el grupo se le vino encima. No la tocó en toda la semana.` },
           },
-          esperar: { moralDe: { id: j.id, delta: -8 },
+          // la moral de uno de reserva no mueve el nivel del domingo, así que
+          // la opción se veía vacía; lo que sí se siente es el grupo, que lo
+          // banca y no entiende por qué no sube
+          esperar: { moralDe: { id: j.id, delta: -8 }, ambiente: -3,
             texto: `${j.apellido} sigue en la reserva por ahora.` },
         },
       };
@@ -782,7 +800,9 @@ const PLANTILLAS: Plantilla[] = [
         efectos: {
           traer: { dineroUsd: -90_000, hinchada: 2, traerPibe: { pueblo, nivel },
             texto: `Llegó el pibe de ${pueblo} a probarse en el predio.` },
-          pasar: { texto: `Se dejó pasar al chico de ${pueblo}.` },
+          // dejarlo pasar tiene su precio: en el interior se cuenta, y la
+          // gente toma nota de que Olimpia no fue a buscar al pibe
+          pasar: { hinchada: -4, texto: `Se dejó pasar al chico de ${pueblo}.` },
         },
       };
     },
@@ -814,7 +834,9 @@ const PLANTILLAS: Plantilla[] = [
           siSaleMal: { dineroUsd: -70_000, ambiente: -2,
             texto: "El representante no atendió más el teléfono. Era humo." },
         },
-        cortar: { texto: "Se cortó la charla con el representante." },
+        // los representantes hablan entre ellos y con los dirigentes: cortarle
+        // el teléfono a uno se sabe arriba
+        cortar: { paciencia: -3, texto: "Se cortó la charla con el representante." },
       },
     }),
   },

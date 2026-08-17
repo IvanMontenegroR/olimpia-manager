@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import {
-  AFORO, menosCansancioPorViajar, miles, nivelConAclimatacion, nivelSi, ocupacionDe,
+  AFORO, miles, nivelConAclimatacion, nivelSi, ocupacionDe,
   plantelDe, salioBienLaApuesta,
   type Asunto, type Partida,
 } from "@/lib/temporada.ts";
@@ -287,29 +287,32 @@ function crudas(a: Asunto, p: Partida): OpcionUI[] {
      * interno que el jugador no ve en ninguna parte, así que la decisión era
      * "pagá 150 mil por algo": se veía el costo y no el beneficio.
      */
-    const base = nivelConAclimatacion(p, 0);
-    const gana = (acl: number) => nivelConAclimatacion(p, acl) - base;
     /*
-     * Y cuánto menos se cansan, que era la otra mitad de lo que paga el plan y
-     * no se veía. En un viaje corto es casi todo lo que da; en La Paz es lo de
-     * menos al lado de lo que recorta la altura.
+     * Con cuánto nivel llega el equipo con cada plan, en absoluto.
+     *
+     * Antes se mostraba la diferencia contra viajar la víspera, así que esa
+     * opción quedaba en cero y era la única sin números: una frase suelta al
+     * lado de dos que decían "+1.3 nivel · −60k". Y es la que uno elige
+     * cuando no quiere gastar, o sea la que más merece que le digan qué le
+     * cuesta. En absoluto las tres se comparan de un vistazo.
      */
-    const menos = (acl: number) => menosCansancioPorViajar(p, acl);
+    const llega = (acl: number) => nivelConAclimatacion(p, acl);
     return [
       { id: "vispera", etiqueta: "Viajar la víspera",
         detalle: altura
           ? "Se llega la noche anterior y la altura se siente entera"
-          : "Lo más barato, pero se llega con el viaje encima" },
+          : "Lo más barato, pero se llega con el viaje encima",
+        efecto: { nivelFinal: llega(0) } },
       { id: "dosdias", etiqueta: "Viajar dos días antes",
         detalle: altura
           ? "Media adaptación: la altura pega bastante menos"
           : "El plantel llega descansado",
-        efecto: { dineroUsd: -60_000, aclimatacion: gana(0.55), menosCansancio: menos(0.55) } },
+        efecto: { dineroUsd: -60_000, nivelFinal: llega(0.55) } },
       { id: "semana", etiqueta: "Concentrar en destino",
         detalle: altura
           ? "Adaptación completa, pero una semana lejos de casa pesa adentro"
           : "Llegan enteros, aunque se hace largo",
-        efecto: { dineroUsd: -150_000, ambiente: -3, aclimatacion: gana(1), menosCansancio: menos(1) } },
+        efecto: { dineroUsd: -150_000, ambiente: -3, nivelFinal: llega(1) } },
     ];
   }
 
@@ -362,10 +365,10 @@ function paraMostrar(e: EfectoVisible | undefined, p: Partida): EfectoVisible | 
     id ? plantelDe(p).find((j) => j.id === id)?.apellido : undefined;
   return {
     ...e,
-    /* El nivel no se estima: se aplica el efecto sobre una copia y se mide. Lo
-       único aparte es el viaje, que no cambia el club sino el partido: eso ya
-       viene medido y se suma. */
-    nivel: nivelSi(p, e as Efecto, e.seVa) + (e.aclimatacion ?? 0),
+    /* El nivel no se estima: se aplica el efecto sobre una copia y se mide. El
+       viaje es la excepción y va por su cuenta en `nivelFinal`, porque ahí lo
+       que importa no es cuánto cambia sino con cuánto llegás. */
+    nivel: e.nivelFinal !== undefined ? 0 : nivelSi(p, e as Efecto, e.seVa),
     suspendeTexto: apellido(e.suspendeA),
     siSaleMal: paraMostrar(e.siSaleMal, p),
   };

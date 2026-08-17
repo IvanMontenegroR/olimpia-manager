@@ -24,10 +24,9 @@ const plantel = plantelDe(p);
 function chips(e: Efecto | undefined): string[] {
   if (!e) return [];
   const out: string[] = [];
-  const n = nivelSi(p, e);
-  if (Math.abs(n) >= 0.05) {
-    out.push(`${n > 0 ? "+" : "−"}${Math.abs(Math.abs(n) >= 1 ? Math.round(n) : Math.round(n * 10) / 10)} nivel`);
-  }
+  // el mismo formato que dibuja `Efectos`: un decimal siempre
+  const n = Math.round(nivelSi(p, e) * 10) / 10;
+  if (Math.abs(n) >= 0.05) out.push(`${n > 0 ? "+" : "−"}${Math.abs(n).toFixed(1)} nivel`);
   if (e.dineroUsd) out.push(`${e.dineroUsd > 0 ? "+" : "−"}${Math.abs(e.dineroUsd / 1e6).toFixed(2)}M`);
   if (e.paciencia) out.push(`${e.paciencia > 0 ? "+" : "−"}${Math.abs(e.paciencia)} dirigencia`);
   if (e.suspendeA) out.push("se pierde 1 partido");
@@ -60,6 +59,7 @@ for (const S of TODAS) {
 
   if (semilla === 0) console.log(`\n  ${s.titulo}`);
   let vacias = 0;
+  const sinChips: string[] = [];
   for (const o of s.opciones) {
     const e = efectos?.[o.id];
     const bien = chips(e);
@@ -96,9 +96,21 @@ for (const S of TODAS) {
       problemas.add(`${s.id}/${o.id}: sale igual bien que mal`);
     }
     vacias += bien.length ? 0 : 1;
+    if (!bien.length) sinChips.push(o.etiqueta);
   }
   if (vacias === s.opciones.length) {
     problemas.add(`${s.id}: NINGUNA de sus opciones hace nada`);
+  }
+  /*
+   * Una opción pelada al lado de otras con números.
+   *
+   * No es lo mismo que "no hacer nada": es que la fila se lee distinto. Donde
+   * las demás muestran "+1.3 nivel · −60k", esta muestra una frase y nada, y
+   * el ojo no la puede comparar con las otras. A veces es correcto (dejar
+   * pasar al pibe no cuesta nada) y a veces es que le falta decir lo suyo.
+   */
+  if (sinChips.length && sinChips.length < s.opciones.length) {
+    problemas.add(`${s.id}: "${sinChips.join('", "')}" no muestra números y las otras sí`);
   }
  }
 }

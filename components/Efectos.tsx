@@ -45,10 +45,16 @@ export interface EfectoVisible {
   nivel?: number;
   /** El que se va del plantel: el once del domingo lo tiene que reemplazar. */
   seVa?: string;
-  /** Lo que suma llegar aclimatado, ya medido en nivel. */
-  aclimatacion?: number;
-  /** Cuánto menos se cansa el equipo, en porcentaje. */
-  menosCansancio?: number;
+  /**
+   * El nivel con el que se llega, en absoluto y no como diferencia.
+   *
+   * Es para el plan de viaje, donde las tres opciones son variantes de lo
+   * mismo y lo que se compara es con cuánto llegás. Midiéndolo como diferencia
+   * contra la más barata, esa quedaba en cero y se mostraba pelada al lado de
+   * las otras dos: la única sin números era justamente la que uno elige
+   * cuando no quiere gastar.
+   */
+  nivelFinal?: number;
   /** Los números del otro desenlace, si la opción era una apuesta. */
   siSaleMal?: EfectoVisible;
 }
@@ -65,24 +71,29 @@ export function chipsDe(e: EfectoVisible): { texto: string; bueno: boolean }[] {
   const chips: { texto: string; bueno: boolean }[] = [];
 
   /*
-   * El nivel se muestra con un decimal cuando no llega a la unidad. Redondear
-   * a entero convertía media docena de decisiones reales en "+0", que es peor
-   * que no decir nada: parece que la opción no hace nada.
+   * El nivel va SIEMPRE con un decimal.
+   *
+   * Antes se redondeaba a entero en cuanto pasaba de 1, así que un +1.6 y un
+   * +2.4 se mostraban los dos como "+2" y dos opciones distintas parecían la
+   * misma. Y abajo de 1 llevaba decimal, o sea que la misma columna cambiaba
+   * de precisión según el número: +0.8 al lado de +2. Ahora es una sola forma
+   * para todos, que además es la que permite comparar dos opciones que se
+   * llevan medio punto.
    */
   if (e.nivel && Math.abs(e.nivel) >= 0.05) {
-    const n = Math.abs(e.nivel) >= 1 ? Math.round(e.nivel) : Math.round(e.nivel * 10) / 10;
+    const n = Math.round(e.nivel * 10) / 10;
     if (n !== 0) {
-      chips.push({ texto: `${n > 0 ? "+" : "−"}${Math.abs(n)} nivel`, bueno: n > 0 });
+      chips.push({ texto: `${n > 0 ? "+" : "−"}${Math.abs(n).toFixed(1)} nivel`, bueno: n > 0 });
     }
+  }
+  if (e.nivelFinal !== undefined) {
+    chips.push({ texto: `llegás con ${e.nivelFinal.toFixed(1)}`, bueno: true });
   }
   if (e.dineroUsd) {
     chips.push({
       texto: `${e.dineroUsd > 0 ? "+" : "−"}${miles(Math.abs(e.dineroUsd))}`,
       bueno: e.dineroUsd > 0,
     });
-  }
-  if (e.menosCansancio) {
-    chips.push({ texto: `${e.menosCansancio}% menos cansancio`, bueno: e.menosCansancio > 0 });
   }
   if (e.paciencia) {
     chips.push({ texto: `${signo(e.paciencia)} dirigencia`, bueno: e.paciencia > 0 });
