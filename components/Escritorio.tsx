@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Escudo from "./Escudo.tsx";
+import Trofeo from "./Trofeo.tsx";
 import IconoModulo, { type ClaveIcono } from "./IconoModulo.tsx";
 import Numero from "./Numero.tsx";
 import Dorsal from "./Dorsal.tsx";
@@ -23,6 +24,8 @@ import {
   comoLoDejaste, guardarEquipo,
 } from "@/lib/temporada.ts";
 import { useAtras } from "@/lib/atras.ts";
+import { esCopaInternacional } from "@/engine/tipos.ts";
+import { NOMBRE_ETAPA, caminoDeCopa, etapaInicial, grupoDeOlimpia } from "@/lib/copaEnJuego.ts";
 import Alineador, { type EstadoAlineacion } from "./Alineador.tsx";
 import FichaJugador from "./FichaJugador.tsx";
 import PantallaEstrella from "./PantallaEstrella.tsx";
@@ -255,7 +258,28 @@ export default function Escritorio({
   const bajas = plantel.filter((j) => j.suspendido || j.lesionado_hasta);
   const lider = tabla[0];
   const difLider = lider.id === "olimpia" ? 0 : lider.pts - yo.pts;
-  const rivalCopa = (RIVALES_COPA as any[]).find((r) => r.id === partida.copa.rivalId);
+  /*
+   * En qué copa está Olimpia ESTE año y contra quién juega.
+   *
+   * La card se quedaba con la Sudamericana y con el rival de la temporada
+   * pasada: leía `copa.rivalId`, que es del sistema viejo y no se actualiza,
+   * en vez del partido que de verdad viene. Ahora sale del cuadro, igual que
+   * todo lo demás.
+   */
+  const copaDeEsteAno: "libertadores" | "sudamericana" =
+    partida.copa.torneo ?? "sudamericana";
+  /*
+   * Sin useMemo a propósito: acá arriba hay returns tempranos (el DT
+   * despedido, la pantalla de estrella) y un hook después de un return rompe
+   * React con "rendered fewer hooks than expected". `partidoDe` es barato.
+   */
+  const proximoDeCopa = (() => {
+    const m = partidoDe(partida);
+    return m && esCopaInternacional(m.ctx.competencia) ? m : null;
+  })();
+  const rivalCopa = proximoDeCopa
+    ? { id: proximoDeCopa.rivalId, nombre: proximoDeCopa.rivalNombre }
+    : (RIVALES_COPA as any[]).find((r) => r.id === partida.copa.rivalId) ?? null;
   const NOMBRE_RONDA: Record<string, string> = {
     octavos: "Octavos", cuartos: "Cuartos", semis: "Semifinal", final: "Final",
     eliminado: "Eliminado", campeon: "Campeón",
@@ -272,7 +296,7 @@ export default function Escritorio({
           <div className="min-w-0 flex-1">
             <div className="apellido text-[16px] leading-none">Olimpia</div>
             <div className="text-[10px]" style={{ color: "var(--tenue)" }}>
-              {formatoDia(partida.dia)} · fecha {Math.min(partida.fechaActual, TOTAL_FECHAS)} de {TOTAL_FECHAS}
+              {formatoDia(partida.dia)} - fecha {Math.min(partida.fechaActual, TOTAL_FECHAS)} de {TOTAL_FECHAS}
             </div>
             {/*
               * La barra es la dirigencia, no el avance del torneo.
@@ -397,10 +421,10 @@ export default function Escritorio({
           /*
            * El día de copa se pintaba de amarillo con un puntito amarillo, o
            * sea con la gama de la Libertadores y sin decir contra quién. Ahora
-           * usa el azul de la Sudamericana, el mismo de la card de al lado, y
-           * muestra el escudo del rival igual que los partidos de liga.
+           * usa el color de la copa que se está jugando, el mismo de la card de
+           * al lado, y muestra el escudo del rival igual que los de liga.
            */
-          const azul = COPAS.sudamericana.acento;
+          const acentoCopa = COPAS[copaDeEsteAno].acento;
           const hoy = i === 0;
           return (
             <div key={dia}
@@ -408,7 +432,7 @@ export default function Escritorio({
                 hoy ? "pasa-el-dia relieve-alto" : "relieve"}`}
               style={{
                 background: hoy ? "var(--blanco)"
-                  : copaHoy ? `color-mix(in srgb, ${azul} 30%, var(--carbon))`
+                  : copaHoy ? `color-mix(in srgb, ${acentoCopa} 30%, var(--carbon))`
                   : m ? "color-mix(in srgb, #3fa76a 24%, var(--carbon))"
                   : "var(--carbon)",
                 color: hoy ? "var(--negro)" : "var(--blanco)",
@@ -421,7 +445,7 @@ export default function Escritorio({
               <span className="flex h-3 items-center">
                 {copaHoy && rivalCopa
                   ? <Escudo id={rivalCopa.id} nombre={rivalCopa.nombre} tam={12} />
-                  : copaHoy ? <Punto color={azul} />
+                  : copaHoy ? <Punto color={acentoCopa} />
                   : m ? <Escudo id={m.rivalId} nombre={m.rivalNombre} tam={12} />
                   : null}
               </span>
@@ -501,11 +525,13 @@ export default function Escritorio({
               )}
             </button>
 
-            <CardCopa copa="sudamericana"
-              ronda={NOMBRE_RONDA[partida.copa.ronda]}
+            <CardCopa copa={copaDeEsteAno}
+              /* En los grupos lo que ubica es la letra, y encima entra: "Fase
+                 de grupos" se cortaba en "FASE DE GRUP…" y no decía cuál. */
+              ronda={partida.copa.etapa === "grupos"
+                ? `Grupo ${grupoDeOlimpia(partida.copas![copaDeEsteAno])?.letra ?? ""}`
+                : NOMBRE_ETAPA[partida.copa.etapa ?? "octavos"] ?? NOMBRE_RONDA[partida.copa.ronda]}
               rival={rivalCopa ? rivalCopa.nombre : null}
-              escudo={partida.copa.ronda !== "eliminado" && partida.copa.ronda !== "campeon"
-                ? partida.copa.rivalId : undefined}
               onClick={() => setVista("copa")} />
           </div>
 
@@ -598,7 +624,7 @@ export default function Escritorio({
                     return (
                       <span className="block text-[9px] font-bold" style={{ color: "#1a7a44" }}>
                         {l.texto.toLowerCase()}
-                        {e.vieneDeCopa ? ", jugó la copa el jueves" : ""} · apretalo
+                        {e.vieneDeCopa ? ", jugó la copa el jueves" : ""} - apretalo
                       </span>
                     );
                   })()}
@@ -786,7 +812,7 @@ export default function Escritorio({
                 {AYUDAS[ayuda].mueve.map((m, i) => (
                   <li key={i} className="mb-1 flex gap-2 text-[11px] leading-snug"
                       style={{ color: "var(--tenue)" }}>
-                    <span style={{ color: "var(--apagado)" }}>·</span>{m}
+                    <span style={{ color: "var(--apagado)" }}>-</span>{m}
                   </li>
                 ))}
               </ul>
@@ -905,12 +931,18 @@ const COPAS = {
   },
 } as const;
 
-/** El azul de la Sudamericana, que es el de la card de la pantalla principal. */
-const SUDA = COPAS.sudamericana;
+/**
+ * El color de la copa que Olimpia está jugando este año.
+ *
+ * Estaba fijo en el azul de la Sudamericana, así que un año de Libertadores se
+ * veía azul en el fixture y dorado en la card de la home. Es la misma copa: se
+ * tiene que ver igual en las dos pantallas.
+ */
+const copaDe = (p: Partida) => COPAS[p.copa.torneo ?? "sudamericana"];
 
-function CardCopa({ copa, ronda, rival, escudo, onClick }: {
+function CardCopa({ copa, ronda, rival, onClick }: {
   copa: keyof typeof COPAS;
-  ronda: string; rival: string | null; escudo?: string;
+  ronda: string; rival: string | null;
   onClick: () => void;
 }) {
   const c = COPAS[copa];
@@ -930,12 +962,16 @@ function CardCopa({ copa, ronda, rival, escudo, onClick }: {
           {rival ? `vs ${rival}` : "sin rival"}
         </span>
       </span>
-      {/* el escudo del rival, grande y al medio: es la cara del cruce */}
-      {escudo && (
-        <span className="relative shrink-0">
-          <Escudo id={escudo} nombre={rival ?? ""} tam={40} />
-        </span>
-      )}
+      {/*
+        * El trofeo, no el escudo del rival.
+        *
+        * Esta card es la de la COPA, y el rival ya está escrito abajo con su
+        * nombre. La copa en cambio no se decía en ningún lado más que con un
+        * color, y una copa se reconoce por su forma antes que por la palabra.
+        */}
+      <span className="relative shrink-0">
+        <Trofeo copa={copa} alto={46} />
+      </span>
     </button>
   );
 }
@@ -1070,7 +1106,7 @@ function VistaPlantel({ plantel, partida, onGuardarEquipos, onMoverReserva, onOf
         <button onClick={() => setPestana("equipos")}
                 className="flex-1 rounded-md py-1.5 text-[10px] font-bold uppercase tracking-wider"
                 style={{ background: "var(--carbon)", color: "var(--tenue)" }}>
-          Equipos{partida.equipos.length ? ` · ${partida.equipos.length}` : ""}
+          Equipos{partida.equipos.length ? ` - ${partida.equipos.length}` : ""}
         </button>
       </div>
       <div className="mb-2 rounded-lg px-3 py-2" style={{ background: "var(--carbon)" }}>
@@ -1104,16 +1140,16 @@ function VistaPlantel({ plantel, partida, onGuardarEquipos, onMoverReserva, onOf
             <span style={{ color: "var(--tenue)" }}>
               Primer equipo <span className="num">{activos.length - reserva}</span>
               {reserva > 0 && (
-                <> · reserva <span className="num">{reserva}</span></>
+                <> - reserva <span className="num">{reserva}</span></>
               )}
               {fuera > 0 && (
                 <span style={{ color: "var(--ladrillo)" }}>
-                  {" · "}<span className="num">{fuera}</span> {fuera === 1 ? "baja" : "bajas"}
+                  {" - "}<span className="num">{fuera}</span> {fuera === 1 ? "baja" : "bajas"}
                 </span>
               )}
               {enVenta.size > 0 && (
                 <span style={{ color: "var(--ladrillo)" }}>
-                  {" · "}<span className="num">{enVenta.size}</span> en venta
+                  {" - "}<span className="num">{enVenta.size}</span> en venta
                 </span>
               )}
             </span>
@@ -1181,9 +1217,9 @@ function VistaPlantel({ plantel, partida, onGuardarEquipos, onMoverReserva, onOf
                   )}
                 </span>
                 <span className="text-[9px]" style={{ color: "var(--apagado)" }}>
-                  {j.edad} años · {e?.minutos ?? 0} min
-                  {(e?.golesTorneo ?? 0) > 0 && ` · ${e.golesTorneo}g`}
-                  {(e?.amarillas ?? 0) > 0 && ` · ${e.amarillas}🟨`}
+                  {j.edad} años - {e?.minutos ?? 0} min
+                  {(e?.golesTorneo ?? 0) > 0 && ` - ${e.golesTorneo}g`}
+                  {(e?.amarillas ?? 0) > 0 && ` - ${e.amarillas}🟨`}
                 </span>
               </span>
               {fuera && (
@@ -1266,6 +1302,7 @@ function VistaFixture({ partida, tabla }: {
   /* La tabla vivía en una card propia del tablero. Está mejor acá: el que
      mira el fixture es el que quiere saber cómo va el torneo. */
   const [comp, setComp] = useState<"todo" | "clausura" | "copa" | "tabla">("todo");
+  const SUDA = copaDe(partida);
 
   const liga = fixtureDeOlimpia(partida).map((p, i) => ({
     clave: `liga-${i}`,
@@ -1280,44 +1317,36 @@ function VistaFixture({ partida, tabla }: {
     esProximo: i + 1 === partida.fechaActual,
   }));
 
-  const RONDAS = ["octavos", "cuartos", "semis", "final"] as const;
-  const NOMBRE: Record<string, string> = {
-    octavos: "8vos", cuartos: "4tos", semis: "Semi", final: "Final",
-  };
-  const indiceActual = RONDAS.indexOf(partida.copa.ronda as "octavos");
+  /*
+   * La copa sale del cuadro sorteado, no de una escalera fija.
+   *
+   * Antes esto listaba octavos, cuartos, semis y final aunque Olimpia hubiera
+   * entrado por la fase 1 y tuviera tres llaves y seis fechas de grupo antes.
+   * Con el cuadro nuevo la pestaña quedaba directamente vacía.
+   */
+  const camino = partida.copas && partida.copa.torneo && partida.copa.etapa
+    ? caminoDeCopa(partida.copas[partida.copa.torneo],
+        partida.copa.etapa === "eliminado" || partida.copa.etapa === "campeon"
+          ? etapaInicial(partida.copas[partida.copa.torneo])
+          : partida.copa.etapa,
+        partida.ano, partida.semilla)
+    : [];
 
-  const copa = RONDAS.flatMap((r) => {
-    const cal = CALENDARIO_COPA[r];
-    const esActual = partida.copa.ronda === r;
-    const yaPaso = partida.copa.ronda === "campeon" || indiceActual > RONDAS.indexOf(r);
-    // el rival solo se conoce en la ronda que se está jugando; más adelante se
-    // sabe la fecha pero todavía no contra quién
-    const rival = esActual
-      ? (RIVALES_COPA as any[]).find((x) => x.id === partida.copa.rivalId)
-      : null;
-    // en la final se juega un partido solo, en el resto ida y vuelta
-    const patas = r === "final"
-      ? [{ dia: cal.ida, mano: "único" }]
-      : [{ dia: cal.ida, mano: "ida" }, { dia: cal.vuelta, mano: "vuelta" }];
-    return patas.map((pata, k) => ({
-      clave: `copa-${r}-${k}`,
-      orden: pata.dia,
-      competencia: "copa" as const,
-      etiqueta: NOMBRE[r],
-      fecha: pata.dia,
-      // de local en la vuelta, que es como cayó el sorteo
-      esLocal: r === "final" ? false : pata.mano === "vuelta",
-      neutral: r === "final",
-      rivalId: esActual ? partida.copa.rivalId : "",
-      rivalNombre: r === "final" && !rival
-        ? "Final en Barranquilla"
-        : rival?.nombre ?? "Por definir",
-      resultado: null,
-      esProximo: esActual,
-      mano: pata.mano,
-      yaPaso,
-    }));
-  });
+  const copa = camino.map((m, k) => ({
+    clave: `copa-${k}`,
+    orden: m.dia,
+    competencia: "copa" as const,
+    etiqueta: m.rotulo,
+    fecha: m.dia,
+    esLocal: m.esLocal,
+    neutral: m.etapa === "final",
+    rivalId: m.rivalId,
+    rivalNombre: m.rivalNombre,
+    resultado: null,
+    esProximo: m.etapa === partida.copa.etapa,
+    mano: "",
+    yaPaso: false,
+  }));
 
   const eliminado = partida.copa.ronda === "eliminado";
   const items = (comp === "clausura" ? liga : comp === "copa" ? copa
@@ -1375,7 +1404,7 @@ function VistaFixture({ partida, tabla }: {
               boxShadow: esCopa && !p.esProximo ? `inset 0 0 0 1px ${SUDA.halo}` : undefined,
               opacity: r ? 0.75 : esCopa && eliminado ? 0.4 : 1,
             }}>
-            <span className="num w-8 shrink-0 text-[10px]"
+            <span className="num w-12 shrink-0 truncate text-[10px]"
                   style={{ color: esCopa ? SUDA.acento : "var(--apagado)" }}>
               {p.etiqueta}
             </span>
@@ -1417,6 +1446,7 @@ function VistaFixture({ partida, tabla }: {
 
 function VistaCopa({ partida }: { partida: Partida }) {
   const c = partida.copa;
+  const SUDA = copaDe(partida);
   const rondas = ["octavos", "cuartos", "semis", "final"] as const;
   const nombres: Record<string, string> = {
     octavos: "Octavos de final", cuartos: "Cuartos de final",
@@ -1688,7 +1718,7 @@ function VistaEquipos({ partida, plantel, onGuardar, onVolver }: {
             <span className="min-w-0 flex-1">
               <span className="apellido block truncate text-[13px] leading-tight">{e.nombre}</span>
               <span className="text-[9px] uppercase tracking-wider" style={{ color: "var(--apagado)" }}>
-                {e.formacion} · nivel medio {nivel}
+                {e.formacion} - nivel medio {nivel}
               </span>
             </span>
             <button onClick={() => abrir(e.nombre)}

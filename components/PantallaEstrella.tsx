@@ -99,10 +99,10 @@ export default function PantallaEstrella({ partida, onFichar, onRechazar, onVolv
               {e.nombre} {e.apellido}
             </div>
             <div className="text-[11px]" style={{ color: "var(--tenue)" }}>
-              {e.edad} años · {e.posicion} · {BANDERA[e.nacionalidad] ?? ""} {e.nacionalidad}
+              {e.edad} años - {e.posicion} - {BANDERA[e.nacionalidad] ?? ""} {e.nacionalidad}
             </div>
             <div className="text-[10px]" style={{ color: "var(--apagado)" }}>
-              viene de {e.de}{e.extranjero ? " · ocupa cupo de extranjero" : ""}
+              viene de {e.de}{e.extranjero ? " - ocupa cupo de extranjero" : ""}
             </div>
           </div>
         </div>

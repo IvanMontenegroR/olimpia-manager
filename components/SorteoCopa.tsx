@@ -85,7 +85,7 @@ export default function SorteoCopa({ cuadro, ano, onSeguir }: {
         <Trofeo copa={cuadro.torneo} alto={64} />
         <div className="min-w-0 flex-1">
           <span className="text-[10px] uppercase tracking-[0.24em]" style={{ color: e.acento }}>
-            Sorteo · {ano}
+            Sorteo - {ano}
           </span>
           <h1 className="apellido mt-1 text-[24px] leading-tight">{e.nombre}</h1>
         </div>
@@ -106,7 +106,7 @@ export default function SorteoCopa({ cuadro, ano, onSeguir }: {
               </span>
               <span className="mt-1 block text-[11px] leading-snug" style={{ color: "var(--tenue)" }}>
                 {yo.grupo.equipos.filter((x) => esPlaceholder(x) || x.id !== "olimpia")
-                  .map(nombreDe).join(" · ")}
+                  .map(nombreDe).join(" - ")}
               </span>
             </>
           ) : yo.llave ? (() => {
@@ -177,7 +177,7 @@ export default function SorteoCopa({ cuadro, ano, onSeguir }: {
                           fontWeight: mio ? 800 : 400,
                           fontStyle: esPlaceholder(x) ? "italic" : "normal",
                         }}>
-                    {visible ? nombreDe(x) : "·"}
+                    {visible ? nombreDe(x) : "-"}
                   </span>
                 </span>
               );
@@ -208,7 +208,7 @@ function Lado({ c, visible, derecha }: { c: Casillero; visible: boolean; derecha
               fontStyle: esPlaceholder(c) ? "italic" : "normal",
               color: esPlaceholder(c) ? "var(--apagado)" : "var(--blanco)",
             }}>
-        {visible ? nombreDe(c) : "·"}
+        {visible ? nombreDe(c) : "-"}
       </span>
     </span>
   );

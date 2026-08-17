@@ -55,8 +55,8 @@ export default function Mercado({
                 </span>
                 <span className="text-[9px]" style={{ color: "var(--apagado)" }}>
                   {f.edad} años {BANDERA[f.nacionalidad] ?? ""}
-                  {f.de ? ` · ${f.de}` : ""}
-                  {f.extranjero && " · ocupa cupo"}
+                  {f.de ? ` - ${f.de}` : ""}
+                  {f.extranjero && " - ocupa cupo"}
                 </span>
               </span>
               {/* El nivel de hoy y, en los que todavía crecen, hasta dónde

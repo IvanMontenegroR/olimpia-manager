@@ -74,8 +74,8 @@ export default function FichaJugador({
           <div className="min-w-0 flex-1">
             <div className="apellido truncate text-[20px] leading-none">{j.apellido}</div>
             <div className="truncate text-[11px]" style={{ color: "var(--tenue)" }}>
-              {j.nombre} · {j.edad} años · {BANDERA[j.nacionalidad] ?? ""} {j.nacionalidad}
-              {j.extranjero && " · ocupa cupo"}
+              {j.nombre} - {j.edad} años - {BANDERA[j.nacionalidad] ?? ""} {j.nacionalidad}
+              {j.extranjero && " - ocupa cupo"}
             </div>
             <div className="mt-0.5 flex flex-wrap items-center gap-1">
               <span className="rounded px-1.5 py-0.5 text-[9px] font-bold"
@@ -124,7 +124,7 @@ export default function FichaJugador({
           <Caja etiqueta="Condición" valor={`${j.condicion}%`} color={colorCondicion(j.condicion)} />
           {/* El número, no solo "En racha": si no se puede medir, no se puede
               querer subir. */}
-          <Caja etiqueta={`Ánimo · ${TEXTO_ANIMO[animoDe(j.animo)].toLowerCase()}`}
+          <Caja etiqueta={`Ánimo - ${TEXTO_ANIMO[animoDe(j.animo)].toLowerCase()}`}
                 valor={`${Math.round(j.animo)}`}
                 color={j.animo >= 78 ? "var(--ok)"
                   : j.animo >= 60 ? "var(--blanco)"

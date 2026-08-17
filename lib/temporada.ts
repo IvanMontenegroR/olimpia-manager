@@ -803,8 +803,14 @@ function partidoDelCuadro(p: Partida): PartidoUI | null {
     rivalNombre: r.nombre,
     estadio: esFinal ? "Cancha neutral" : esLocal ? "Defensores del Chaco" : `Estadio de ${r.nombre}`,
     ciudad: esFinal ? "sede única" : esLocal ? "Asunción" : "",
-    etiqueta: `${nombre} · ${NOMBRE_ETAPA[etapa]}` +
-      (etapa === "grupos" ? ` · fecha ${i + 1}` : unico ? "" : i === 0 ? " ida" : " vuelta"),
+    /*
+     * La etiqueta dice de qué copa es y en qué instancia estás. En los grupos
+     * decía "fecha 1" a secas, que es como se llama una fecha de liga: acá lo
+     * que ubica es el grupo, y cuántas quedan.
+     */
+    etiqueta: etapa === "grupos"
+      ? `${nombre} - Grupo ${grupoDeOlimpia(cuadro)?.letra ?? ""} - fecha ${i + 1} de 6`
+      : `${nombre} - ${NOMBRE_ETAPA[etapa]}` + (unico ? "" : i === 0 ? " - ida" : " - vuelta"),
     llave: etapa === "grupos" || unico ? undefined
       : { globalO: c.globalO, globalR: c.globalR, esVuelta: i === 1, esFinal },
     ctx: {
@@ -853,7 +859,7 @@ export function partidoCopaDe(p: Partida): PartidoUI | null {
     rivalNombre: r.nombre,
     estadio: esFinal ? "Cancha neutral" : esLocal ? "Defensores del Chaco" : r.estadio,
     ciudad: esFinal ? "sede única" : esLocal ? "Asunción" : r.ciudad,
-    etiqueta: `Sudamericana · ${nombreRonda}${esFinal ? "" : c.jugadosEnRonda === 0 ? " ida" : " vuelta"}`,
+    etiqueta: `Sudamericana - ${nombreRonda}${esFinal ? "" : c.jugadosEnRonda === 0 ? " ida" : " vuelta"}`,
     llave: { globalO: c.globalO, globalR: c.globalR, esVuelta: c.jugadosEnRonda === 1, esFinal },
     ctx: {
       fecha: dia,
@@ -3036,7 +3042,7 @@ export function fichar(p: Partida, fichajeId: string): Partida | null {
       ? `Firma con Olimpia por ${miles(f.precioUsd)}. Va derecho al once.`
       : `Firma con Olimpia por ${miles(f.precioUsd)}. Se suma al plantel.`,
     cifra: String(f.nivel),
-    pie: `${f.posicion} · ${f.edad} años · viene de ${f.de}`,
+    pie: `${f.posicion} - ${f.edad} años - viene de ${f.de}`,
   };
   n.bitacora.push({ dia: n.dia, texto:
     `Refuerzo: llega ${f.apellido} (${f.posicion}, nivel ${f.nivel}) por ${miles(f.precioUsd)}.` });

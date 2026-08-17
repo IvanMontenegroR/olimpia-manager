@@ -121,7 +121,7 @@ export default function Arranque({ partida, onListo }: {
     <div className="app">
       <header className="px-4 pb-2 pt-3">
         <span className="text-[10px] uppercase tracking-[0.24em]" style={{ color: "var(--tenue)" }}>
-          Clausura 2026 · Olimpia
+          Clausura 2026 - Olimpia
         </span>
         <h1 className="apellido mt-0.5 text-[22px] leading-tight">Armá tus dos equipos</h1>
         <p className="mt-1 text-[11px] leading-snug" style={{ color: "var(--tenue)" }}>

@@ -55,7 +55,7 @@ export default function FinDeTemporada({ partida, onCerrar, onSiguiente }: {
     <div className="app scroll-y px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-5">
 
       <span className="text-[10px] uppercase tracking-[0.24em]" style={{ color: "var(--tenue)" }}>
-        Temporada {ano} · Olimpia
+        Temporada {ano} - Olimpia
       </span>
       <h1 className="apellido mt-1 text-[26px] leading-tight">Cómo terminó el año</h1>
 

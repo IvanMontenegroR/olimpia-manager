@@ -226,7 +226,7 @@ export function partidosDeOlimpia(
         rivalNombre: rival.nombre,
         estadio: p.estadio,
         ciudad: p.ciudad,
-        etiqueta: `${NOMBRE_TORNEO[torneo]} · Fecha ${p.fechaNumero}`,
+        etiqueta: `${NOMBRE_TORNEO[torneo]} - Fecha ${p.fechaNumero}`,
         ctx: {
           fecha: p.dia,
           competencia: torneo,

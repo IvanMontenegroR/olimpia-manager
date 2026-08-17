@@ -109,7 +109,7 @@ export default function Penales({ tanda, onPatear, onAtajar, onCerrar }: {
                               color: p ? "#0a120d" : "var(--linea)",
                               transition: "background 200ms ease-out",
                             }}>
-                        {p ? (p.entro ? "●" : "✕") : "·"}
+                        {p ? (p.entro ? "●" : "✕") : "-"}
                       </span>
                     );
                   })}

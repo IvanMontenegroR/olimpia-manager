@@ -1,15 +1,538 @@
 {
-  "_nota": "Colores de club para la interfaz. 'escudo' en true solo cuando el archivo existe en public/escudos/<id>.png. Los marcados como verificar están en gris neutro a propósito: es preferible eso a inventar un color.",
-  "olimpia":             { "primario": "#ffffff", "secundario": "#0b0b0c", "sobrePrimario": "#0b0b0c", "escudo": false },
-  "cerro_porteno":       { "primario": "#0b3ea8", "secundario": "#e2001a", "sobrePrimario": "#ffffff", "escudo": false },
-  "libertad":            { "primario": "#f2f2f2", "secundario": "#0b0b0c", "sobrePrimario": "#0b0b0c", "escudo": false },
-  "guarani":             { "primario": "#f5c400", "secundario": "#0b0b0c", "sobrePrimario": "#0b0b0c", "escudo": false },
-  "nacional":            { "primario": "#0b3da5", "secundario": "#ffffff", "sobrePrimario": "#ffffff", "escudo": false },
-  "sportivo_luqueno":    { "primario": "#1e3a8a", "secundario": "#f5c400", "sobrePrimario": "#ffffff", "escudo": false, "verificar": true },
-  "recoleta":            { "primario": "#3d4a42", "secundario": "#8fa396", "sobrePrimario": "#ffffff", "escudo": false, "verificar": true },
-  "sportivo_ameliano":   { "primario": "#3d4a42", "secundario": "#8fa396", "sobrePrimario": "#ffffff", "escudo": false, "verificar": true },
-  "sportivo_trinidense": { "primario": "#3d4a42", "secundario": "#8fa396", "sobrePrimario": "#ffffff", "escudo": false, "verificar": true },
-  "2_de_mayo":           { "primario": "#3d4a42", "secundario": "#8fa396", "sobrePrimario": "#ffffff", "escudo": false, "verificar": true },
-  "san_lorenzo":         { "primario": "#3d4a42", "secundario": "#8fa396", "sobrePrimario": "#ffffff", "escudo": false, "verificar": true },
-  "rubio_nu":            { "primario": "#3d4a42", "secundario": "#8fa396", "sobrePrimario": "#ffffff", "escudo": false, "verificar": true }
+ "_nota": "Colores de club para la interfaz. 'escudo' en true solo cuando el archivo existe en public/escudos/<id>.png. Los marcados como verificar están en gris neutro a propósito: es preferible eso a inventar un color.",
+ "olimpia": {
+  "primario": "#ffffff",
+  "secundario": "#0b0b0c",
+  "sobrePrimario": "#0b0b0c",
+  "escudo": false
+ },
+ "cerro_porteno": {
+  "primario": "#0b3ea8",
+  "secundario": "#e2001a",
+  "sobrePrimario": "#ffffff",
+  "escudo": false
+ },
+ "libertad": {
+  "primario": "#f2f2f2",
+  "secundario": "#0b0b0c",
+  "sobrePrimario": "#0b0b0c",
+  "escudo": false
+ },
+ "guarani": {
+  "primario": "#f5c400",
+  "secundario": "#0b0b0c",
+  "sobrePrimario": "#0b0b0c",
+  "escudo": false
+ },
+ "nacional": {
+  "primario": "#0b3da5",
+  "secundario": "#ffffff",
+  "sobrePrimario": "#ffffff",
+  "escudo": false
+ },
+ "sportivo_luqueno": {
+  "primario": "#1e3a8a",
+  "secundario": "#f5c400",
+  "sobrePrimario": "#ffffff",
+  "escudo": false,
+  "verificar": true
+ },
+ "recoleta": {
+  "primario": "#3d4a42",
+  "secundario": "#8fa396",
+  "sobrePrimario": "#ffffff",
+  "escudo": false,
+  "verificar": true
+ },
+ "sportivo_ameliano": {
+  "primario": "#3d4a42",
+  "secundario": "#8fa396",
+  "sobrePrimario": "#ffffff",
+  "escudo": false,
+  "verificar": true
+ },
+ "sportivo_trinidense": {
+  "primario": "#3d4a42",
+  "secundario": "#8fa396",
+  "sobrePrimario": "#ffffff",
+  "escudo": false,
+  "verificar": true
+ },
+ "2_de_mayo": {
+  "primario": "#3d4a42",
+  "secundario": "#8fa396",
+  "sobrePrimario": "#ffffff",
+  "escudo": false,
+  "verificar": true
+ },
+ "san_lorenzo": {
+  "primario": "#3d4a42",
+  "secundario": "#8fa396",
+  "sobrePrimario": "#ffffff",
+  "escudo": false,
+  "verificar": true
+ },
+ "rubio_nu": {
+  "primario": "#3d4a42",
+  "secundario": "#8fa396",
+  "sobrePrimario": "#ffffff",
+  "escudo": false,
+  "verificar": true
+ },
+ "flamengo": {
+  "primario": "#c8102e",
+  "secundario": "#111111",
+  "sobrePrimario": "#ffffff",
+  "escudo": true
+ },
+ "palmeiras": {
+  "primario": "#006437",
+  "secundario": "#ffffff",
+  "sobrePrimario": "#ffffff",
+  "escudo": true
+ },
+ "corinthians": {
+  "primario": "#ffffff",
+  "secundario": "#111111",
+  "sobrePrimario": "#111111",
+  "escudo": true
+ },
+ "fluminense": {
+  "primario": "#7a1b3a",
+  "secundario": "#0f6b3a",
+  "sobrePrimario": "#ffffff",
+  "escudo": true
+ },
+ "cruzeiro": {
+  "primario": "#1b3f94",
+  "secundario": "#ffffff",
+  "sobrePrimario": "#ffffff",
+  "escudo": true
+ },
+ "internacional": {
+  "primario": "#c8102e",
+  "secundario": "#ffffff",
+  "sobrePrimario": "#ffffff",
+  "escudo": true
+ },
+ "gremio": {
+  "primario": "#1b6ec2",
+  "secundario": "#111111",
+  "sobrePrimario": "#ffffff",
+  "escudo": true
+ },
+ "fortaleza": {
+  "primario": "#c8102e",
+  "secundario": "#1b3f94",
+  "sobrePrimario": "#ffffff",
+  "escudo": true
+ },
+ "racing": {
+  "primario": "#7fbfe8",
+  "secundario": "#ffffff",
+  "sobrePrimario": "#111111",
+  "escudo": true
+ },
+ "velez": {
+  "primario": "#ffffff",
+  "secundario": "#1b3f94",
+  "sobrePrimario": "#111111",
+  "escudo": true
+ },
+ "estudiantes": {
+  "primario": "#c8102e",
+  "secundario": "#ffffff",
+  "sobrePrimario": "#ffffff",
+  "escudo": true
+ },
+ "independiente": {
+  "primario": "#c8102e",
+  "secundario": "#ffffff",
+  "sobrePrimario": "#ffffff",
+  "escudo": true
+ },
+ "san_lorenzo_arg": {
+  "primario": "#0b3c8c",
+  "secundario": "#c8102e",
+  "sobrePrimario": "#ffffff",
+  "escudo": true
+ },
+ "talleres": {
+  "primario": "#0b3c8c",
+  "secundario": "#ffffff",
+  "sobrePrimario": "#ffffff",
+  "escudo": true
+ },
+ "argentinos": {
+  "primario": "#c8102e",
+  "secundario": "#ffffff",
+  "sobrePrimario": "#ffffff",
+  "escudo": true
+ },
+ "rosario_central": {
+  "primario": "#f2c200",
+  "secundario": "#0b3c8c",
+  "sobrePrimario": "#111111",
+  "escudo": true
+ },
+ "newells": {
+  "primario": "#c8102e",
+  "secundario": "#111111",
+  "sobrePrimario": "#ffffff",
+  "escudo": true
+ },
+ "penarol": {
+  "primario": "#f2c200",
+  "secundario": "#111111",
+  "sobrePrimario": "#111111",
+  "escudo": true
+ },
+ "nacional_uru": {
+  "primario": "#ffffff",
+  "secundario": "#0b3c8c",
+  "sobrePrimario": "#111111",
+  "escudo": true
+ },
+ "liverpool_uru": {
+  "primario": "#111111",
+  "secundario": "#1b6ec2",
+  "sobrePrimario": "#ffffff",
+  "escudo": true
+ },
+ "defensor": {
+  "primario": "#7a1b3a",
+  "secundario": "#ffffff",
+  "sobrePrimario": "#ffffff",
+  "escudo": true
+ },
+ "danubio": {
+  "primario": "#ffffff",
+  "secundario": "#111111",
+  "sobrePrimario": "#111111",
+  "escudo": true
+ },
+ "cerro_largo": {
+  "primario": "#0b6b3a",
+  "secundario": "#ffffff",
+  "sobrePrimario": "#ffffff",
+  "escudo": true
+ },
+ "boston_river": {
+  "primario": "#c8102e",
+  "secundario": "#ffffff",
+  "sobrePrimario": "#ffffff",
+  "escudo": true
+ },
+ "racing_uru": {
+  "primario": "#7fbfe8",
+  "secundario": "#ffffff",
+  "sobrePrimario": "#111111",
+  "escudo": true
+ },
+ "colo_colo": {
+  "primario": "#ffffff",
+  "secundario": "#111111",
+  "sobrePrimario": "#111111",
+  "escudo": true
+ },
+ "u_de_chile": {
+  "primario": "#0b3c8c",
+  "secundario": "#c8102e",
+  "sobrePrimario": "#ffffff",
+  "escudo": true
+ },
+ "u_catolica": {
+  "primario": "#ffffff",
+  "secundario": "#1b3f94",
+  "sobrePrimario": "#111111",
+  "escudo": true
+ },
+ "palestino": {
+  "primario": "#0b6b3a",
+  "secundario": "#c8102e",
+  "sobrePrimario": "#ffffff",
+  "escudo": true
+ },
+ "huachipato": {
+  "primario": "#0b3c8c",
+  "secundario": "#f2c200",
+  "sobrePrimario": "#ffffff",
+  "escudo": true
+ },
+ "cobresal": {
+  "primario": "#ffffff",
+  "secundario": "#e07a1b",
+  "sobrePrimario": "#111111",
+  "escudo": true
+ },
+ "audax": {
+  "primario": "#0b6b3a",
+  "secundario": "#ffffff",
+  "sobrePrimario": "#ffffff",
+  "escudo": true
+ },
+ "nublense": {
+  "primario": "#c8102e",
+  "secundario": "#0b3c8c",
+  "sobrePrimario": "#ffffff",
+  "escudo": true
+ },
+ "ohiggins": {
+  "primario": "#7fbfe8",
+  "secundario": "#111111",
+  "sobrePrimario": "#111111",
+  "escudo": true
+ },
+ "atletico_nacional": {
+  "primario": "#0b6b3a",
+  "secundario": "#ffffff",
+  "sobrePrimario": "#ffffff",
+  "escudo": true
+ },
+ "millonarios": {
+  "primario": "#0b3c8c",
+  "secundario": "#ffffff",
+  "sobrePrimario": "#ffffff",
+  "escudo": true
+ },
+ "junior": {
+  "primario": "#c8102e",
+  "secundario": "#ffffff",
+  "sobrePrimario": "#ffffff",
+  "escudo": true
+ },
+ "america_cali": {
+  "primario": "#c8102e",
+  "secundario": "#ffffff",
+  "sobrePrimario": "#ffffff",
+  "escudo": true
+ },
+ "deportivo_cali": {
+  "primario": "#0b6b3a",
+  "secundario": "#ffffff",
+  "sobrePrimario": "#ffffff",
+  "escudo": true
+ },
+ "tolima": {
+  "primario": "#c8102e",
+  "secundario": "#f2c200",
+  "sobrePrimario": "#ffffff",
+  "escudo": true
+ },
+ "once_caldas": {
+  "primario": "#ffffff",
+  "secundario": "#111111",
+  "sobrePrimario": "#111111",
+  "escudo": true
+ },
+ "aguilas": {
+  "primario": "#f2c200",
+  "secundario": "#0b6b3a",
+  "sobrePrimario": "#111111",
+  "escudo": true
+ },
+ "idv": {
+  "primario": "#0b3c8c",
+  "secundario": "#111111",
+  "sobrePrimario": "#ffffff",
+  "escudo": true
+ },
+ "ldu": {
+  "primario": "#ffffff",
+  "secundario": "#0b3c8c",
+  "sobrePrimario": "#111111",
+  "escudo": true
+ },
+ "barcelona_sc": {
+  "primario": "#f2c200",
+  "secundario": "#c8102e",
+  "sobrePrimario": "#111111",
+  "escudo": true
+ },
+ "emelec": {
+  "primario": "#7fbfe8",
+  "secundario": "#111111",
+  "sobrePrimario": "#111111",
+  "escudo": true
+ },
+ "aucas": {
+  "primario": "#f2c200",
+  "secundario": "#c8102e",
+  "sobrePrimario": "#111111",
+  "escudo": true
+ },
+ "u_catolica_ecu": {
+  "primario": "#0b3c8c",
+  "secundario": "#ffffff",
+  "sobrePrimario": "#ffffff",
+  "escudo": true
+ },
+ "delfin": {
+  "primario": "#7fbfe8",
+  "secundario": "#111111",
+  "sobrePrimario": "#111111",
+  "escudo": true
+ },
+ "orense": {
+  "primario": "#0b6b3a",
+  "secundario": "#ffffff",
+  "sobrePrimario": "#ffffff",
+  "escudo": true
+ },
+ "libertad_ecu": {
+  "primario": "#c8102e",
+  "secundario": "#ffffff",
+  "sobrePrimario": "#ffffff",
+  "escudo": true
+ },
+ "universitario": {
+  "primario": "#ffffff",
+  "secundario": "#7a1b3a",
+  "sobrePrimario": "#111111",
+  "escudo": true
+ },
+ "alianza_lima": {
+  "primario": "#0b3c8c",
+  "secundario": "#ffffff",
+  "sobrePrimario": "#ffffff",
+  "escudo": true
+ },
+ "sporting_cristal": {
+  "primario": "#7fbfe8",
+  "secundario": "#ffffff",
+  "sobrePrimario": "#111111",
+  "escudo": true
+ },
+ "melgar": {
+  "primario": "#111111",
+  "secundario": "#c8102e",
+  "sobrePrimario": "#ffffff",
+  "escudo": true
+ },
+ "cesar_vallejo": {
+  "primario": "#0b3c8c",
+  "secundario": "#ffffff",
+  "sobrePrimario": "#ffffff",
+  "escudo": true
+ },
+ "cusco_fc": {
+  "primario": "#f2c200",
+  "secundario": "#111111",
+  "sobrePrimario": "#111111",
+  "escudo": true
+ },
+ "sport_huancayo": {
+  "primario": "#c8102e",
+  "secundario": "#f2c200",
+  "sobrePrimario": "#ffffff",
+  "escudo": true
+ },
+ "adt": {
+  "primario": "#0b6b3a",
+  "secundario": "#ffffff",
+  "sobrePrimario": "#ffffff",
+  "escudo": true
+ },
+ "the_strongest": {
+  "primario": "#f2c200",
+  "secundario": "#111111",
+  "sobrePrimario": "#111111",
+  "escudo": true
+ },
+ "always_ready": {
+  "primario": "#111111",
+  "secundario": "#c8102e",
+  "sobrePrimario": "#ffffff",
+  "escudo": true
+ },
+ "nacional_potosi": {
+  "primario": "#7fbfe8",
+  "secundario": "#ffffff",
+  "sobrePrimario": "#111111",
+  "escudo": true
+ },
+ "blooming": {
+  "primario": "#7fbfe8",
+  "secundario": "#ffffff",
+  "sobrePrimario": "#111111",
+  "escudo": true
+ },
+ "aurora": {
+  "primario": "#7fbfe8",
+  "secundario": "#111111",
+  "sobrePrimario": "#111111",
+  "escudo": true
+ },
+ "wilstermann": {
+  "primario": "#c8102e",
+  "secundario": "#ffffff",
+  "sobrePrimario": "#ffffff",
+  "escudo": true
+ },
+ "real_tomayapo": {
+  "primario": "#c8102e",
+  "secundario": "#111111",
+  "sobrePrimario": "#ffffff",
+  "escudo": true
+ },
+ "guabira": {
+  "primario": "#0b6b3a",
+  "secundario": "#ffffff",
+  "sobrePrimario": "#ffffff",
+  "escudo": true
+ },
+ "caracas": {
+  "primario": "#c8102e",
+  "secundario": "#ffffff",
+  "sobrePrimario": "#ffffff",
+  "escudo": true
+ },
+ "tachira": {
+  "primario": "#f2c200",
+  "secundario": "#111111",
+  "sobrePrimario": "#111111",
+  "escudo": true
+ },
+ "carabobo": {
+  "primario": "#0b3c8c",
+  "secundario": "#c8102e",
+  "sobrePrimario": "#ffffff",
+  "escudo": true
+ },
+ "la_guaira": {
+  "primario": "#e07a1b",
+  "secundario": "#111111",
+  "sobrePrimario": "#ffffff",
+  "escudo": true
+ },
+ "metropolitanos": {
+  "primario": "#0b3c8c",
+  "secundario": "#ffffff",
+  "sobrePrimario": "#ffffff",
+  "escudo": true
+ },
+ "monagas": {
+  "primario": "#7a1b3a",
+  "secundario": "#ffffff",
+  "sobrePrimario": "#ffffff",
+  "escudo": true
+ },
+ "puerto_cabello": {
+  "primario": "#c8102e",
+  "secundario": "#111111",
+  "sobrePrimario": "#ffffff",
+  "escudo": true
+ },
+ "estudiantes_merida": {
+  "primario": "#c8102e",
+  "secundario": "#ffffff",
+  "sobrePrimario": "#ffffff",
+  "escudo": true
+ },
+ "rayo_zuliano": {
+  "primario": "#0b3c8c",
+  "secundario": "#f2c200",
+  "sobrePrimario": "#ffffff",
+  "escudo": true
+ }
 }

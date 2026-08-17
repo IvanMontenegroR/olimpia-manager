@@ -853,7 +853,7 @@ export default function PartidoEnVivo({
           })}
           {!corriendo && !terminado && (
             <div className="mt-1 text-[11px] uppercase tracking-[0.16em]" style={{ color: "var(--medio)" }}>
-              Detenido · te toca decidir
+              Detenido - te toca decidir
             </div>
           )}
         </div>
@@ -883,7 +883,7 @@ export default function PartidoEnVivo({
               className="flex-1 rounded py-2.5 text-[11px] font-bold uppercase tracking-wider"
               style={{ background: "var(--carbon)",
                        color: cambios && ventanas ? "var(--blanco)" : "var(--apagado)" }}>
-              Cambios · {cambios}
+              Cambios - {cambios}
               <span className="ml-1 text-[9px]" style={{ color: "var(--apagado)" }}>
                 {ventanas} {ventanas === 1 ? "parada" : "paradas"}
               </span>
@@ -906,8 +906,8 @@ export default function PartidoEnVivo({
       {panel === "cambio" && (
         <Panel
           titulo={eligiendoPara
-            ? `Entra por ${once.find((j) => j.id === eligiendoPara)?.apellido ?? ""} · ${puestos.get(eligiendoPara) ?? ""}`
-            : `¿Quiénes salen? · te quedan ${cambios}`}
+            ? `Entra por ${once.find((j) => j.id === eligiendoPara)?.apellido ?? ""} - ${puestos.get(eligiendoPara) ?? ""}`
+            : `¿Quiénes salen? - te quedan ${cambios}`}
           onCerrar={cerrarPanel}>
 
           {eligiendoPara ? (() => {
@@ -1019,7 +1019,7 @@ export default function PartidoEnVivo({
         <Panel titulo="Plan de partido" onCerrar={() => { setPanel(null); setCorriendo(true); }}>
           <span className="mb-1.5 block text-[9px] uppercase tracking-[0.18em]"
                 style={{ color: "var(--apagado)" }}>
-            Formación · trae del banco lo que haga falta
+            Formación - trae del banco lo que haga falta
           </span>
           <div className="mb-3 grid grid-cols-2 gap-1.5">
             {MOLDES.map((m) => m.nombre).map((f) => {
@@ -1055,7 +1055,7 @@ export default function PartidoEnVivo({
 
           <span className="mb-1.5 block text-[9px] uppercase tracking-[0.18em]"
                 style={{ color: "var(--apagado)" }}>
-            Actitud · una sola vez
+            Actitud - una sola vez
           </span>
           {(["defensivo", "equilibrado", "ofensivo"] as Actitud[]).map((a) => {
             const A = ACTITUD[a];
@@ -1139,7 +1139,7 @@ function FilaJugador({
         <span className="apellido block truncate text-[14px]">{j.apellido}</span>
         <span className="text-[10px]" style={{ color: "var(--tenue)" }}>
           {natural && natural !== puesto ? <>es {natural}</> : puesto}
-          {" · "}<span style={{ color: colorCondicion(cond) }}>{cond}%</span>
+          {" - "}<span style={{ color: colorCondicion(cond) }}>{cond}%</span>
           {lesionado && <span className="ml-1.5 font-bold" style={{ color: "var(--bajo)" }}>LESIONADO</span>}
           {entrante && <span className="ml-1.5" style={{ color: "var(--ok)" }}>→ {entrante.apellido}</span>}
           {penal !== undefined && (

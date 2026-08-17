@@ -125,7 +125,7 @@ export default function ArmarOnce({
 
   const problema =
     once.length !== 11
-      ? `Faltan ${11 - once.length} · tocá un hueco de la cancha` :
+      ? `Faltan ${11 - once.length} - tocá un hueco de la cancha` :
     arqueros !== 1 ? "Necesitás un arquero" :
     extranjeros > cupo ? `${extranjeros} extranjeros, el cupo es ${cupo}` :
     null;
@@ -271,7 +271,7 @@ export default function ArmarOnce({
           {equipos.length === 0 && (
             <p className="text-[11px] leading-relaxed" style={{ color: "var(--tenue)" }}>
               Todavía no guardaste ninguno. Armá un once y guardalo acá abajo, o
-              armalos con calma desde Plantel · Equipos.
+              armalos con calma desde Plantel - Equipos.
             </p>
           )}
           <div className="flex flex-col gap-1.5">
@@ -292,7 +292,7 @@ export default function ArmarOnce({
                     <span className="apellido block truncate text-[13px] leading-tight">{e.nombre}</span>
                     <span className="text-[9px] uppercase tracking-wider"
                           style={{ color: vivos < e.jugadores.length ? "var(--medio)" : "var(--tenue)" }}>
-                      {e.formacion} · {vivos === e.jugadores.length
+                      {e.formacion} - {vivos === e.jugadores.length
                         ? `${vivos} jugadores`
                         : `faltan ${e.jugadores.length - vivos}, hay bajas`}
                     </span>

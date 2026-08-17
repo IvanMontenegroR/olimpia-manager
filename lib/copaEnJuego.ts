@@ -362,4 +362,66 @@ export function faltanPrevias(c: CuadroCopa): boolean {
   return c.grupos.some((g) => g.equipos.some(esPlaceholder));
 }
 
+/**
+ * El camino entero de Olimpia por la copa, para poder mirarlo de una.
+ *
+ * Va desde la etapa por donde entró hasta la final: lo jugado con su rival, lo
+ * que viene con el rival que ya se sabe, y lo que todavía no tiene nombre
+ * porque depende de que pases. Es lo que el fixture necesita para mostrar la
+ * copa igual que muestra el torneo local.
+ */
+export interface PartidoDeCopa {
+  etapa: EtapaCopa;
+  dia: string;
+  /** Vacío cuando todavía no se sabe contra quién. */
+  rivalId: string;
+  rivalNombre: string;
+  esLocal: boolean;
+  rotulo: string;
+}
+
+/** Los nombres cortos, para donde no entra el largo. */
+const CORTO: Partial<Record<EtapaCopa, string>> = {
+  "fase 1": "F1", "fase 2": "F2", "fase 3": "F3",
+  octavos: "8vos", cuartos: "4tos", semis: "Semi", final: "Final",
+};
+
+export function caminoDeCopa(
+  c: CuadroCopa, desde: EtapaCopa, ano: number, semilla: string,
+): PartidoDeCopa[] {
+  const salida: PartidoDeCopa[] = [];
+  const desdeI = ORDEN.indexOf(desde);
+  if (desdeI < 0) return salida;
+
+  for (const etapa of ORDEN.slice(desdeI)) {
+    const dias = FECHAS[etapa] ?? [];
+    /* El play-off nacional de la Sudamericana es a partido único. */
+    const cuantos = etapa === "grupos" ? 6
+      : etapa === "final" ? 1
+      : etapa === "fase 1" && c.torneo === "sudamericana" ? 1
+      : 2;
+    for (let i = 0; i < cuantos; i++) {
+      const dia = dias[i] ? `${ano}${dias[i]}` : "";
+      if (!dia) continue;
+      const cruce = etapa === "octavos" || etapa === "cuartos" ||
+                    etapa === "semis" || etapa === "final"
+        ? null
+        : rivalDeLaEtapa(c, etapa, i);
+      const r = cruce?.id ? rivalDeCopa(cruce.id) : null;
+      salida.push({
+        etapa, dia,
+        rivalId: r?.id ?? "",
+        rivalNombre: r?.nombre ?? "Por definir",
+        esLocal: cruce?.esLocal ?? false,
+        /* Corto: en el fixture esto entra en una columna angosta. */
+        rotulo: etapa === "grupos"
+          ? `${grupoDeOlimpia(c)?.letra ?? ""}-${i + 1}`
+          : (CORTO[etapa] ?? NOMBRE_ETAPA[etapa]) +
+            (cuantos === 2 ? (i === 0 ? " ida" : " vta") : ""),
+      });
+    }
+  }
+  return salida;
+}
+
 export { grupoQueEspera, resolverLlave };
