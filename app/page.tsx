@@ -55,7 +55,8 @@ export default function Page() {
   if (!partida.arrancada) {
     return (
       <Arranque partida={partida}
-        onListo={(equipos) => setPartida((p) => (p ? { ...p, equipos, arrancada: true } : p))} />
+        onListo={(equipos) => setPartida((p) => (p
+          ? { ...p, equipos, equipoActivo: equipos[0]?.nombre, arrancada: true } : p))} />
     );
   }
 
@@ -88,6 +89,9 @@ export default function Page() {
         partido={partido}
         plantel={plantelDe(partida)}
         equipos={partida.equipos}
+        activo={partida.equipoActivo}
+        onElegirEquipo={(nombre) => setPartida((p) =>
+          (p ? { ...p, equipoActivo: nombre } : p))}
         estadoSub18={{
           minutos: partida.minutosSub18,
           partidosRestantes: Math.max(1, TOTAL_FECHAS - partida.fechaActual + 1),

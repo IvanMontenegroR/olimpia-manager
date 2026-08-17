@@ -22,12 +22,14 @@ export interface Salida {
 }
 
 export default function ArmarOnce({
-  partido, plantel, equipos, estadoSub18, modo = "jugar",
-  onJugar, onVolver, onGuardarEquipo,
+  partido, plantel, equipos, activo, estadoSub18, modo = "jugar",
+  onJugar, onVolver, onGuardarEquipo, onElegirEquipo,
 }: {
   partido: PartidoUI;
   plantel: Jugador[];
   equipos: EquipoGuardado[];
+  /** El nombre del que está puesto. Es lo que se abre y lo que se guarda. */
+  activo?: string;
   estadoSub18: { minutos: number; partidosRestantes: number };
   /**
    * "jugar" es el día del partido. "guardar" es cuando entrás desde la cancha
@@ -38,6 +40,7 @@ export default function ArmarOnce({
   onJugar: (s: Salida) => void;
   onVolver: () => void;
   onGuardarEquipo: (e: EquipoGuardado) => void;
+  onElegirEquipo: (nombre: string) => void;
 }) {
   const { ctx } = partido;
   const aptos = useMemo(
@@ -55,8 +58,11 @@ export default function ArmarOnce({
    * el banco. Solo se completa a mano lo que dejaron vacío los lesionados y
    * los suspendidos, y si no hay equipo guardado se propone uno.
    */
+  /* El que está puesto, no el primero de la lista. */
+  const elEquipo = equipos.find((e) => e.nombre === activo) ?? equipos[0];
+
   const inicial = useMemo<EstadoAlineacion>(() => {
-    const eq = equipos[0];
+    const eq = elEquipo;
     if (eq) {
       // tal cual lo guardaste: cada uno en su casillero, sin reordenar
       const alineado = comoLoDejaste(eq, (id) => porId.has(id));
@@ -73,11 +79,13 @@ export default function ArmarOnce({
     const once = autoOnce(ctx, aptos.filter((j) => !j.reserva), estadoSub18)
       .map((id) => porId.get(id)!).filter(Boolean);
     return mejorMolde(once, ctx);
-  }, [ctx, aptos, porId, estadoSub18, equipos]);
+  }, [ctx, aptos, porId, estadoSub18, elEquipo]);
 
   const [estado, setEstado] = useState<EstadoAlineacion>(inicial);
   const [actitud, setActitud] = useState<Actitud>(ctx.esLocal ? "ofensivo" : "equilibrado");
   const [verEquipos, setVerEquipos] = useState(false);
+  const [verFormaciones, setVerFormaciones] = useState(false);
+  useAtras(verFormaciones, () => setVerFormaciones(false));
   useAtras(verEquipos, () => setVerEquipos(false));
   const [nombreNuevo, setNombreNuevo] = useState("");
 
@@ -105,6 +113,7 @@ export default function ArmarOnce({
     null;
 
   const aplicarEquipo = (e: EquipoGuardado) => {
+    onElegirEquipo(e.nombre);
     const vivos = e.jugadores.map((id) => porId.get(id)).filter(Boolean) as Jugador[];
     setEstado({
       formacion: e.formacion,
@@ -134,7 +143,7 @@ export default function ArmarOnce({
   const guardarTitular = () => {
     if (problema) return;
     onGuardarEquipo({
-      nombre: equipos[0]?.nombre ?? "Titular",
+      nombre: elEquipo?.nombre ?? "Titular",
       formacion: estado.formacion,
       jugadores: once.map((j) => j.id),
     });
@@ -177,7 +186,10 @@ export default function ArmarOnce({
           tener 2 de 4 extranjeros. */}
       <div className="flex items-stretch border-y" style={{ borderColor: "var(--linea)" }}>
         <Dato etiqueta="Once" valor={`${once.length}/11`} alerta={once.length !== 11} />
-        <Dato etiqueta="Formación" valor={estado.formacion} />
+        {/* Tocar acá abre las formaciones: el botoncito que estaba abajo, en
+            el row de los filtros, competía con los puestos y nadie lo veía. */}
+        <Dato etiqueta="Formación" valor={estado.formacion}
+              onClick={() => setVerFormaciones(true)} />
         {/* En copa no hay cupo, así que no hay nada que mirar. */}
         {Number.isFinite(cupo) && extranjeros >= cupo && (
           <Dato etiqueta="Extranj." valor={`${extranjeros}/${cupo}`}
@@ -188,11 +200,14 @@ export default function ArmarOnce({
       </div>
 
       <Alineador aptos={aptos} ctx={ctx} estado={estado} onCambio={setEstado}
+        verFormaciones={verFormaciones} onVerFormaciones={setVerFormaciones}
         extra={
+          /* Dice cuál está puesto, no "Equipos": el nombre ES la información,
+             y el genérico obligaba a abrir la hoja para saber con cuál estabas. */
           <button onClick={() => setVerEquipos(true)}
             className="shrink-0 rounded px-2 py-1 text-[9px] font-bold uppercase tracking-[0.12em]"
-            style={{ background: "var(--carbon)", color: "var(--tenue)" }}>
-            Equipos
+            style={{ background: "var(--carbon)", color: "var(--blanco)" }}>
+            {elEquipo?.nombre ?? "Equipos"} ▾
           </button>
         } />
 
@@ -241,10 +256,17 @@ export default function ArmarOnce({
           <div className="flex flex-col gap-1.5">
             {equipos.map((e) => {
               const vivos = e.jugadores.filter((id) => porId.has(id)).length;
+              // el que está puesto se ve distinto: no hay que abrir para saber
+              const puesto = e.nombre === elEquipo?.nombre;
               return (
                 <button key={e.nombre} onClick={() => aplicarEquipo(e)}
                   className="flex items-center justify-between rounded-lg px-3 py-2.5 text-left"
-                  style={{ background: "var(--carbon)" }}>
+                  style={{
+                    background: puesto
+                      ? "color-mix(in srgb, var(--cesped) 22%, var(--carbon))"
+                      : "var(--carbon)",
+                    boxShadow: puesto ? "inset 0 0 0 1.5px var(--cesped)" : undefined,
+                  }}>
                   <span className="min-w-0">
                     <span className="apellido block truncate text-[13px] leading-tight">{e.nombre}</span>
                     <span className="text-[9px] uppercase tracking-wider"
@@ -255,7 +277,9 @@ export default function ArmarOnce({
                     </span>
                   </span>
                   <span className="shrink-0 text-[10px] font-bold uppercase tracking-widest"
-                        style={{ color: "var(--medio)" }}>Poner</span>
+                        style={{ color: puesto ? "var(--cesped)" : "var(--medio)" }}>
+                    {puesto ? "Puesto" : "Poner"}
+                  </span>
                 </button>
               );
             })}
@@ -291,19 +315,24 @@ export default function ArmarOnce({
  * Lo que hay que saber antes de elegir: si el rival llega gastado conviene
  * apretarlo, y si el viaje o la altura pesan hay que ver con qué se llega.
  */
-function Dato({ etiqueta, valor, alerta, fuerte }: {
+function Dato({ etiqueta, valor, alerta, fuerte, onClick }: {
   etiqueta: string; valor: string; alerta?: boolean; fuerte?: boolean;
+  /** Cuando se puede tocar, el valor lleva la flechita. */
+  onClick?: () => void;
 }) {
+  const Marco = onClick ? "button" : "div";
   return (
-    <div className="flex-1 border-r px-2 py-1 last:border-r-0" style={{ borderColor: "var(--linea)" }}>
+    <Marco onClick={onClick}
+      className="flex-1 border-r px-2 py-1 text-left last:border-r-0"
+      style={{ borderColor: "var(--linea)" }}>
       <div className="text-[8px] uppercase tracking-[0.12em]" style={{ color: "var(--apagado)" }}>
         {etiqueta}
       </div>
       <div className={fuerte ? "num text-[16px] leading-tight" : "text-[12px] font-bold leading-tight"}
            style={{ color: alerta ? "var(--medio)" : "var(--blanco)" }}>
-        {valor}
+        {valor}{onClick && <span className="ml-0.5 text-[9px] opacity-60">▾</span>}
       </div>
-    </div>
+    </Marco>
   );
 }
 

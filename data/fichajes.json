@@ -770,5 +770,263 @@
     ],
     "nota": "La figura de Paraguay en el Mundial Sub-20. Se fue muy chico a Inglaterra y busca minutos.",
     "potencial": 77
+  },
+  {
+    "id": "almiron",
+    "nombre": "Miguel",
+    "apellido": "Almirón",
+    "posicion": "MCO",
+    "edad": 32,
+    "nacionalidad": "PAR",
+    "nivel": 76,
+    "de": "Newcastle",
+    "rasgos": [
+      "definidor"
+    ],
+    "nota": "Termina contrato en Inglaterra y avisó que quiere jugar en Paraguay antes de colgarlos."
+  },
+  {
+    "id": "sanabria",
+    "nombre": "Antonio",
+    "apellido": "Sanabria",
+    "posicion": "DC",
+    "edad": 30,
+    "nacionalidad": "PAR",
+    "nivel": 75,
+    "de": "Torino",
+    "rasgos": [
+      "definidor",
+      "juego_aereo"
+    ],
+    "nota": "Diez años en el calcio y ganas de volver."
+  },
+  {
+    "id": "gustavo_gomez",
+    "nombre": "Gustavo",
+    "apellido": "Gómez",
+    "posicion": "DFC",
+    "edad": 33,
+    "nacionalidad": "PAR",
+    "nivel": 77,
+    "de": "Palmeiras",
+    "rasgos": [
+      "juego_aereo"
+    ],
+    "nota": "Capitán en Brasil, campeón de todo, y la idea de terminar donde empezó todo."
+  },
+  {
+    "id": "balbuena",
+    "nombre": "Fabián",
+    "apellido": "Balbuena",
+    "posicion": "DFC",
+    "edad": 34,
+    "nacionalidad": "PAR",
+    "nivel": 73,
+    "de": "Sin club",
+    "rasgos": [
+      "juego_aereo"
+    ],
+    "nota": "Quedó libre y está entrenando solo en Asunción."
+  },
+  {
+    "id": "di_maria",
+    "nombre": "Ángel",
+    "apellido": "Di María",
+    "posicion": "ED",
+    "edad": 38,
+    "nacionalidad": "ARG",
+    "nivel": 76,
+    "de": "Rosario Central",
+    "rasgos": [
+      "definidor"
+    ],
+    "nota": "Campeón del mundo, y todavía le queda una gambeta."
+  },
+  {
+    "id": "suarez",
+    "nombre": "Luis",
+    "apellido": "Suárez",
+    "posicion": "DC",
+    "edad": 39,
+    "nacionalidad": "URU",
+    "nivel": 75,
+    "de": "Inter Miami",
+    "rasgos": [
+      "definidor",
+      "juego_aereo"
+    ],
+    "nota": "Se le termina el contrato en Estados Unidos y quiere volver a jugar Libertadores antes del retiro."
+  },
+  {
+    "id": "vidal",
+    "nombre": "Arturo",
+    "apellido": "Vidal",
+    "posicion": "MC",
+    "edad": 39,
+    "nacionalidad": "CHI",
+    "nivel": 74,
+    "de": "Colo-Colo",
+    "rasgos": [
+      "juego_aereo"
+    ],
+    "nota": "No le alcanza con el fútbol chileno."
+  },
+  {
+    "id": "angel_romero",
+    "nombre": "Ángel",
+    "apellido": "Romero",
+    "posicion": "ED",
+    "edad": 34,
+    "nacionalidad": "PAR",
+    "nivel": 73,
+    "de": "Corinthians",
+    "rasgos": [
+      "definidor"
+    ],
+    "nota": "Ídolo de Cerro Porteño, el que le hizo goles a Olimpia en todos los clásicos que jugó."
+  },
+  {
+    "id": "oscar_romero",
+    "nombre": "Óscar",
+    "apellido": "Romero",
+    "posicion": "MCO",
+    "edad": 34,
+    "nacionalidad": "PAR",
+    "nivel": 72,
+    "de": "San Lorenzo",
+    "rasgos": [],
+    "nota": "El mellizo."
+  },
+  {
+    "id": "sosa",
+    "nombre": "Ramón",
+    "apellido": "Sosa",
+    "posicion": "EI",
+    "edad": 26,
+    "nacionalidad": "PAR",
+    "nivel": 74,
+    "de": "Palmeiras",
+    "rasgos": [],
+    "nota": "De Talleres al Nottingham Forest y de ahí al Palmeiras."
+  },
+  {
+    "id": "alderete",
+    "nombre": "Omar",
+    "apellido": "Alderete",
+    "posicion": "DFC",
+    "edad": 29,
+    "nacionalidad": "PAR",
+    "nivel": 74,
+    "de": "Getafe",
+    "rasgos": [
+      "juego_aereo"
+    ],
+    "nota": "Central de selección, curtido en España y Alemania."
+  },
+  {
+    "id": "cubas",
+    "nombre": "Andrés",
+    "apellido": "Cubas",
+    "posicion": "MCD",
+    "edad": 30,
+    "nacionalidad": "PAR",
+    "nivel": 71,
+    "de": "Vancouver",
+    "rasgos": [],
+    "nota": "El cinco de la selección."
+  },
+  {
+    "id": "junior_alonso",
+    "nombre": "Junior",
+    "apellido": "Alonso",
+    "posicion": "DFC",
+    "edad": 33,
+    "nacionalidad": "PAR",
+    "nivel": 73,
+    "de": "Fluminense",
+    "rasgos": [
+      "juego_aereo"
+    ],
+    "nota": "Campeón de la Libertadores con Atlético Mineiro."
+  },
+  {
+    "id": "arce",
+    "nombre": "Álex",
+    "apellido": "Arce",
+    "posicion": "DC",
+    "edad": 31,
+    "nacionalidad": "PAR",
+    "nivel": 72,
+    "de": "LDU Quito",
+    "rasgos": [],
+    "nota": "Goleador del fútbol ecuatoriano dos años seguidos."
+  },
+  {
+    "id": "bobadilla",
+    "nombre": "Damián",
+    "apellido": "Bobadilla",
+    "posicion": "MC",
+    "edad": 26,
+    "nacionalidad": "PAR",
+    "nivel": 71,
+    "de": "San Lorenzo",
+    "rasgos": [
+      "juego_aereo"
+    ],
+    "nota": "Volante de recorrido, titular en la selección."
+  },
+  {
+    "id": "galarza",
+    "nombre": "Matías",
+    "apellido": "Galarza",
+    "posicion": "MC",
+    "edad": 24,
+    "nacionalidad": "PAR",
+    "nivel": 71,
+    "de": "Atlanta United",
+    "rasgos": [],
+    "nota": "Salió de Talleres, pasó por la MLS y todavía tiene 24."
+  },
+  {
+    "id": "pitta",
+    "nombre": "Isidro",
+    "apellido": "Pitta",
+    "posicion": "DC",
+    "edad": 26,
+    "nacionalidad": "PAR",
+    "nivel": 70,
+    "de": "Cuiabá",
+    "rasgos": [
+      "definidor"
+    ],
+    "nota": "Nueve grandote, de los que aguantan la pelota de espaldas."
+  },
+  {
+    "id": "ojeda",
+    "nombre": "Braian",
+    "apellido": "Ojeda",
+    "posicion": "MCD",
+    "edad": 26,
+    "nacionalidad": "PAR",
+    "nivel": 70,
+    "de": "Orlando City",
+    "rasgos": [
+      "definicion_irregular"
+    ],
+    "nota": "Salió de Olimpia, se fue a Inglaterra a los veinte y terminó en la MLS."
+  },
+  {
+    "id": "avalos",
+    "nombre": "Gabriel",
+    "apellido": "Ávalos",
+    "posicion": "DC",
+    "edad": 33,
+    "nacionalidad": "PAR",
+    "nivel": 69,
+    "de": "Independiente",
+    "rasgos": [
+      "juego_aereo"
+    ],
+    "nota": "Nueve de área, de los que la meten de cualquier forma."
   }
 ]

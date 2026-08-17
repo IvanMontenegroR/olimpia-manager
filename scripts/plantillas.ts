@@ -21,8 +21,22 @@ import { CATALOGO } from "../engine/mercado.ts";
 import { ESTRELLAS } from "../engine/estrellas.ts";
 import { PLANTEL } from "../lib/juego.ts";
 
-/** Arriba de esto ya no es un refuerzo, es una estrella. */
-const TECHO_DEL_MERCADO = 75;
+/**
+ * Arriba de esto ya no es un refuerzo, es una estrella.
+ *
+ * Subió de 75 a 79 cuando la lista de estrellas se limpió. Una "estrella" de
+ * 73 no era una estrella: era un buen jugador con pantalla propia, y mientras
+ * tanto el mercado no pasaba de 74 contra un plantel que ya tenía 73, 70 y
+ * 69. O sea que ninguno de los seis que te ofrecían te mejoraba el once y no
+ * daban ganas de comprar a nadie.
+ *
+ * Ahora la estrella arranca en 80 (Messi, Cristiano, Neymar, Icardi, Diego
+ * Gómez, Enciso) y todos los demás se fueron al mercado, que es donde son
+ * exactamente lo que hacía falta: refuerzos de 73 a 77.
+ */
+const TECHO_DEL_MERCADO = 79;
+/** Y de acá para arriba es estrella, sin excepciones. */
+const PISO_DE_ESTRELLA = 80;
 
 const fallas: string[] = [];
 const nombre = (j: { nombre: string; apellido: string }) =>
@@ -54,6 +68,11 @@ for (const j of [...CATALOGO, ...ESTRELLAS]) {
 }
 
 // ---------------------------------------------------------------- rangos
+for (const e of ESTRELLAS) {
+  if (e.nivel < PISO_DE_ESTRELLA) {
+    fallas.push(`${e.nombre} ${e.apellido} es ${e.nivel}: con eso no es estrella, va al mercado`);
+  }
+}
 for (const f of CATALOGO) {
   if (f.nivel > TECHO_DEL_MERCADO) {
     fallas.push(`${f.nombre} ${f.apellido} es ${f.nivel}: a ese nivel va en estrellas`);

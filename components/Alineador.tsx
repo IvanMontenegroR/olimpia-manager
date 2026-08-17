@@ -3,12 +3,13 @@
 import { useMemo, useState } from "react";
 import {
   type Alineado, colorCondicion, CUPO_EXTRANJEROS, esSub18, MOLDE_DE, MOLDES,
-  nivelEf, repartirEnMolde,
+  deltaNivel, nivelEf, repartirEnMolde,
 } from "@/lib/juego.ts";
 import { type Punta, useArrastre } from "@/lib/arrastre.ts";
 import { factorPosicion } from "@/engine/motor.ts";
 import { LINEA_DE, type ContextoPartido, type Jugador, type Linea, type Posicion } from "@/engine/tipos.ts";
 import CanchaArmado, { type Casillero } from "./CanchaArmado.tsx";
+import Delta from "./Delta.tsx";
 import Dorsal from "./Dorsal.tsx";
 
 /**
@@ -36,7 +37,7 @@ export interface EstadoAlineacion {
 
 
 export default function Alineador({
-  aptos, ctx, estado, onCambio, extra,
+  aptos, ctx, estado, onCambio, extra, verFormaciones, onVerFormaciones,
 }: {
   aptos: Jugador[];
   ctx: ContextoPartido;
@@ -44,12 +45,25 @@ export default function Alineador({
   onCambio: (e: EstadoAlineacion) => void;
   /** Botón propio de cada pantalla, al lado de los filtros del banco. */
   extra?: React.ReactNode;
+  /*
+   * La hoja de formaciones se puede manejar desde afuera. En la pantalla de
+   * armar el once el disparador es el dato "Formación" de la cabecera, así que
+   * el botón que estaba acá abajo entre los filtros sobra: ahí competía con
+   * los puestos y nadie lo encontraba. Las pantallas que no tienen ese dato
+   * (la de arranque) no pasan nada y se quedan con el botón de siempre.
+   */
+  verFormaciones?: boolean;
+  onVerFormaciones?: (v: boolean) => void;
 }) {
   const porId = useMemo(() => new Map(aptos.map((j) => [j.id, j])), [aptos]);
   const [filtro, setFiltro] = useState<Filtro>(null);
   const [verReserva, setVerReserva] = useState(false);
   const [marcado, setMarcado] = useState<Punta | null>(null);
-  const [verFormaciones, setVerFormaciones] = useState(false);
+  const [formacionesPropias, setFormacionesPropias] = useState(false);
+  const abiertas = verFormaciones ?? formacionesPropias;
+  const abrirFormaciones = onVerFormaciones ?? setFormacionesPropias;
+  /** Si el disparador vive afuera, acá no se dibuja el botón. */
+  const botonPropio = verFormaciones === undefined;
 
   const { formacion, alineado } = estado;
   const slots = MOLDE_DE(formacion);
@@ -83,6 +97,10 @@ export default function Alineador({
         ? valor(b) - valor(a)
         : orden(a.posicion) - orden(b.posicion) || valor(b) - valor(a));
   }, [filtro, verReserva, alineado, ctx, aptos, marcado, formacion]);
+
+  /* El casillero marcado, para que el banco diga cuánto valdría AHÍ. */
+  const destinoDelBanco = marcado?.tipo === "cancha"
+    ? MOLDE_DE(formacion)[marcado.slot] : null;
 
   const enReserva = aptos.filter((j) => j.reserva).length;
 
@@ -135,7 +153,7 @@ export default function Alineador({
   const cambiarFormacion = (nombre: string) => {
     // se conservan los jugadores y se los reparte lo mejor posible en el molde
     onCambio({ formacion: nombre, alineado: repartirEnMolde(once, MOLDE_DE(nombre), ctx) });
-    setVerFormaciones(false);
+    abrirFormaciones(false);
   };
 
   const fantasma = arrastrando
@@ -181,11 +199,13 @@ export default function Alineador({
 
       <div className="border-t pt-1.5" style={{ borderColor: "var(--linea)" }}>
         <div className="flex items-center gap-1 px-3 pb-1.5">
-          <button onClick={() => setVerFormaciones(true)}
-            className="num mr-1 shrink-0 rounded px-2 py-1 text-[11px]"
-            style={{ background: "var(--carbon)", color: "var(--blanco)" }}>
-            {formacion} ▾
-          </button>
+          {botonPropio && (
+            <button onClick={() => abrirFormaciones(true)}
+              className="num mr-1 shrink-0 rounded px-2 py-1 text-[11px]"
+              style={{ background: "var(--carbon)", color: "var(--blanco)" }}>
+              {formacion} ▾
+            </button>
+          )}
           {extra}
           {/* Tocar el filtro puesto lo saca: volver a "todos" no necesita botón. */}
           {FILTROS.map((p) => {
@@ -243,9 +263,13 @@ export default function Alineador({
                   <span style={{ color: elegido ? "var(--negro)" : "var(--apagado)" }}>
                     {j.posicion}
                   </span>
+                  {/* el de la ficha, quieto; al lado, lo que se mueve hoy */}
                   <span className="num" style={{ color: j.aRevelar ? "var(--medio)" : undefined }}>
-                    {j.aRevelar ? "?" : nivelEf(j, j.posicion, ctx)}
+                    {j.aRevelar ? "?" : j.nivel}
                   </span>
+                  {!j.aRevelar && (
+                    <Delta valor={deltaNivel(j, destinoDelBanco ?? j.posicion, ctx)} tam={9} />
+                  )}
                   <span className="inline-block h-1 w-1 rounded-full"
                         style={{ background: colorCondicion(j.condicion) }} />
                 </span>
@@ -264,8 +288,8 @@ export default function Alineador({
         </div>
       )}
 
-      {verFormaciones && (
-        <Hoja titulo="Formación" onCerrar={() => setVerFormaciones(false)}>
+      {abiertas && (
+        <Hoja titulo="Formación" onCerrar={() => abrirFormaciones(false)}>
           <div className="grid grid-cols-2 gap-2">
             {MOLDES.map((m) => (
               <button key={m.nombre} onClick={() => cambiarFormacion(m.nombre)}

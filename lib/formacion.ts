@@ -31,16 +31,38 @@ export function repartirCancha(formacion: string, ancho: number, alto: number): 
   const casillas = casillasDe(formacion);
   if (ancho <= 0 || alto <= 0) return { ubicados: [], escala: 1 };
 
-  // Cuánto hay que encoger para que entren: mandan la cantidad de líneas a lo
-  // alto y la línea más poblada a lo ancho.
+  /*
+   * Cuánto hay que encoger para que entren, y acá estaba el bug de los nombres
+   * pisados en el 5-3-2 y el 3-4-3.
+   *
+   * La cuenta vieja era `ancho / (cuántos hay × ancho del bloque)`, que asume
+   * que los bloques van pegados de borde a borde. No van: se reparten entre el
+   * 12% y el 88% del ancho ÚTIL, que a su vez es el ancho menos un bloque de
+   * márgenes. Con cinco defensores en 340 píxeles daba escala 1 y quedaban 52
+   * píxeles de separación para bloques de 66. Se pisaban catorce.
+   *
+   * Lo que hay que resolver es la separación entre vecinos:
+   *
+   *     d × (ancho − BLOQUE × e)  ≥  BLOQUE × e
+   *
+   * donde d es la fracción de ancho que hay entre dos vecinos. Despejando e
+   * sale lo de abajo. El 0.94 es aire para que se separen y no se toquen.
+   */
   const lineas = new Set(casillas.map((c) => c.x)).size;
   const porLinea = new Map<number, number>();
   for (const c of casillas) porLinea.set(c.x, (porLinea.get(c.x) ?? 0) + 1);
   const maxPorLinea = Math.max(...porLinea.values());
 
+  // la misma repartija que hace `casillasDe`: del 12% al 88% cuando son varios
+  const abanico = maxPorLinea === 1 ? 0 : maxPorLinea === 2 ? 0.34 : 0.76;
+  const d = maxPorLinea > 1 ? abanico / (maxPorLinea - 1) : 1;
+  const cabeEnAncho = maxPorLinea > 1
+    ? (d * ancho) / (BLOQUE_ANCHO * (1 + d)) * 0.94
+    : 1;
+
   const escala = Math.max(
     ESCALA_MINIMA,
-    Math.min(1, alto / (lineas * BLOQUE_ALTO), ancho / (maxPorLinea * BLOQUE_ANCHO)),
+    Math.min(1, alto / (lineas * BLOQUE_ALTO), cabeEnAncho),
   );
 
   // margen para que el bloque no se corte contra el borde de la cancha

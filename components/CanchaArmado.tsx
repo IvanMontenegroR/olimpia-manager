@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { aroDe, colorComoLlega, comoLlegaAlPartido, esSub18 } from "@/lib/juego.ts";
+import { aroDe, colorComoLlega, comoLlegaAlPartido, deltaNivel, esSub18 } from "@/lib/juego.ts";
 import { repartirCancha } from "@/lib/formacion.ts";
 import { factorPosicion } from "@/engine/motor.ts";
 import Dorsal from "./Dorsal.tsx";
+import Delta from "./Delta.tsx";
 import type { ContextoPartido, Jugador, Posicion } from "@/engine/tipos.ts";
 
 export interface Casillero {
@@ -127,6 +128,8 @@ export default function CanchaArmado({
                         style={{ color: "#e9e4d8", textShadow: "0 1px 3px rgba(0,0,0,0.9)" }}>
                     {j.nivel}
                   </span>
+                  {/* lo que le suma o le resta este casillero y cómo llega */}
+                  <Delta valor={deltaNivel(j, c.puesto, ctx)} tam={8 * escala} />
                   {esSub18(j) && <span className="font-bold" style={{ color: "var(--ok)" }}>S18</span>}
                 </span>
               </>

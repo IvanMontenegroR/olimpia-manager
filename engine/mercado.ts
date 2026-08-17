@@ -129,8 +129,29 @@ export function generarMercado(
   const lista: FichajeGenerado[] = [];
   const usados = new Set<string>();
 
-  while (lista.length < cantidad && usados.size < libres.length) {
-    const f = rng.elegir(libres);
+  /*
+   * Los buenos salen más seguido.
+   *
+   * Antes se elegían seis al azar parejo, y como el grueso del catálogo está
+   * entre 70 y 73, los de 74 para arriba casi no aparecían: abrías fichajes y
+   * te ofrecían gente del nivel de tus suplentes, así que no daban ganas de
+   * comprar a nadie. El peso es el cubo de cuánto sobresale sobre el más
+   * flojo de la lista, que sube fuerte sin dejar afuera a los demás: un 77
+   * aparece bastante más que un 70, pero el 70 sigue existiendo.
+   */
+  const piso = Math.min(...libres.map((f) => f.nivel));
+  const peso = (f: { nivel: number }) => Math.pow(f.nivel - piso + 1, 3);
+  const total = libres.reduce((n, f) => n + peso(f), 0);
+  const sortear = () => {
+    let t = rng.next() * total;
+    for (const f of libres) { t -= peso(f); if (t <= 0) return f; }
+    return libres[libres.length - 1];
+  };
+
+  let vueltas = 0;
+  while (lista.length < cantidad && usados.size < libres.length && vueltas < 400) {
+    vueltas++;
+    const f = sortear();
     if (usados.has(f.id)) continue;
     usados.add(f.id);
     const extranjero = f.nacionalidad !== "PAR";

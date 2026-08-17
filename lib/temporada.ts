@@ -235,6 +235,14 @@ export interface Partida {
   /** Alineaciones guardadas por el DT: el titular, el equipo de copa, etc. */
   equipos: EquipoGuardado[];
   /**
+   * Cuál de esos equipos está puesto ahora mismo.
+   *
+   * Antes siempre jugaba `equipos[0]`, así que elegir el Alternativo antes de
+   * un partido no se recordaba: entrabas a modificar y te aparecía otro once,
+   * el primero de la lista. Es una decisión del DT y como tal se guarda.
+   */
+  equipoActivo?: string;
+  /**
    * Quiénes están en la reserva. Arranca con los que vienen marcados en el
    * plantel y lo maneja el DT: subir a un pibe es una decisión, no un dato
    * fijo. Sirve para que la pantalla del partido muestre a los que compiten y
@@ -464,6 +472,7 @@ export function cargar(): Partida {
     // las partidas de antes no tenían semilla: se les da una ahora, así que
     // siguen su temporada pero lo que venga de acá en adelante ya es propio
     p.semilla ??= semillaNueva();
+    p.equipoActivo ??= p.equipos[0]?.nombre;
     p.arrancada ??= true;
     p.enReserva ??= PLANTEL.filter((j) => j.reserva).map((j) => j.id);
     p.aclimatacion ??= 0;
@@ -817,9 +826,14 @@ export function ovrDe(p: Partida): OvrDelClub {
  * partido. Ahora se muestra ese, y solo los puestos que quedan libres por una
  * lesión o una suspensión se completan solos.
  */
+/** El equipo que está puesto, o el primero si nunca se eligió. */
+export function equipoPuesto(p: Partida): EquipoGuardado | undefined {
+  return p.equipos?.find((e) => e.nombre === p.equipoActivo) ?? p.equipos?.[0];
+}
+
 export function onceTitular(p: Partida, partido: PartidoUI, jugadores: Jugador[]) {
   const auto = () => salidaAutomatica(partido, jugadores, estadoSub18Para(p));
-  const eq = p.equipos?.[0];
+  const eq = equipoPuesto(p);
   if (!eq) return auto();
 
   const disponible = (j: Jugador) => !j.suspendido && !j.lesionado_hasta && !j.reserva;
@@ -1483,10 +1497,14 @@ export function avanzarUnDia(p: Partida): ResultadoAvance {
       texto: `${e?.apellido ?? "El jugador"} firmó en otro club. Se cerró la ventana.` });
     n.estrella = null;
   }
-  // Calibrado con el simulador: ~2.5 oportunidades por temporada y una leyenda
-  // cada cuatro. Con más, deja de ser una oportunidad y pasa a ser un catálogo
-  // donde alcanza con ahorrar.
-  if (!n.estrella && !n.pendientes.length && rng.chance(0.018)) {
+  /*
+   * Calibrado con el simulador. Subió de 0.018 a 0.026 cuando la lista se
+   * limpió: quedaron seis estrellas de verdad en vez de veinticinco nombres
+   * de los cuales veintidós no llegaban a 80, así que ahora aparecen más
+   * seguido y cada una de las que aparece vale la pena. La ventana sigue
+   * siendo corta: si esperaran, alcanzaría con ahorrar y no habría decisión.
+   */
+  if (!n.estrella && !n.pendientes.length && rng.chance(0.026)) {
     const e = sortearEstrella(n.dia, n.estrellasVistas);
     if (e) {
       n.estrella = { id: e.id, venceEl: sumarDias(n.dia, DIAS_DE_VENTANA) };

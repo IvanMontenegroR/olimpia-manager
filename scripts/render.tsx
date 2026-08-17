@@ -138,14 +138,14 @@ for (const e of ESTRELLAS) {
  */
 const escritorios: [string, Partida][] = [
   ["recién empezada", base],
-  ["con una estrella en la mesa", { ...base, estrella: { id: ESTRELLAS[8].id, venceEl: sumarDias(base.dia, 7) } }],
+  ["con una estrella en la mesa", { ...base, estrella: { id: ESTRELLAS[ESTRELLAS.length - 1].id, venceEl: sumarDias(base.dia, 7) } }],
   ["con un refuerzo del mercado", (() => {
     const conFichaje = fichar(base, base.fichajes[0].id);
     return conFichaje ?? base;
   })()],
   ["con una estrella ya fichada", (() => {
     const rica = { ...base, dineroUsd: 90_000_000,
-                   estrella: { id: ESTRELLAS[8].id, venceEl: sumarDias(base.dia, 7) } };
+                   estrella: { id: ESTRELLAS[ESTRELLAS.length - 1].id, venceEl: sumarDias(base.dia, 7) } };
     return ficharEstrella(rica);
   })()],
   ["a mitad de temporada", { ...base, fechaActual: 12, dia: sumarDias(base.dia, 90) }],

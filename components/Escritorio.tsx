@@ -549,7 +549,7 @@ export default function Escritorio({
             if (!u) return null;
             const m = u.marca ? MARCA[u.marca] : null;
             return (
-              <button onClick={() => setVista("fixture")}
+              <button onClick={() => setVista("bitacora")}
                 className="mt-1.5 flex shrink-0 items-center gap-2 rounded-md px-2.5 py-1.5 text-left"
                 style={{ background: m
                   ? `color-mix(in srgb, ${m.color} 14%, var(--carbon))` : "var(--carbon)" }}>
@@ -618,9 +618,21 @@ export default function Escritorio({
               </button>
             </div>
           ) : partido ? (
+            /*
+             * El día de partido el botón es blanco y grita. Este no puede
+             * copiarlo (si los dos gritan, ninguno grita) pero tampoco puede
+             * parecer una tarjeta de información, que era lo que pasaba: un
+             * rectángulo oscuro con texto adentro. Lo que lo vuelve un botón
+             * sin agregar una palabra es el círculo verde con la flecha, que
+             * es lo que todo el mundo entiende por "seguir", más el borde
+             * tenue del mismo verde para que se lea como algo que se toca.
+             */
             <button onClick={onAvanzar}
               className="relieve flex w-full items-center gap-3 rounded-lg px-3 py-2.5"
-              style={{ background: "linear-gradient(160deg, var(--carbon-alto), var(--carbon))" }}>
+              style={{
+                background: "linear-gradient(160deg, var(--carbon-alto), var(--carbon))",
+                boxShadow: "inset 0 0 0 1px color-mix(in srgb, var(--cesped) 40%, transparent)",
+              }}>
               <span className="num flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[13px]"
                     style={{ background: "var(--blanco)", color: "var(--negro)" }}>
                 +1
@@ -647,6 +659,12 @@ export default function Escritorio({
                 </span>
               )}
               <Escudo id={partido.rivalId} nombre={partido.rivalNombre} tam={24} />
+              {/* La flecha: lo único que hacía falta para que se lea como un
+                  botón y no como un cartel. Late despacio para que se note. */}
+              <span className="respirar flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[17px] font-bold leading-none"
+                    style={{ background: "var(--cesped)", color: "#0a120d" }}>
+                ›
+              </span>
             </button>
           ) : (
             <div className="rounded-lg p-3 text-center" style={{ background: "var(--carbon)" }}>
@@ -1253,7 +1271,7 @@ function VistaFixture({ partida, tabla }: {
 }) {
   /* La tabla vivía en una card propia del tablero. Está mejor acá: el que
      mira el fixture es el que quiere saber cómo va el torneo. */
-  const [comp, setComp] = useState<"todo" | "clausura" | "copa" | "tabla" | "diario">("todo");
+  const [comp, setComp] = useState<"todo" | "clausura" | "copa" | "tabla">("todo");
 
   const liga = partidosDeOlimpia().map((p, i) => ({
     clave: `liga-${i}`,
@@ -1309,19 +1327,20 @@ function VistaFixture({ partida, tabla }: {
 
   const eliminado = partida.copa.ronda === "eliminado";
   const items = (comp === "clausura" ? liga : comp === "copa" ? copa
-    : comp === "diario" || comp === "tabla" ? [] : [...liga, ...copa])
+    : comp === "tabla" ? [] : [...liga, ...copa])
     .sort((a, b) => a.orden.localeCompare(b.orden));
 
   return (
     <>
       <div className="mb-2 flex gap-1">
-        {/* El diario dejó la home y vive acá, con el resto de lo que se
-            consulta de vez en cuando y no todos los días. */}
+        {/* El diario ya no es una pestaña de acá: se abre tocando la última
+            noticia de la pantalla principal, que es de donde uno quiere
+            enterarse del resto. */}
         {([["todo", "Todo"], ["clausura", "Clausura"], ["copa", "Copa"],
-           ["tabla", "Tabla"], ["diario", "Diario"]] as const)
+           ["tabla", "Tabla"]] as const)
           .map(([id, texto]) => (
             <button key={id} onClick={() => setComp(id)}
-              className="flex-1 rounded-md py-1.5 text-[9px] font-bold uppercase tracking-wider"
+              className="flex-1 rounded-md py-1.5 text-[10px] font-bold uppercase tracking-wider"
               style={{
                 background: comp === id ? "var(--blanco)" : "var(--carbon)",
                 color: comp === id ? "var(--negro)" : "var(--tenue)",
@@ -1332,9 +1351,8 @@ function VistaFixture({ partida, tabla }: {
       </div>
 
       {comp === "tabla" && <VistaTabla tabla={tabla} />}
-      {comp === "diario" && <VistaBitacora partida={partida} />}
 
-      {comp !== "tabla" && comp !== "diario" && comp !== "clausura" && eliminado && (
+      {comp !== "tabla" && comp !== "clausura" && eliminado && (
         <div className="mb-2 rounded-md px-2.5 py-2 text-[11px]"
              style={{ background: "var(--carbon)", color: "var(--tenue)" }}>
           Olimpia quedó afuera de la Sudamericana.

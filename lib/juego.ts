@@ -355,6 +355,18 @@ export function autoOnce(
  */
 export const BANCO = 12;
 
+/**
+ * Lo que se mueve el nivel de un jugador en un puesto y un contexto.
+ *
+ * El número que se muestra es SIEMPRE el de la ficha, el mismo con el que lo
+ * fichaste. Antes el banco mostraba el nivel efectivo y la cancha el de ficha,
+ * así que arrastrabas a alguien de 66 a un casillero y aparecía como 59: el
+ * jugador parecía cambiar de valor por moverse de lugar. Ahora el número queda
+ * quieto y lo que se mueve es esto, que va al lado y con su signo.
+ */
+export const deltaNivel = (j: Jugador, puesto: Posicion, ctx: ContextoPartido): number =>
+  Math.round(nivelEf(j, puesto, ctx) - j.nivel);
+
 export function bancoSugerido(
   aptos: Jugador[], once: Jugador[], ctx: ContextoPartido,
   /**
