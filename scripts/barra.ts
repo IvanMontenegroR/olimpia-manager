@@ -47,7 +47,7 @@ for (const c of CASOS) {
       if (!dentro) {
         fallas++;
         if (fallas <= 8) {
-          console.log(`    ✗ ${c.que} · ${nombre} · semilla ${semilla}: ` +
+          console.log(`    ✗ ${c.que} - ${nombre} - semilla ${semilla}: ` +
             `frena en ${t.donde.toFixed(1)}, la franja va de ${t.desde.toFixed(1)} a ${t.hasta.toFixed(1)}`);
         }
       }

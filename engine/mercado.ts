@@ -39,24 +39,65 @@ interface FichajeDelCatalogo {
 export const CATALOGO = fichajesJson as FichajeDelCatalogo[];
 
 /**
+ * Cada cuántos niveles el precio se multiplica por diez.
+ *
+ * Es la única perilla que decide cuánto separa a un bueno de un crack: con 15,
+ * tres niveles de diferencia son un 58% más caro y seis niveles son el triple.
+ */
+export const NIVELES_POR_DECADA = 20;
+
+/**
+ * Cuánto descuenta o encarece la edad, como curva y no como escalón.
+ *
+ * Esto era una escalera de cinco tramos que iba de 1.3 a 0.5, y tenía dos
+ * problemas grandes. El primero: los saltos caían en cualquier lado, así que
+ * cumplir 33 años te bajaba el precio un 24% de un día para el otro y Gómez
+ * (77 años, digo, nivel 77 y 33 años) salía más barato que Almirón, que es uno
+ * menos y un año más joven.
+ *
+ * El segundo es peor. Entre la punta joven y la vieja había 2.6 veces de
+ * diferencia, y como quince niveles multiplican por diez, 2.6 veces son casi
+ * cinco niveles: la edad le ganaba al nivel y el mercado quedaba desordenado
+ * de verdad, con jugadores de 77 más baratos que otros de 74.
+ *
+ * Ahora es continua y va de 1.07 a 0.86, o sea 1.24 veces de punta a punta,
+ * que es MENOS que lo que valen dos niveles (10^(2/20) = 1.26). Así el orden
+ * por nivel no se puede dar vuelta salvo entre vecinos, y eso lo chequea
+ * `scripts/plantillas.ts` para que no se rompa al cargar un jugador nuevo.
+ *
+ * Que sea tan achatada no es que la edad no importe: importa muchísimo, pero
+ * en otro lado. Un veterano se rompe más, rinde menos cada año y se retira, y
+ * todo eso ya está en el juego y a la vista. Meterlo otra vez en el precio era
+ * cobrarlo dos veces, y encima al precio de romper el orden del mercado.
+ */
+const CURVA_EDAD: [edad: number, factor: number][] = [
+  [20, 1.03], [24, 1.07], [28, 1.04], [31, 0.99],
+  [34, 0.94], [37, 0.90], [40, 0.87], [43, 0.86],
+];
+
+export function factorEdad(edad: number): number {
+  const c = CURVA_EDAD;
+  if (edad <= c[0][0]) return c[0][1];
+  for (let i = 1; i < c.length; i++) {
+    const [e0, v0] = c[i - 1], [e1, v1] = c[i];
+    if (edad <= e1) return v0 + ((v1 - v0) * (edad - e0)) / (e1 - e0);
+  }
+  return c[c.length - 1][1];
+}
+
+/**
  * Precio de referencia, en escala logarítmica sobre el nivel.
  *
- * Estaba tan barato que rompía la única decisión económica del juego: un
- * refuerzo de 70 salía 610 mil, o sea menos de dos partidos de recaudación,
- * mientras que una estrella del mismo nivel pedía cinco o seis veces eso.
- * Nadie iba a ahorrar para el crack pudiendo llenarse de buenos a precio de
- * ganga. Ahora la estrella sale menos del doble que un refuerzo equivalente,
- * y esa diferencia se paga con lo que trae de hinchada y de vestuario.
- *
- * El castigo por edad también era brutal: un cuarentón valía el 40% de su
- * nivel, y como el catálogo son casi todos veteranos, todo salía regalado.
+ * Es la misma curva para todo el juego: el refuerzo del mercado, la estrella
+ * que aparece una vez al año y lo que te ofrecen por los tuyos. Antes las
+ * estrellas tenían el precio escrito a mano en el JSON y quedó cualquier cosa:
+ * Enciso, que juega en la Premier y tiene veintidós años, salía seis millones,
+ * menos que Neymar y casi lo mismo que Icardi, que le lleva once años.
  */
-export const precioDe = (nivel: number, edad: number) => {
-  const base = 45_000 * Math.pow(10, (nivel - 45) / 14);
-  const factorEdad = edad <= 23 ? 1.3 : edad <= 28 ? 1.1
-    : edad <= 32 ? 0.85 : edad <= 35 ? 0.65 : 0.5;
-  return Math.round((base * factorEdad) / 10_000) * 10_000;
-};
+export const precioDe = (nivel: number, edad: number) =>
+  Math.round(
+    (150_000 * Math.pow(10, (nivel - 45) / NIVELES_POR_DECADA) * factorEdad(edad)) / 10_000,
+  ) * 10_000;
 
 export interface FichajeGenerado {
   id: string;

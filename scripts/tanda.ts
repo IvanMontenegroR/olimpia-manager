@@ -106,7 +106,7 @@ console.log(`\n  Los que patean son los que terminaron el partido:\n`);
 for (const [rotulo, t] of [["el once titular", conTitulares], ["once del banco", conBanco]] as const) {
   const mejores = t.candidatos.slice(0, 3)
     .map((c) => `${c.apellido} ${Math.round(c.chance * 100)}%`).join(", ");
-  console.log(`  ${rotulo.padEnd(16)} ${t.candidatos.length} pateadores · los tres primeros: ${mejores}`);
+  console.log(`  ${rotulo.padEnd(16)} ${t.candidatos.length} pateadores - los tres primeros: ${mejores}`);
 }
 
 // ------------------------------------------------ el rango entre pateadores

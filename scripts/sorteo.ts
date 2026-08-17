@@ -92,14 +92,14 @@ probar("6 arrancan en la fase 1", libertadores.filter((p) => p.fase === "fase 1"
 
 const lib = sortearLibertadores(libertadores, "s1");
 console.log(`\n  Llaves: ${["F1", "F2", "F3"].map((f) =>
-  `${f} ${lib.llaves.filter((l) => l.fase === f).length}`).join(" · ")}\n`);
+  `${f} ${lib.llaves.filter((l) => l.fase === f).length}`).join(" - ")}\n`);
 probar("3 llaves en la fase 1", lib.llaves.filter((l) => l.fase === "F1").length === 3);
 probar("8 llaves en la fase 2", lib.llaves.filter((l) => l.fase === "F2").length === 8);
 probar("4 llaves en la fase 3", lib.llaves.filter((l) => l.fase === "F3").length === 4);
 revisar(lib, 8);
 
 for (const g of lib.grupos.slice(0, 3)) {
-  console.log(`  Grupo ${g.letra}: ${g.equipos.map(nombreDe).join(" · ")}`);
+  console.log(`  Grupo ${g.letra}: ${g.equipos.map(nombreDe).join(" - ")}`);
 }
 
 // ------------------------------------------------------------ Sudamericana
@@ -124,7 +124,7 @@ for (const l of suda.llaves.slice(0, 3)) {
   console.log(`  ${l.id}: ${nombreDe(l.local)} vs ${nombreDe(l.visita)}`);
 }
 for (const g of suda.grupos.slice(0, 2)) {
-  console.log(`  Grupo ${g.letra}: ${g.equipos.map(nombreDe).join(" · ")}`);
+  console.log(`  Grupo ${g.letra}: ${g.equipos.map(nombreDe).join(" - ")}`);
 }
 
 // -------------------------------------------------- que cambie cada temporada
@@ -216,8 +216,8 @@ console.log(`\n  === desde la partida: ganar la llave revela el grupo del cartel
       p1.caeElGrupo!.llaves.every((l) => !!l.ganador));
     probar(`${torneo}: la llave de Olimpia está marcada como suya`,
       p1.caeElGrupo!.llaves.filter((l) => l.mia).length === 1);
-    console.log(`  ${torneo}: ganó ${donde.llave.id} · se resolvieron ` +
-      `${p1.caeElGrupo!.llaves.length} llaves · entra al Grupo ` +
+    console.log(`  ${torneo}: ganó ${donde.llave.id} - se resolvieron ` +
+      `${p1.caeElGrupo!.llaves.length} llaves - entra al Grupo ` +
       `${dest?.tipo === "grupo" ? dest.letra : "?"}`);
   }
 }
@@ -244,7 +244,7 @@ console.log(`\n  === quién ganó cada llave, para la animación ===\n`);
     }
     const mia = p1.caeElGrupo!.llaves.find((l) => l.mia)!;
     probar(`${torneo}: en su propia llave el ganador es Olimpia`, mia.ganador === "Olimpia");
-    console.log(`  ${torneo}: ${mia.id} · ${mia.local} vs ${mia.visita} → ganó ${mia.ganador}`);
+    console.log(`  ${torneo}: ${mia.id} - ${mia.local} vs ${mia.visita} → ganó ${mia.ganador}`);
   }
   probar(`en las ${revisadas} llaves el ganador es uno de los dos que jugaron`,
     revisadas > 0 && correctas === revisadas);

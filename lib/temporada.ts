@@ -22,9 +22,9 @@ import {
 import type { Participante } from "./copas.ts";
 import { esCopaInternacional } from "@/engine/tipos.ts";
 import {
-  NOMBRE_ETAPA, diaDe, etapaInicial, etapaSiguiente, faltanPrevias, grupoDeOlimpia,
+  NOMBRE_ETAPA, caminoDeCopa, diaDe, etapaInicial, etapaSiguiente, faltanPrevias, grupoDeOlimpia,
   bajarDeLaLibertadores, comoQuedoLaFase, llaveDeOlimpia, rivalDeCopa,
-  rivalDeFaseFinal, rivalDeLaEtapa, simularPrevias, type ResueltaLlave,
+  rivalDeFaseFinal, rivalDeLaEtapa, simularPrevias, type PartidoDeCopa, type ResueltaLlave,
   tablaDelGrupo, type EtapaCopa,
 } from "./copaEnJuego.ts";
 import equiposJson from "@/data/equipos_2026.json";
@@ -36,7 +36,7 @@ import {
   TOTAL_SITUACIONES, sortearSituacion, type Efecto, type Situacion,
 } from "@/engine/situaciones.ts";
 import {
-  CATALOGO, generarMercado, sortearOferta, type FichajeGenerado,
+  CATALOGO, generarMercado, precioDe, sortearOferta, type FichajeGenerado,
 } from "@/engine/mercado.ts";
 import {
   DIAS_DE_VENTANA, ESTRELLAS, impactoDe, jugadorDeEstrella, sortearEstrella,
@@ -687,6 +687,16 @@ export function cargar(): Partida {
     p.estrella ??= null;
     p.estrellasVistas ??= [];
     p.incorporados ??= [];
+    /*
+     * El precio del mercado se recalcula, nunca se hereda del guardado.
+     *
+     * Es un valor derivado del nivel y la edad, pero se guardaba junto con el
+     * jugador, así que una partida vieja seguía mostrando la lista de precios
+     * anterior para siempre: Vidal, que es 74, aparecía a 2.65M al lado de
+     * Gabigol, que es 73, a 3.83M. Recalcularlo acá arregla las partidas que
+     * ya están empezadas sin tener que tirarlas.
+     */
+    p.fichajes = p.fichajes.map((f) => ({ ...f, precioUsd: precioDe(f.nivel, f.edad) }));
     return p;
   } catch {
     return partidaNueva();
@@ -761,6 +771,53 @@ export function partidoLigaDe(p: Partida): PartidoUI | null {
 }
 
 /**
+ * Todos los partidos internacionales del año, valga la partida que valga.
+ *
+ * Existe porque el calendario se quedó sin copa. Adentro del juego conviven
+ * dos sistemas: la Sudamericana 2026, que es una escalera fija de octavos a
+ * final con las fechas escritas en `CALENDARIO_COPA`, y la copa del 2027 en
+ * adelante, que sale del cuadro sorteado en enero. El fixture y la tira de la
+ * home leían solo uno cada uno, así que en 2026 la pestaña de copa estaba
+ * vacía y del 2027 en adelante la tira pintaba los días de la escalera vieja,
+ * que ya no se juegan.
+ *
+ * Acá se resuelve una vez y las dos pantallas preguntan lo mismo.
+ */
+export function caminoInternacional(p: Partida): PartidoDeCopa[] {
+  if (p.copas && p.copa.torneo && p.copa.etapa) {
+    const cuadro = p.copas[p.copa.torneo];
+    const etapa = p.copa.etapa;
+    /* Eliminado o campeón el camino igual se muestra entero, desde donde entró. */
+    const desde = etapa === "eliminado" || etapa === "campeon" ? etapaInicial(cuadro) : etapa;
+    return caminoDeCopa(cuadro, desde, p.ano, p.semilla);
+  }
+
+  /* La Sudamericana 2026, que es la de la escalera fija. */
+  const CORTO: Record<string, string> = {
+    octavos: "8vos", cuartos: "4tos", semis: "Semi", final: "Final",
+  };
+  const salida: PartidoDeCopa[] = [];
+  for (const ronda of ["octavos", "cuartos", "semis", "final"] as const) {
+    const cal = CALENDARIO_COPA[ronda];
+    /* La final es a partido único en cancha neutral. */
+    const dias = ronda === "final" ? [cal.ida] : [cal.ida, cal.vuelta];
+    /* Solo se sabe contra quién en la ronda que se está jugando. */
+    const r = p.copa.ronda === ronda
+      ? (RIVALES as { id: string; nombre: string }[]).find((x) => x.id === p.copa.rivalId)
+      : undefined;
+    dias.forEach((dia, i) => salida.push({
+      etapa: ronda as EtapaCopa,
+      dia,
+      rivalId: r?.id ?? "",
+      rivalNombre: r?.nombre ?? "Por definir",
+      esLocal: ronda !== "final" && i === 1,
+      rotulo: CORTO[ronda] + (dias.length === 2 ? (i === 0 ? " ida" : " vta") : ""),
+    }));
+  }
+  return salida;
+}
+
+/**
  * El próximo partido de copa de Olimpia, leído del cuadro.
  *
  * Del 2027 en adelante la copa no es una escalera fija: Olimpia arranca donde
@@ -804,12 +861,17 @@ function partidoDelCuadro(p: Partida): PartidoUI | null {
     estadio: esFinal ? "Cancha neutral" : esLocal ? "Defensores del Chaco" : `Estadio de ${r.nombre}`,
     ciudad: esFinal ? "sede única" : esLocal ? "Asunción" : "",
     /*
-     * La etiqueta dice de qué copa es y en qué instancia estás. En los grupos
-     * decía "fecha 1" a secas, que es como se llama una fecha de liga: acá lo
-     * que ubica es el grupo, y cuántas quedan.
+     * La etiqueta dice de qué copa es y en qué instancia estás.
+     *
+     * En los grupos decía "fecha 1", que es como se llama una fecha de liga y
+     * no una de copa. Después dijo "fecha 1 de 6", que era más honesto pero
+     * seguía sobrando: en la fase de grupos lo que ubica es el grupo y contra
+     * quién jugás, los dos ya están en pantalla, y el número de fecha no
+     * cambia ninguna decisión. Ida y vuelta sí, porque ahí sí importa: en la
+     * vuelta jugás con el global encima.
      */
     etiqueta: etapa === "grupos"
-      ? `${nombre} - Grupo ${grupoDeOlimpia(cuadro)?.letra ?? ""} - fecha ${i + 1} de 6`
+      ? `${nombre} - Grupo ${grupoDeOlimpia(cuadro)?.letra ?? ""}`
       : `${nombre} - ${NOMBRE_ETAPA[etapa]}` + (unico ? "" : i === 0 ? " - ida" : " - vuelta"),
     llave: etapa === "grupos" || unico ? undefined
       : { globalO: c.globalO, globalR: c.globalR, esVuelta: i === 1, esFinal },

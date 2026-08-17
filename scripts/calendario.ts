@@ -64,8 +64,8 @@ for (const ano of [2027, 2028, 2031]) {
       ps.every((p) => p.dia === dias[p.fechaNumero - 1]));
 
     const km = ps.filter((p) => p.visitante === "olimpia");
-    console.log(`  ${rotulo.padEnd(16)} ${ps.length} partidos · ${dias[0]} a ${dias[dias.length - 1]}` +
-      ` · Olimpia viaja ${km.reduce((s, p) => s + p.viajeKm, 0)} km`);
+    console.log(`  ${rotulo.padEnd(16)} ${ps.length} partidos - ${dias[0]} a ${dias[dias.length - 1]}` +
+      ` - Olimpia viaja ${km.reduce((s, p) => s + p.viajeKm, 0)} km`);
   }
 }
 

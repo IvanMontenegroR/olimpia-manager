@@ -18,7 +18,7 @@ import type { Participante } from "./copas.ts";
 
 /** Un lugar del cuadro que todavía no tiene dueño. */
 export interface Placeholder {
-  /** "Ganador de la Fase 3 · Llave 2", que es lo que dice el bombo de verdad. */
+  /** "Ganador F3-2", que es lo que dice el cartel del bombo de verdad. */
   rotulo: string;
   /** De qué llave sale, para poder reemplazarlo cuando se juegue. */
   llave: string;

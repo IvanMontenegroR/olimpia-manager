@@ -75,7 +75,7 @@ for (let i = 0; i < 5; i++) {
 
   console.log(`  ${String(p.ano).padEnd(6)}${String(plantel.length).padStart(8)}` +
     `${edad.padStart(7)}${String(nivelOnce).padStart(6)}${String(retiros).padStart(9)}  ` +
-    `${b.puestoAnual}° del año · ${b.miCupo ? `${b.miCupo.torneo} ${b.miCupo.fase}` : "sin copa"}`);
+    `${b.puestoAnual}° del año - ${b.miCupo ? `${b.miCupo.torneo} ${b.miCupo.fase}` : "sin copa"}`);
 
   probar(`${p.ano}: queda plantel para jugar`, plantel.length >= 16);
   probar(`${p.ano}: hay por lo menos un arquero`,

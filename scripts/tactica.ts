@@ -100,11 +100,11 @@ for (const f of ["5-3-2", "4-3-3", "3-4-3"]) {
       const r = simularPartido(a, ctx, new Rng(`g-${i}`));
       gf += r.golesOlimpia; gc += r.golesRival;
     }
-    celdas.push(`${(gf / N).toFixed(2)} · ${(gc / N).toFixed(2)}`.padEnd(20));
+    celdas.push(`${(gf / N).toFixed(2)} - ${(gc / N).toFixed(2)}`.padEnd(20));
   }
   console.log(`  ${f.padEnd(9)}${celdas.join("")}`);
 }
-console.log(`\n  (mete · recibe)`);
+console.log(`\n  (mete - recibe)`);
 
 // ------------------------------------------------------------ fuera de puesto
 console.log(`\n  === PONER A ALGUIEN FUERA DE PUESTO ===\n`);

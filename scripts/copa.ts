@@ -93,8 +93,8 @@ for (let i = 0; i < 4; i++) {
       r.partidosDeCopa.length <= 16);
   }
   if (r.partidosDeCopa.length) {
-    console.log(`         ${r.partidosDeCopa.slice(0, 3).join(" · ")}` +
-      (r.partidosDeCopa.length > 3 ? ` · …(${r.partidosDeCopa.length})` : ""));
+    console.log(`         ${r.partidosDeCopa.slice(0, 3).join(" - ")}` +
+      (r.partidosDeCopa.length > 3 ? ` - …(${r.partidosDeCopa.length})` : ""));
   }
 }
 
@@ -106,7 +106,7 @@ if (p.copas) {
     const d = dondeEsta(c, "olimpia");
     const carteles = c.grupos.flatMap((g) => g.equipos).filter(esPlaceholder).length;
     console.log(`  ${t.padEnd(14)} Olimpia ${d.grupo ? `en el Grupo ${d.grupo.letra}` :
-      d.llave ? `en ${d.llave.id}` : "afuera"} · quedan ${carteles} carteles sin dueño`);
+      d.llave ? `en ${d.llave.id}` : "afuera"} - quedan ${carteles} carteles sin dueño`);
     probar(`${t}: los grupos siguen teniendo 4`,
       c.grupos.every((g) => g.equipos.length === 4));
     probar(`${t}: Olimpia no está en dos lugares a la vez`,

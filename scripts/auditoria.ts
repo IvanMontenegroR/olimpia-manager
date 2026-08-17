@@ -105,7 +105,7 @@ for (const S of TODAS) {
    * Una opción pelada al lado de otras con números.
    *
    * No es lo mismo que "no hacer nada": es que la fila se lee distinto. Donde
-   * las demás muestran "+1.3 nivel · −60k", esta muestra una frase y nada, y
+   * las demás muestran "+1.3 nivel - −60k", esta muestra una frase y nada, y
    * el ojo no la puede comparar con las otras. A veces es correcto (dejar
    * pasar al pibe no cuesta nada) y a veces es que le falta decir lo suyo.
    */

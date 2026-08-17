@@ -1,4 +1,5 @@
 import estrellasJson from "@/data/estrellas.json";
+import { precioDe } from "./mercado.ts";
 import { Rng } from "./rng.ts";
 import type { Jugador, Posicion, Rasgo } from "./tipos.ts";
 
@@ -38,7 +39,19 @@ export interface Estrella {
   rasgos?: Rasgo[];
 }
 
-export const ESTRELLAS = estrellasJson as Estrella[];
+/**
+ * El precio no se carga: se calcula, con la misma curva que el mercado común.
+ *
+ * Escrito a mano quedó incoherente de todas las formas posibles. Messi salía
+ * catorce millones y Cristiano nueve, que es más barato que un refuerzo de 77
+ * en proporción a lo que rinden; Enciso, veintidós años y titular en la
+ * Premier, salía seis, menos que Neymar de treinta y cuatro. Con la curva
+ * compartida el orden sale solo y no se puede volver a romper: la estrella más
+ * barata cuesta más que el mejor del mercado, y entre ellas manda el nivel.
+ */
+export const ESTRELLAS: Estrella[] =
+  (estrellasJson as Omit<Estrella, "precioUsd">[])
+    .map((e) => ({ ...e, precioUsd: precioDe(e.nivel, e.edad) }));
 
 /**
  * Cada cuánto puede aparecer una. Las leyendas son rarísimas a propósito: si

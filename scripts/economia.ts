@@ -29,18 +29,33 @@ const anotar = (que: string, monto: number) => {
   mov.set(que, m);
 };
 
-let picoMedio = 0, finalMedio = 0, estrellasFichadas = 0, refuerzosFichados = 0;
-let vecesQueAlcanzo = 0, vecesQueAparecio = 0;
+/**
+ * Dos maneras de dirigir, porque la plata solo tiene sentido comparada.
+ *
+ * "gasta" es el que compra cada vez que puede, y es la que se venía midiendo.
+ * El problema es que con esa sola no se puede responder la pregunta que el
+ * juego hace: si ahorrás, ¿llegás a la estrella? Con el que gasta la respuesta
+ * es siempre no, y eso no dice si el precio está mal o si el que gasta eligió
+ * mal. "ahorra" no compra un solo refuerzo, vende a todo el que le ofertan y
+ * cobra la entrada cara. Si ni así llega, el precio está mal de verdad.
+ */
+type Politica = "gasta" | "ahorra";
 
-for (let s = 0; s < temporadas; s++) {
+interface Corrida {
+  pico: number; final: number; estrellas: number; refuerzos: number;
+  alcanzo: number; aparecio: number;
+}
+
+function correrTemporada(s: number, politica: Politica, contar: boolean): Corrida {
   const rng = new Rng(`eco-${s}`);
   let p: Partida = partidaNueva(`eco-${s}`);
   let pico = p.dineroUsd;
   let antes = p.dineroUsd;
+  const r: Corrida = { pico: 0, final: 0, estrellas: 0, refuerzos: 0, alcanzo: 0, aparecio: 0 };
 
   const registrar = (que: string, ahora: number) => {
     const d = ahora - antes;
-    if (Math.abs(d) > 500) anotar(que, d);
+    if (contar && Math.abs(d) > 500) anotar(que, d);
     antes = ahora;
   };
 
@@ -51,7 +66,10 @@ for (let s = 0; s < temporadas; s++) {
         : a.tipo === "marketing" ? ["barato", "normal", "caro"]
         : a.tipo === "viaje" ? ["sobrelahora", "dosdias", "semana"]
         : Object.keys(a.efectos ?? {});
-      const op = ops.length ? rng.elegir(ops) : "";
+      /* El que ahorra vende siempre y cobra la entrada cara. */
+      const op = politica === "ahorra" && a.tipo === "oferta" ? "vender"
+        : politica === "ahorra" && a.tipo === "marketing" ? "caro"
+        : ops.length ? rng.elegir(ops) : "";
       p = resolverAsunto(p, a.id, op);
       registrar(a.tipo === "oferta" ? (op === "vender" ? "vender un jugador" : "rechazar oferta")
         : a.tipo === "viaje" ? "el viaje"
@@ -61,19 +79,19 @@ for (let s = 0; s < temporadas; s++) {
     }
     if (p.hito) { p = { ...p, hito: null }; continue; }
     if (p.estrella) {
-      vecesQueAparecio++;
+      r.aparecio++;
       const e = ESTRELLAS.find((x) => x.id === p.estrella!.id)!;
-      if (p.dineroUsd >= e.precioUsd) vecesQueAlcanzo++;
-      if (p.dineroUsd >= e.precioUsd && rng.chance(0.7)) {
-        p = ficharEstrella(p); estrellasFichadas++;
+      if (p.dineroUsd >= e.precioUsd) r.alcanzo++;
+      if (p.dineroUsd >= e.precioUsd && (politica === "ahorra" || rng.chance(0.7))) {
+        p = ficharEstrella(p); r.estrellas++;
         registrar("fichar una estrella", p.dineroUsd);
       } else p = rechazarEstrella(p);
       continue;
     }
-    if (p.fichajes.length && rng.chance(0.06)) {
+    if (politica === "gasta" && p.fichajes.length && rng.chance(0.06)) {
       const f = rng.elegir(p.fichajes);
       const t = fichar(p, f.id);
-      if (t) { p = t; refuerzosFichados++; registrar("fichar del mercado", p.dineroUsd); continue; }
+      if (t) { p = t; r.refuerzos++; registrar("fichar del mercado", p.dineroUsd); continue; }
     }
     if (hayPartidoHoy(p)) {
       const m = partidoDe(p)!;
@@ -96,16 +114,28 @@ for (let s = 0; s < temporadas; s++) {
     registrar("el día a día", p.dineroUsd);
     pico = Math.max(pico, p.dineroUsd);
   }
-  picoMedio += pico;
-  finalMedio += p.dineroUsd;
+  r.pico = pico;
+  r.final = p.dineroUsd;
+  return r;
 }
+
+const sumar = (xs: Corrida[]): Corrida => xs.reduce((a, b) => ({
+  pico: a.pico + b.pico, final: a.final + b.final, estrellas: a.estrellas + b.estrellas,
+  refuerzos: a.refuerzos + b.refuerzos, alcanzo: a.alcanzo + b.alcanzo,
+  aparecio: a.aparecio + b.aparecio,
+}));
+
+const temp = Array.from({ length: temporadas }, (_, s) => s);
+const gasta = sumar(temp.map((s) => correrTemporada(s, "gasta", true)));
+const ahorra = sumar(temp.map((s) => correrTemporada(s, "ahorra", false)));
 
 const n = (x: number) => x / temporadas;
 
 console.log(`\n  LA PLATA, media de ${temporadas} temporadas\n`);
 console.log(`    arranca con              ${M(partidaNueva("eco").dineroUsd)}`);
-console.log(`    lo máximo que llega a tener  ${M(n(picoMedio))}`);
-console.log(`    termina con              ${M(n(finalMedio))}`);
+console.log(`    lo máximo que llega a tener  ${M(n(gasta.pico))}  si comprás cada vez que podés`);
+console.log(`                                 ${M(n(ahorra.pico))}  si ahorrás todo el año`);
+console.log(`    termina con              ${M(n(gasta.final))}`);
 
 console.log("\n  DE DÓNDE SALE Y ADÓNDE VA (por temporada)\n");
 const filas = [...mov].map(([que, m]) => ({ que, veces: n(m.veces), total: n(m.total) }))
@@ -124,6 +154,10 @@ console.log(`    la más cara              ${M(estrellas[estrellas.length - 1].p
 const cat = CATALOGO.map((f) => precioDe(f.nivel, f.edad)).sort((a, b) => a - b);
 console.log(`    refuerzo del mercado     de ${M(cat[0])} a ${M(cat[cat.length - 1])}`);
 console.log();
-console.log(`    aparece una estrella     ${n(vecesQueAparecio).toFixed(1)} veces por temporada`);
-console.log(`    y te alcanzaba           ${vecesQueAparecio ? Math.round(vecesQueAlcanzo / vecesQueAparecio * 100) : 0}% de esas veces`);
-console.log(`    terminás fichando        ${n(estrellasFichadas).toFixed(2)} estrellas y ${n(refuerzosFichados).toFixed(1)} refuerzos`);
+const pct = (c: Corrida) => c.aparecio ? Math.round((c.alcanzo / c.aparecio) * 100) : 0;
+console.log(`    aparece una estrella     ${n(gasta.aparecio).toFixed(1)} veces por temporada`);
+console.log(`    y te alcanza             ${pct(gasta)}% de esas veces si venís comprando refuerzos`);
+console.log(`                             ${pct(ahorra)}% si guardás todo para ella`);
+console.log(`    terminás fichando        ${n(gasta.estrellas).toFixed(2)} estrellas y ` +
+  `${n(gasta.refuerzos).toFixed(1)} refuerzos comprando`);
+console.log(`                             ${n(ahorra.estrellas).toFixed(2)} estrellas ahorrando`);

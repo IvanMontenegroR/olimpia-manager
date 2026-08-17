@@ -17,7 +17,8 @@ import {
 import Delta from "./Delta.tsx";
 import RIVALES_COPA from "@/data/rivales_internacionales.json";
 import {
-  CALENDARIO_COPA, OBJETIVO, TOTAL_FECHAS, borrar, diasAlPartido, esPartidoDeCopa,
+  OBJETIVO, TOTAL_FECHAS, borrar, caminoInternacional, diasAlPartido,
+  esPartidoDeCopa,
   diasEntre, estadoSub18, formatoDia, hayPartidoHoy, miles, ocupacionDe, ovrDe, partidoDe, plantelDe,
   posicionDe, sumarDias,
   tablaDe, fixtureDeOlimpia, type EntradaDiario, type EquipoGuardado, type Partida,
@@ -25,7 +26,7 @@ import {
 } from "@/lib/temporada.ts";
 import { useAtras } from "@/lib/atras.ts";
 import { esCopaInternacional } from "@/engine/tipos.ts";
-import { NOMBRE_ETAPA, caminoDeCopa, etapaInicial, grupoDeOlimpia } from "@/lib/copaEnJuego.ts";
+import { NOMBRE_ETAPA, grupoDeOlimpia, tablaDelGrupo } from "@/lib/copaEnJuego.ts";
 import Alineador, { type EstadoAlineacion } from "./Alineador.tsx";
 import FichaJugador from "./FichaJugador.tsx";
 import PantallaEstrella from "./PantallaEstrella.tsx";
@@ -186,7 +187,9 @@ export default function Escritorio({
     return (
       <Sub titulo={{
         plantel: "Plantel", fixture: "Fixture",
-        mercado: "Fichajes", bitacora: "Bitácora", copa: "Sudamericana",
+        /* El título de la copa era "Sudamericana" fijo, así que un año de
+           Libertadores se abría con el nombre de la otra copa arriba. */
+        mercado: "Fichajes", bitacora: "Bitácora", copa: copaDe(partida).nombre,
         estrella: "Mercado",
       }[vista]} onVolver={() => setVista("escritorio")}>
         {/*
@@ -280,6 +283,10 @@ export default function Escritorio({
   const rivalCopa = proximoDeCopa
     ? { id: proximoDeCopa.rivalId, nombre: proximoDeCopa.rivalNombre }
     : (RIVALES_COPA as any[]).find((r) => r.id === partida.copa.rivalId) ?? null;
+  /* Los días de copa de la tira, del mismo camino que muestra el fixture. */
+  const camino = caminoInternacional(partida);
+  const afueraDeLaCopa = partida.copa.ronda === "eliminado" || partida.copa.ronda === "campeon"
+    || partida.copa.etapa === "eliminado" || partida.copa.etapa === "campeon";
   const NOMBRE_RONDA: Record<string, string> = {
     octavos: "Octavos", cuartos: "Cuartos", semis: "Semifinal", final: "Final",
     eliminado: "Eliminado", campeon: "Campeón",
@@ -415,9 +422,13 @@ export default function Escritorio({
         {Array.from({ length: 14 }, (_, i) => {
           const dia = sumarDias(partida.dia, i);
           const m = fixtureDeOlimpia(partida).find((x) => x.ctx.fecha === dia);
-          const copaHoy = Object.values(CALENDARIO_COPA).some(
-            (r) => (r.ida === dia || r.vuelta === dia)
-              && partida.copa.ronda !== "eliminado" && partida.copa.ronda !== "campeon");
+          /*
+           * Los días de copa salían de `CALENDARIO_COPA`, que es la escalera
+           * fija del 2026: del 2027 en adelante pintaba días en los que no se
+           * juega nada y dejaba sin pintar los que sí. Ahora sale del mismo
+           * camino que muestra el fixture.
+           */
+          const copaHoy = afueraDeLaCopa ? null : camino.find((c) => c.dia === dia) ?? null;
           /*
            * El día de copa se pintaba de amarillo con un puntito amarillo, o
            * sea con la gama de la Libertadores y sin decir contra quién. Ahora
@@ -443,8 +454,8 @@ export default function Escritorio({
               </span>
               <span className="num text-[12px] leading-none">{dia.slice(8, 10)}</span>
               <span className="flex h-3 items-center">
-                {copaHoy && rivalCopa
-                  ? <Escudo id={rivalCopa.id} nombre={rivalCopa.nombre} tam={12} />
+                {copaHoy?.rivalId
+                  ? <Escudo id={copaHoy.rivalId} nombre={copaHoy.rivalNombre} tam={12} />
                   : copaHoy ? <Punto color={acentoCopa} />
                   : m ? <Escudo id={m.rivalId} nombre={m.rivalNombre} tam={12} />
                   : null}
@@ -940,6 +951,18 @@ const COPAS = {
  */
 const copaDe = (p: Partida) => COPAS[p.copa.torneo ?? "sudamericana"];
 
+/**
+ * El hueco del trofeo en la card de copa, y cuánto mide el trofeo adentro.
+ *
+ * El alto lo manda la card de al lado (la del nivel), que es la más alta de la
+ * fila y mide 76 píxeles con el gradiente. El trofeo tiene 68 para que respire
+ * arriba y abajo sin tocar los bordes, y el hueco tiene 40 de ancho: el dibujo
+ * es de 120 por 320, o sea que a 68 de alto mide 26 de ancho y le sobra aire a
+ * los dos lados. Antes eran 46 y quedaba chiquito al lado del texto.
+ */
+const ALTO_TROFEO = 68;
+const HUECO_TROFEO = 40;
+
 function CardCopa({ copa, ronda, rival, onClick }: {
   copa: keyof typeof COPAS;
   ronda: string; rival: string | null;
@@ -948,8 +971,10 @@ function CardCopa({ copa, ronda, rival, onClick }: {
   const c = COPAS[copa];
   return (
     <button onClick={onClick}
-      className="relieve relative flex items-center gap-2 overflow-hidden rounded-lg px-2.5 py-1.5 text-left"
-      style={{ background: c.fondo, boxShadow: `inset 0 0 0 1px ${c.halo}` }}>
+      className="relieve relative flex items-center overflow-hidden rounded-lg py-1.5 pl-2.5 text-left"
+      /* El hueco de la derecha es del trofeo y de nadie más. */
+      style={{ background: c.fondo, boxShadow: `inset 0 0 0 1px ${c.halo}`,
+               paddingRight: HUECO_TROFEO }}>
       <span className="absolute -left-8 -top-10 h-24 w-28 rounded-full"
             style={{ background: `radial-gradient(closest-side, ${c.halo}, transparent)`,
                      filter: "blur(14px)" }} />
@@ -968,9 +993,17 @@ function CardCopa({ copa, ronda, rival, onClick }: {
         * Esta card es la de la COPA, y el rival ya está escrito abajo con su
         * nombre. La copa en cambio no se decía en ningún lado más que con un
         * color, y una copa se reconoce por su forma antes que por la palabra.
+        *
+        * Va absoluto y no en el flex por dos razones. Una, que así no empuja
+        * el alto de la card: puede crecer todo lo que el texto le permita sin
+        * mover nada. Y dos, que ocupa exactamente el hueco que el texto le
+        * dejó libre, así que centrarlo ahí adentro lo deja centrado de verdad
+        * contra el borde derecho, y no colgando al lado de la última línea.
         */}
-      <span className="relative shrink-0">
-        <Trofeo copa={copa} alto={46} />
+      <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center
+                       justify-center"
+            style={{ width: HUECO_TROFEO }}>
+        <Trofeo copa={copa} alto={ALTO_TROFEO} />
       </span>
     </button>
   );
@@ -1322,15 +1355,21 @@ function VistaFixture({ partida, tabla }: {
    *
    * Antes esto listaba octavos, cuartos, semis y final aunque Olimpia hubiera
    * entrado por la fase 1 y tuviera tres llaves y seis fechas de grupo antes.
-   * Con el cuadro nuevo la pestaña quedaba directamente vacía.
+   * Con el cuadro nuevo la pestaña quedaba directamente vacía, y en el 2026,
+   * que todavía usa la escalera vieja, quedaba vacía siempre. `caminoInter-
+   * nacional` responde por los dos sistemas.
    */
-  const camino = partida.copas && partida.copa.torneo && partida.copa.etapa
-    ? caminoDeCopa(partida.copas[partida.copa.torneo],
-        partida.copa.etapa === "eliminado" || partida.copa.etapa === "campeon"
-          ? etapaInicial(partida.copas[partida.copa.torneo])
-          : partida.copa.etapa,
-        partida.ano, partida.semilla)
-    : [];
+  const camino = caminoInternacional(partida);
+
+  /*
+   * Cuál de los de copa es el que viene.
+   *
+   * Decía "el que sea de la etapa actual", y en la fase de grupos eso son SEIS
+   * partidos: los seis se pintaban de blanco como si todos fueran el próximo.
+   * El que viene es uno solo, y es el que sigue a los que ya se jugaron.
+   */
+  const proximoDeCopa = camino.findIndex((m) =>
+    m.etapa === partida.copa.etapa) + (partida.copa.jugadosEnEtapa ?? 0);
 
   const copa = camino.map((m, k) => ({
     clave: `copa-${k}`,
@@ -1343,7 +1382,7 @@ function VistaFixture({ partida, tabla }: {
     rivalId: m.rivalId,
     rivalNombre: m.rivalNombre,
     resultado: null,
-    esProximo: m.etapa === partida.copa.etapa,
+    esProximo: k === proximoDeCopa,
     mano: "",
     yaPaso: false,
   }));
@@ -1444,62 +1483,117 @@ function VistaFixture({ partida, tabla }: {
   );
 }
 
+/**
+ * La pantalla de la copa, que es adonde lleva la card de la home.
+ *
+ * Estaba escrita a mano para la Sudamericana 2026: decía "Copa Sudamericana
+ * 2026" con el año adentro del texto, listaba octavos, cuartos, semis y final
+ * como si la copa siempre empezara ahí, y sacaba las fechas de la escalera
+ * vieja. En un año de Libertadores que arranca en fase 1 y tiene seis fechas
+ * de grupo, no acertaba una sola línea.
+ *
+ * Ahora es el mismo camino que muestra el fixture, más la tabla del grupo
+ * cuando hay grupo, que es lo único que la copa tiene y el torneo local no.
+ */
 function VistaCopa({ partida }: { partida: Partida }) {
   const c = partida.copa;
-  const SUDA = copaDe(partida);
-  const rondas = ["octavos", "cuartos", "semis", "final"] as const;
-  const nombres: Record<string, string> = {
-    octavos: "Octavos de final", cuartos: "Cuartos de final",
-    semis: "Semifinal", final: "Final en Barranquilla",
-  };
-  const indiceActual = rondas.indexOf(c.ronda as "octavos");
+  const COPA = copaDe(partida);
+  const camino = caminoInternacional(partida);
+  const etapaAhora = c.etapa ?? c.ronda;
+  const cuadro = partida.copas && c.torneo ? partida.copas[c.torneo] : null;
+  const grupo = cuadro ? grupoDeOlimpia(cuadro) : null;
+
+  /*
+   * Cuál es el partido que viene, que es uno solo.
+   *
+   * "El de la etapa actual" no alcanza en la fase de grupos: son seis, y los
+   * seis se marcaban como el próximo. El que viene es el que sigue a los que
+   * ya se jugaron dentro de la etapa.
+   */
+  const jugados = c.etapa ? (c.jugadosEnEtapa ?? 0) : (c.jugadosEnRonda ?? 0);
+  const iAhora = camino.findIndex((m) => m.etapa === etapaAhora) + jugados;
+
+  const titulo = c.ronda === "campeon" || etapaAhora === "campeon" ? "OLIMPIA CAMPEÓN"
+    : c.ronda === "eliminado" || etapaAhora === "eliminado" ? "Eliminado"
+    : NOMBRE_ETAPA[etapaAhora as keyof typeof NOMBRE_ETAPA] ?? "En carrera";
 
   return (
     <>
       <div className="mb-3 rounded-xl p-3"
-           style={{ background: SUDA.fondo, boxShadow: `inset 0 0 0 1px ${SUDA.halo}` }}>
-        <div className="text-[9px] uppercase tracking-[0.16em]" style={{ color: SUDA.acento }}>
-          Copa Sudamericana 2026
-        </div>
-        <div className="apellido mt-1 text-[18px]">
-          {c.ronda === "campeon" ? "OLIMPIA CAMPEÓN"
-            : c.ronda === "eliminado" ? "Eliminado"
-            : nombres[c.ronda]}
-        </div>
-        {c.ronda !== "campeon" && c.ronda !== "eliminado" && c.jugadosEnRonda === 1 && (
-          <div className="num mt-1 text-[13px]" style={{ color: "var(--tenue)" }}>
-            Global: {c.globalO} - {c.globalR}
+           style={{ background: COPA.fondo, boxShadow: `inset 0 0 0 1px ${COPA.halo}` }}>
+        <div className="flex items-center gap-3">
+          <Trofeo copa={c.torneo ?? "sudamericana"} alto={54} />
+          <div className="min-w-0 flex-1">
+            <div className="text-[9px] uppercase tracking-[0.16em]" style={{ color: COPA.acento }}>
+              Copa {COPA.nombre} {partida.ano}
+            </div>
+            <div className="apellido mt-1 text-[18px] leading-tight">{titulo}</div>
+            {etapaAhora !== "grupos" && jugados === 1 && (
+              <div className="num mt-1 text-[13px]" style={{ color: "var(--tenue)" }}>
+                Global: {c.globalO} - {c.globalR}
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
 
-      {rondas.map((r, i) => {
-        const pasada = c.ronda === "campeon" || indiceActual > i;
-        const actual = c.ronda === r;
-        const cal = CALENDARIO_COPA[r];
+      {/* La tabla del grupo, que es lo que decide si pasás. */}
+      {etapaAhora === "grupos" && cuadro && grupo && (
+        <>
+          <div className="mb-1.5 text-[10px] uppercase tracking-[0.18em]"
+               style={{ color: COPA.acento }}>
+            Grupo {grupo.letra} - pasan los dos primeros
+          </div>
+          {tablaDelGrupo(cuadro, c.grupo ?? [], `${partida.semilla}-${partida.ano}`)
+            .map((f, i) => (
+            <div key={f.id} className="mb-1 flex items-center gap-2 rounded-md px-2 py-1.5"
+                 style={{ background: f.id === "olimpia"
+                   ? "color-mix(in srgb, #ffffff 15%, var(--carbon))"
+                   : i < 2 ? COPA.fondo : "var(--carbon)",
+                   boxShadow: i < 2 && f.id !== "olimpia"
+                     ? `inset 0 0 0 1px ${COPA.halo}` : undefined }}>
+              <span className="num w-4 shrink-0 text-[10px]"
+                    style={{ color: i < 2 ? COPA.acento : "var(--apagado)" }}>{i + 1}</span>
+              <Escudo id={f.id} nombre={f.nombre} tam={18} />
+              <span className="apellido min-w-0 flex-1 truncate text-[11px]">{f.nombre}</span>
+              <span className="num shrink-0 text-[9px]" style={{ color: "var(--apagado)" }}>
+                {f.pj} pj
+              </span>
+              <span className="num w-7 shrink-0 text-right text-[13px] font-extrabold">{f.pts}</span>
+            </div>
+          ))}
+          <div className="mb-1.5 mt-3 text-[10px] uppercase tracking-[0.18em]"
+               style={{ color: "var(--tenue)" }}>
+            El camino
+          </div>
+        </>
+      )}
+
+      {camino.map((m, i) => {
+        const actual = i === iAhora;
+        const pasada = i < iAhora;
         return (
-          <div key={r} className="mb-1.5 rounded-lg p-2.5"
+          <div key={`${m.etapa}-${m.dia}`} className="mb-1.5 rounded-lg p-2.5"
                style={{
-                 background: actual ? SUDA.fondo : "var(--carbon)",
-                 boxShadow: actual ? `inset 0 0 0 1px ${SUDA.halo}` : undefined,
-                 opacity: !actual && !pasada && c.ronda !== "eliminado" ? 0.55 : 1,
+                 background: actual ? COPA.fondo : "var(--carbon)",
+                 boxShadow: actual ? `inset 0 0 0 1px ${COPA.halo}` : undefined,
+                 opacity: pasada ? 0.55 : 1,
                }}>
             <div className="flex items-center gap-2">
-              {actual && <Escudo id={c.rivalId} nombre={c.rivalId} tam={22} />}
+              {m.rivalId
+                ? <Escudo id={m.rivalId} nombre={m.rivalNombre} tam={22} />
+                : <span className="h-[22px] w-[22px] shrink-0 rounded-full"
+                        style={{ background: "var(--linea)" }} />}
               <span className="min-w-0 flex-1">
-                <span className="apellido block text-[13px]">{nombres[r]}</span>
+                <span className="apellido block truncate text-[13px]">{m.rivalNombre}</span>
                 <span className="text-[10px]" style={{ color: "var(--apagado)" }}>
-                  {r === "final" ? cal.ida.slice(8, 10) + "/" + cal.ida.slice(5, 7)
-                    : `${cal.ida.slice(8, 10)}/${cal.ida.slice(5, 7)} y ${cal.vuelta.slice(8, 10)}/${cal.vuelta.slice(5, 7)}`}
+                  {m.rotulo} - {m.dia.slice(8, 10)}/{m.dia.slice(5, 7)}
+                  {m.etapa === "final" ? " - cancha neutral" : m.esLocal ? " - de local" : " - de visitante"}
                 </span>
               </span>
-              {pasada && (
+              {actual && (
                 <span className="rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase"
-                      style={{ background: "#3fa76a", color: "#0a120d" }}>Pasó</span>
-              )}
-              {actual && c.ronda !== "eliminado" && (
-                <span className="rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase"
-                      style={{ background: SUDA.acento, color: "#0a120d" }}>Ahora</span>
+                      style={{ background: COPA.acento, color: "#0a120d" }}>Ahora</span>
               )}
             </div>
           </div>
@@ -1508,7 +1602,7 @@ function VistaCopa({ partida }: { partida: Partida }) {
 
       <p className="mt-3 px-2 text-[10px] leading-relaxed" style={{ color: "var(--apagado)" }}>
         Ida y vuelta, sin gol de visitante y sin alargue: si el global termina empatado, se define
-        por penales. La final es a partido único en el Metropolitano de Barranquilla.
+        por penales. La final es a partido único en cancha neutral.
       </p>
     </>
   );

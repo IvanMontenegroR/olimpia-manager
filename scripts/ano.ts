@@ -88,11 +88,11 @@ probar("el Apertura terminó antes de que arrancara el Clausura", ultimaApertura
 probar("hubo pantalla de fin de los dos torneos",
   hitos.filter((h) => /Apertura|Clausura/.test(h)).length >= 2);
 
-console.log(`\n  Apertura: ${apertura.slice(0, 3).map((f) => `${f.nombre} ${f.pts}`).join(" · ")}`);
-console.log(`  Clausura: ${clausura.slice(0, 3).map((f) => `${f.nombre} ${f.pts}`).join(" · ")}`);
-console.log(`  Anual:    ${b.acumulada.slice(0, 3).map((f) => `${f.nombre} ${f.pts}`).join(" · ")}`);
+console.log(`\n  Apertura: ${apertura.slice(0, 3).map((f) => `${f.nombre} ${f.pts}`).join(" - ")}`);
+console.log(`  Clausura: ${clausura.slice(0, 3).map((f) => `${f.nombre} ${f.pts}`).join(" - ")}`);
+console.log(`  Anual:    ${b.acumulada.slice(0, 3).map((f) => `${f.nombre} ${f.pts}`).join(" - ")}`);
 console.log(`  Olimpia:  ${b.puestoApertura}° / ${b.puestoClausura}° / ${b.puestoAnual}° en el año`);
-console.log(`  Hitos:    ${hitos.join(" · ") || "ninguno"}`);
+console.log(`  Hitos:    ${hitos.join(" - ") || "ninguno"}`);
 console.log(`  Cupo:     ${b.miCupo ? `${b.miCupo.torneo} ${b.miCupo.fase}` : "sin copa"}`);
 
 console.log();

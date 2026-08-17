@@ -118,8 +118,8 @@ probar("la acumulativa suma los dos semestres",
     const c = clausura.find((x) => x.id === f.id)!;
     return f.pts === a.pts + c.pts;
   }));
-console.log(`       Apertura ${s.apertura[0].nombre} campeón · Copa Paraguay ${s.campeonCopaParaguay}`);
-console.log(`       Acumulativa: ${acumulada.slice(0, 5).map((f) => `${f.nombre} ${f.pts}`).join(" · ")}`);
+console.log(`       Apertura ${s.apertura[0].nombre} campeón - Copa Paraguay ${s.campeonCopaParaguay}`);
+console.log(`       Acumulativa: ${acumulada.slice(0, 5).map((f) => `${f.nombre} ${f.pts}`).join(" - ")}`);
 
 
 console.log(`\n  === Olimpia campeón de la Copa Sudamericana ===\n`);

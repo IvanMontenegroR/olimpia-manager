@@ -214,8 +214,8 @@ for (const x of props) {
 }
 
 // ---------------------------------------------------------------- informe
-const flecha = (d: number) => d === 0 ? "  ·  " : d > 0 ? `  ▲${d}` : `  ▼${-d}`;
-console.log(`\n  ${pares.length} cruzados · ${sinDato.length} sin datos de Sofascore\n`);
+const flecha = (d: number) => d === 0 ? "  -  " : d > 0 ? `  ▲${d}` : `  ▼${-d}`;
+console.log(`\n  ${pares.length} cruzados - ${sinDato.length} sin datos de Sofascore\n`);
 console.log(`  ${"jugador".padEnd(20)} ${"pos".padEnd(4)} ${"min".padStart(5)} ` +
   `${"rat".padStart(5)}  nivel        rasgos`);
 console.log("  " + "-".repeat(92));
