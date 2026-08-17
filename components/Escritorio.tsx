@@ -586,9 +586,15 @@ export default function Escritorio({
              */
             <div className="flex gap-1.5">
               <button onClick={onDirigir}
-                className="relieve-alto flex min-w-0 flex-1 items-center gap-3 rounded-lg px-3 py-2.5"
-                style={{ background: "var(--blanco)", color: "var(--negro)" }}>
-                <Escudo id={partido.rivalId} nombre={partido.rivalNombre} tam={30} />
+                className="relieve-alto respirar flex min-w-0 flex-1 items-center gap-3 rounded-lg px-3 py-3"
+                style={{
+                  background: "var(--blanco)", color: "var(--negro)",
+                  /* Los dos botones son blancos ahora, así que lo que separa
+                     al del día de partido es el aura: un halo verde que late.
+                     Sin eso el domingo se leía igual que un martes. */
+                  boxShadow: "0 0 0 2px var(--cesped), 0 0 26px color-mix(in srgb, var(--cesped) 45%, transparent)",
+                }}>
+                <Escudo id={partido.rivalId} nombre={partido.rivalNombre} tam={34} />
                 <span className="min-w-0 flex-1 text-left">
                   <span className="block text-[9px] uppercase tracking-[0.14em] opacity-60">
                     {esPartidoDeCopa(partido) ? partido.etiqueta : "Hoy se juega"}
@@ -619,30 +625,26 @@ export default function Escritorio({
             </div>
           ) : partido ? (
             /*
-             * El día de partido el botón es blanco y grita. Este no puede
-             * copiarlo (si los dos gritan, ninguno grita) pero tampoco puede
-             * parecer una tarjeta de información, que era lo que pasaba: un
-             * rectángulo oscuro con texto adentro. Lo que lo vuelve un botón
-             * sin agregar una palabra es el círculo verde con la flecha, que
-             * es lo que todo el mundo entiende por "seguir", más el borde
-             * tenue del mismo verde para que se lea como algo que se toca.
+             * El mismo blanco que el día de partido.
+             *
+             * Antes era oscuro con un borde verde, y en una pantalla que ya es
+             * verde y oscura se perdía: parecía una tarjeta de información y no
+             * el botón principal. Lo que separa a los dos ahora es el aura: el
+             * del domingo late con un halo verde, este no. Misma jerarquía
+             * visual de "esto es lo que hay que tocar", distinta urgencia.
              */
             <button onClick={onAvanzar}
-              className="relieve flex w-full items-center gap-3 rounded-lg px-3 py-2.5"
-              style={{
-                background: "linear-gradient(160deg, var(--carbon-alto), var(--carbon))",
-                boxShadow: "inset 0 0 0 1px color-mix(in srgb, var(--cesped) 40%, transparent)",
-              }}>
+              className="relieve-alto flex w-full items-center gap-3 rounded-lg px-3 py-2.5"
+              style={{ background: "var(--blanco)", color: "var(--negro)" }}>
               <span className="num flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[13px]"
-                    style={{ background: "var(--blanco)", color: "var(--negro)" }}>
+                    style={{ background: "var(--negro)", color: "var(--blanco)" }}>
                 +1
               </span>
               <span className="min-w-0 flex-1 text-left">
-                <span className="block text-[9px] uppercase tracking-[0.14em]"
-                      style={{ color: "var(--apagado)" }}>
+                <span className="block text-[9px] uppercase tracking-[0.14em] opacity-55">
                   Avanzar el día
                 </span>
-                <span className="block truncate text-[12px]" style={{ color: "var(--tenue)" }}>
+                <span className="block truncate text-[12px] opacity-80">
                   {nombreCorto(partido.rivalId, partido.rivalNombre)} en {faltan} día{faltan === 1 ? "" : "s"}
                 </span>
               </span>
@@ -650,19 +652,18 @@ export default function Escritorio({
                   antes de que llegue el día. */}
               {ovr.rival !== null && (
                 <span className="shrink-0 text-right">
-                  <span className="block text-[8px] uppercase tracking-[0.14em]"
-                        style={{ color: "var(--apagado)" }}>nivel</span>
+                  <span className="block text-[8px] uppercase tracking-[0.14em] opacity-55">nivel</span>
+                  {/* sobre blanco los colores de siempre no se leen: van los
+                      mismos verdes y rojos pero hundidos */}
                   <span className="num block text-[17px] leading-none"
-                        style={{ color: ovr.hoy >= ovr.rival ? "var(--cesped)" : "var(--ladrillo)" }}>
+                        style={{ color: ovr.hoy >= ovr.rival ? "#1a7a44" : "#a3271b" }}>
                     {Math.round(ovr.rival)}
                   </span>
                 </span>
               )}
               <Escudo id={partido.rivalId} nombre={partido.rivalNombre} tam={24} />
-              {/* La flecha: lo único que hacía falta para que se lea como un
-                  botón y no como un cartel. Late despacio para que se note. */}
-              <span className="respirar flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[17px] font-bold leading-none"
-                    style={{ background: "var(--cesped)", color: "#0a120d" }}>
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[16px] font-bold leading-none"
+                    style={{ background: "var(--negro)", color: "var(--blanco)" }}>
                 ›
               </span>
             </button>
