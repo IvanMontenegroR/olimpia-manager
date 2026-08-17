@@ -10,6 +10,7 @@
  *   npx tsx scripts/reparto.ts
  */
 
+import { fuerzas, ovrDelOnce, simularPartido } from "../engine/motor.ts";
 import { Rng } from "../engine/rng.ts";
 import { MOLDE_DE } from "../lib/juego.ts";
 import { partidaNueva, partidoDe, plantelDe } from "../lib/temporada.ts";
