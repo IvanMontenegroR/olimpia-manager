@@ -619,7 +619,7 @@ export function generarMomento(
             chips: [
               bien(`Llegás ${cuantoMenos(P.actitudAtaque.ofensivo)}% más`),
               mal(`Te llegan ${cuantoMenos(P.actitudDefensa.ofensivo)}% más`),
-              mal("Gastás piernas"),
+              mal("Más cansancio"),
             ] },
         ],
         porDefecto: "seguir",

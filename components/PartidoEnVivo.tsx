@@ -35,7 +35,7 @@ export const ACTITUD: Record<Actitud, { nombre: string; color: string; sobre: st
   equilibrado: { nombre: "Parejo",       color: "#a1a1aa", sobre: "#0a120d",
                  nota: "Sin ventajas ni riesgos extra" },
   ofensivo:    { nombre: "Ir al frente", color: "#e0902a", sobre: "#0a120d",
-                 nota: "Presionás arriba: más peligro y más piernas gastadas. " +
+                 nota: "Presionás arriba: más peligro y más cansancio. " +
                        "Rinde el doble si el rival llega cansado" },
 };
 

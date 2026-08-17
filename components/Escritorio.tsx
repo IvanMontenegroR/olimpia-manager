@@ -772,7 +772,7 @@ export default function Escritorio({
                 <ParteConComo etiqueta="Hinchada" valor={ovr.partes.cancha} siempre
                   como="Cuánta gente entra al Defensores. Se llena bajando el precio de la entrada y ganando; de visitante no cuenta." />
                 <ParteConComo etiqueta="Físico" valor={ovr.partes.piernas}
-                  como="Cómo llegan de piernas. Se sube rotando: el que juega jueves y domingo llega fundido al segundo." />
+                  como="Con cuánto cansancio llegan. Se sube rotando: el que juega jueves y domingo llega fundido al segundo." />
                 <ParteConComo etiqueta="Fuera de puesto" valor={ovr.partes.puestos}
                   como="Lo que perdés por poner gente donde no juega. Se arregla armando el once con la formación que le calza al plantel." />
                 <ParteConComo etiqueta="El viaje" valor={ovr.partes.viaje}

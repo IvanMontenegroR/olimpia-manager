@@ -403,7 +403,7 @@ const PLANTILLAS: Plantilla[] = [
         contexto: "Llega una oferta para jugar un amistoso a mitad de semana. Pagan bien.",
         opciones: [
           { id: "jugar", etiqueta: "Aceptar",
-            detalle: "Buena plata, cuesta piernas" },
+            detalle: "Buena plata, pero terminan cansados" },
           { id: "rechazar", etiqueta: "Rechazar",
             detalle: "La semana queda limpia" },
         ],

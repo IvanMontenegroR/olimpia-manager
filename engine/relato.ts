@@ -196,7 +196,7 @@ export function ambienteDe(ctx: ContextoPartido): string {
     return "El estadio es una caldera. No se escucha nada.";
   if (ctx.esLocal && ctx.competencia === "sudamericana")
     return "El Defensores está lleno y empuja. Se siente en la cancha.";
-  if (ctx.viajeKm > 300) return "Se nota el viaje en las piernas.";
+  if (ctx.viajeKm > 300) return "Se nota el viaje: el equipo llega cansado.";
   return "Olimpia sale a la cancha.";
 }
 
