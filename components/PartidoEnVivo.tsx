@@ -3,12 +3,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useAtras } from "@/lib/atras.ts";
 import { Rng } from "@/engine/rng.ts";
+import Delta from "./Delta.tsx";
 import {
   desgastePorPartido, factorCondicion, factorPosicion, fuerzas, ovrDelOnce, P,
 } from "@/engine/motor.ts";
 import { ambienteDe, relatarTramo, type EventoRelato, type TipoEvento } from "@/engine/relato.ts";
 import {
-  colorCondicion, MOLDE_DE, MOLDES, nivelEf, nombreCorto, repartirEnMolde,
+  colorCondicion, deltaNivel, MOLDE_DE, MOLDES, nivelEf, nombreCorto, repartirEnMolde,
   type PartidoUI,
 } from "@/lib/juego.ts";
 import { LINEA_DE, type Actitud, type Alineacion, type Jugador, type Posicion } from "@/engine/tipos.ts";
@@ -991,9 +992,6 @@ function FilaJugador({
   /** Su puesto de verdad, cuando el de arriba es el casillero que va a ocupar. */
   natural?: Posicion;
 }) {
-  // lo que pierde por jugar donde no es, en el mismo número que se ve al lado
-  const cuesta = natural && natural !== puesto
-    ? nivelEf(j, natural, ctx) - nivelEf(j, puesto, ctx) : 0;
   return (
     <button onClick={onClick}
       className="mb-1 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left"
@@ -1007,16 +1005,20 @@ function FilaJugador({
         <span className="text-[10px]" style={{ color: "var(--tenue)" }}>
           {natural && natural !== puesto ? <>es {natural}</> : puesto}
           {" · "}<span style={{ color: colorCondicion(cond) }}>{cond}%</span>
-          {cuesta > 0 && (
-            <span className="num ml-1.5 font-bold" style={{ color: "var(--critico)" }}>
-              −{cuesta} fuera de puesto
-            </span>
-          )}
           {lesionado && <span className="ml-1.5 font-bold" style={{ color: "var(--bajo)" }}>LESIONADO</span>}
           {entrante && <span className="ml-1.5" style={{ color: "var(--ok)" }}>→ {entrante.apellido}</span>}
         </span>
       </span>
-      <span className="num text-[19px]">{nivelEf(j, puesto, ctx)}</span>
+      {/*
+        * El de la ficha y lo que se mueve, igual que en todas las demás
+        * pantallas. Acá mostraba el nivel efectivo pelado: el mismo volante
+        * que en el plantel figura "66 −1" aparecía como 59 al ir a meterlo de
+        * central, y no había forma de saber que era el mismo jugador.
+        */}
+      <span className="flex shrink-0 items-baseline gap-1">
+        <span className="num text-[19px]">{j.nivel}</span>
+        <Delta valor={deltaNivel(j, puesto, ctx)} tam={10} />
+      </span>
     </button>
   );
 }

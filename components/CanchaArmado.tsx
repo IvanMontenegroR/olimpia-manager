@@ -17,7 +17,17 @@ export interface Casillero {
 /** Mide el contenedor: el reparto necesita píxeles reales, no porcentajes. */
 function useMedida() {
   const ref = useRef<HTMLDivElement>(null);
-  const [caja, setCaja] = useState({ ancho: 0, alto: 0 });
+  /*
+   * Arranca con una medida razonable y no en cero.
+   *
+   * `repartirCancha` devuelve la lista vacía si el alto o el ancho son cero,
+   * así que con el cero de arranque la cancha se dibujaba SIN JUGADORES hasta
+   * que el ResizeObserver corriera. Normalmente es un fotograma y no se nota,
+   * pero se ve: me pasó en una captura, y en el render de servidor (donde el
+   * observer no existe nunca) la cancha salía siempre vacía. Un teléfono
+   * típico ronda esto, y la medida de verdad la pisa enseguida.
+   */
+  const [caja, setCaja] = useState({ ancho: 330, alto: 380 });
   useEffect(() => {
     const el = ref.current;
     if (!el) return;

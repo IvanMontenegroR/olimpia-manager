@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { repartirCancha } from "@/lib/formacion.ts";
 import Dorsal from "./Dorsal.tsx";
 import { factorPosicion } from "@/engine/motor.ts";
-import { aroDe, colorComoLlega, comoLlegaAlPartido } from "@/lib/juego.ts";
+import { aroDe, colorComoLlega, comoLlegaAlPartido, deltaNivel } from "@/lib/juego.ts";
+import Delta from "./Delta.tsx";
 import type { ContextoPartido, Jugador, Posicion } from "@/engine/tipos.ts";
 
 /**
@@ -27,7 +28,17 @@ import type { ContextoPartido, Jugador, Posicion } from "@/engine/tipos.ts";
 
 function useMedida() {
   const ref = useRef<HTMLDivElement>(null);
-  const [caja, setCaja] = useState({ ancho: 0, alto: 0 });
+  /*
+   * Arranca con una medida razonable y no en cero.
+   *
+   * `repartirCancha` devuelve la lista vacía si el alto o el ancho son cero,
+   * así que con el cero de arranque la cancha se dibujaba SIN JUGADORES hasta
+   * que el ResizeObserver corriera. Normalmente es un fotograma y no se nota,
+   * pero se ve: me pasó en una captura, y en el render de servidor (donde el
+   * observer no existe nunca) la cancha salía siempre vacía. Un teléfono
+   * típico ronda esto, y la medida de verdad la pisa enseguida.
+   */
+  const [caja, setCaja] = useState({ ancho: 330, alto: 380 });
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -119,6 +130,10 @@ export default function CanchaHome({
                              textShadow: "0 1px 3px rgba(0,0,0,0.9)" }}>
                 {baja === "lesionado" ? "LESIÓN" : baja === "suspendido" ? "SUSP" : j.nivel}
               </span>
+              {/* y lo que se mueve hoy, igual que en la pantalla de armar el
+                  once: el mismo jugador no puede leerse distinto según por
+                  dónde entraste a mirarlo */}
+              {!baja && <Delta valor={deltaNivel(j, puesto, ctx)} tam={8 * escala} />}
             </span>
           </button>
         );
