@@ -1829,11 +1829,11 @@ export function resolverAsunto(p: Partida, asuntoId: string, opcionId: string): 
 
   if (a.tipo === "viaje") {
     const PLANES: Record<string, { acl: number; costo: number; texto: string }> = {
-      vispera:  { acl: 0,    costo: 0,       texto: "Se viaja la víspera. Se ahorra plata y se llega justo." },
+      sobrelahora: { acl: 0, costo: 0,       texto: "Se viaja sobre la hora. Se ahorra plata y se llega justo." },
       dosdias:  { acl: 0.55, costo: 60_000,  texto: "La delegación viaja dos días antes." },
       semana:   { acl: 1,    costo: 150_000, texto: "Se arma la concentración con anticipación en destino." },
     };
-    const plan = PLANES[opcionId] ?? PLANES.vispera;
+    const plan = PLANES[opcionId] ?? PLANES.sobrelahora;
     n.aclimatacion = plan.acl;
     n.dineroUsd -= plan.costo;
     // estar lejos de casa varios días desgasta la cabeza, no las piernas

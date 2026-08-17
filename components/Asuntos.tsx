@@ -290,7 +290,7 @@ function crudas(a: Asunto, p: Partida): OpcionUI[] {
     /*
      * Con cuánto nivel llega el equipo con cada plan, en absoluto.
      *
-     * Antes se mostraba la diferencia contra viajar la víspera, así que esa
+     * Antes se mostraba la diferencia contra viajar sobre la hora, así que esa
      * opción quedaba en cero y era la única sin números: una frase suelta al
      * lado de dos que decían "+1.3 nivel · −60k". Y es la que uno elige
      * cuando no quiere gastar, o sea la que más merece que le digan qué le
@@ -298,7 +298,7 @@ function crudas(a: Asunto, p: Partida): OpcionUI[] {
      */
     const llega = (acl: number) => nivelConAclimatacion(p, acl);
     return [
-      { id: "vispera", etiqueta: "Viajar la víspera",
+      { id: "sobrelahora", etiqueta: "Viajar sobre la hora",
         detalle: altura
           ? "Se llega la noche anterior y la altura se siente entera"
           : "Lo más barato, pero se llega con el viaje encima",

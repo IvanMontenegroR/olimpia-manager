@@ -53,7 +53,7 @@ for (let s = 0; s < temporadas; s++) {
          */
         const ops = a.tipo === "oferta" ? ["vender", "rechazar"]
           : a.tipo === "marketing" ? ["barato", "normal", "caro"]
-          : a.tipo === "viaje" ? ["vispera", "dosdias", "semana"]
+          : a.tipo === "viaje" ? ["sobrelahora", "dosdias", "semana"]
           : Object.keys(a.efectos ?? {});
         p = resolverAsunto(p, a.id, ops.length ? rng.elegir(ops) : "");
         continue;
