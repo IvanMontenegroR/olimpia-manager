@@ -586,13 +586,18 @@ export default function Escritorio({
              */
             <div className="flex gap-1.5">
               <button onClick={onDirigir}
-                className="relieve-alto respirar flex min-w-0 flex-1 items-center gap-3 rounded-lg px-3 py-3"
+                className="relieve-alto flex min-w-0 flex-1 items-center gap-3 rounded-lg px-3 py-3.5"
                 style={{
+                  /*
+                   * Los dos botones son blancos, así que lo que separa al del
+                   * domingo tiene que ser algo quieto: no una animación, que
+                   * llama la atención y después cansa. Es la franja verde
+                   * gruesa del costado más el aro, y que el botón sea más alto
+                   * y traiga el escudo más grande. Se nota sin moverse.
+                   */
                   background: "var(--blanco)", color: "var(--negro)",
-                  /* Los dos botones son blancos ahora, así que lo que separa
-                     al del día de partido es el aura: un halo verde que late.
-                     Sin eso el domingo se leía igual que un martes. */
-                  boxShadow: "0 0 0 2px var(--cesped), 0 0 26px color-mix(in srgb, var(--cesped) 45%, transparent)",
+                  borderLeft: "5px solid var(--cesped)",
+                  boxShadow: "0 0 0 1.5px var(--cesped), 0 6px 22px color-mix(in srgb, var(--cesped) 30%, transparent)",
                 }}>
                 <Escudo id={partido.rivalId} nombre={partido.rivalNombre} tam={34} />
                 <span className="min-w-0 flex-1 text-left">
@@ -618,7 +623,7 @@ export default function Escritorio({
                     );
                   })()}
                 </span>
-                <span className="shrink-0 text-[11px] font-extrabold uppercase tracking-wider">
+                <span className="shrink-0 text-[12px] font-extrabold uppercase tracking-wider">
                   Armar el once →
                 </span>
               </button>
