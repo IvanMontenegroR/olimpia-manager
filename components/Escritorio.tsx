@@ -252,17 +252,6 @@ export default function Escritorio({
   const lider = tabla[0];
   const difLider = lider.id === "olimpia" ? 0 : lider.pts - yo.pts;
   const rivalCopa = (RIVALES_COPA as any[]).find((r) => r.id === partida.copa.rivalId);
-  /*
-   * Cuándo se juega el próximo de la copa. La card decía la ronda y el rival
-   * pero no cuándo, así que la única forma de saber si era pasado mañana o el
-   * mes que viene era contar los días en la tira de arriba.
-   */
-  const diasCopa = (() => {
-    const cal = CALENDARIO_COPA[partida.copa.ronda];
-    if (!cal) return null;
-    const proximo = [cal.ida, cal.vuelta].filter((d) => d >= partida.dia).sort()[0];
-    return proximo ? diasEntre(partida.dia, proximo) : null;
-  })();
   const NOMBRE_RONDA: Record<string, string> = {
     octavos: "Octavos", cuartos: "Cuartos", semis: "Semifinal", final: "Final",
     eliminado: "Eliminado", campeon: "Campeón",
@@ -510,8 +499,6 @@ export default function Escritorio({
 
             <CardCopa copa="sudamericana"
               ronda={NOMBRE_RONDA[partida.copa.ronda]}
-              cuando={diasCopa === null ? null
-                : diasCopa === 0 ? "hoy" : diasCopa === 1 ? "mañana" : `en ${diasCopa} días`}
               rival={rivalCopa ? rivalCopa.nombre : null}
               escudo={partida.copa.ronda !== "eliminado" && partida.copa.ronda !== "campeon"
                 ? partida.copa.rivalId : undefined}
@@ -650,14 +637,6 @@ export default function Escritorio({
                 <span className="apellido block truncate text-[14px] leading-tight">
                   {nombreCorto(partido.rivalId, partido.rivalNombre)}
                 </span>
-                {/* Contra cuánto vas: lo único del rival que hace falta saber
-                    antes de que llegue el día. */}
-                {ovr.rival !== null && (
-                  <span className="block text-[9px] font-bold"
-                        style={{ color: ovr.hoy >= ovr.rival ? "#1a7a44" : "#a3271b" }}>
-                    nivel {Math.round(ovr.rival)} contra tus {Math.round(ovr.hoy)}
-                  </span>
-                )}
               </span>
               <span className="shrink-0 text-[11px] font-extrabold uppercase tracking-wider">
                 Avanzar →
@@ -932,11 +911,9 @@ const COPAS = {
   },
 } as const;
 
-function CardCopa({ copa, ronda, rival, escudo, cuando, onClick }: {
+function CardCopa({ copa, ronda, rival, escudo, onClick }: {
   copa: keyof typeof COPAS;
   ronda: string; rival: string | null; escudo?: string;
-  /** "en 6 días", "mañana", "hoy". */
-  cuando?: string | null;
   onClick: () => void;
 }) {
   const c = COPAS[copa];
@@ -948,15 +925,8 @@ function CardCopa({ copa, ronda, rival, escudo, cuando, onClick }: {
             style={{ background: `radial-gradient(closest-side, ${c.halo}, transparent)`,
                      filter: "blur(14px)" }} />
       <span className="relative min-w-0 flex-1">
-        <span className="flex items-baseline justify-between gap-1">
-          <span className="text-[9px] uppercase tracking-[0.14em]" style={{ color: c.acento }}>
-            {c.nombre}
-          </span>
-          {cuando && (
-            <span className="num shrink-0 text-[9px] font-extrabold" style={{ color: c.acento }}>
-              {cuando}
-            </span>
-          )}
+        <span className="block text-[9px] uppercase tracking-[0.14em]" style={{ color: c.acento }}>
+          {c.nombre}
         </span>
         <span className="apellido mt-1 block truncate text-[17px] leading-none">{ronda}</span>
         <span className="mt-0.5 block truncate text-[10px]" style={{ color: "var(--tenue)" }}>
