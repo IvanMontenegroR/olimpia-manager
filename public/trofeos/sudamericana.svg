@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 320" width="120" height="320">
+  <defs>
+    <radialGradient id="s_bola" cx=".38" cy=".28" r=".8">
+      <stop offset="0" stop-color="#dcdfe1"/><stop offset=".5" stop-color="#c2c6c9"/>
+      <stop offset="1" stop-color="#9ba0a4"/>
+    </radialGradient>
+    <linearGradient id="s_aro" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f0c96a"/><stop offset=".5" stop-color="#e0a63a"/>
+      <stop offset="1" stop-color="#c98f26"/>
+    </linearGradient>
+    <linearGradient id="s_pata" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#8f9498"/><stop offset=".4" stop-color="#d7dadd"/>
+      <stop offset="1" stop-color="#9ba0a4"/>
+    </linearGradient>
+    <radialGradient id="s_pelota" cx=".35" cy=".3" r=".8">
+      <stop offset="0" stop-color="#f4efe0"/><stop offset="1" stop-color="#d8cfb8"/>
+    </radialGradient>
+    <linearGradient id="s_base" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#7e8387"/><stop offset=".45" stop-color="#e2e5e7"/>
+      <stop offset="1" stop-color="#82878b"/>
+    </linearGradient>
+  </defs>
+
+  <!-- la esfera grande con su faja dorada -->
+  <circle cx="60" cy="62" r="52" fill="url(#s_bola)"/>
+  <rect x="2" y="55" width="116" height="14" fill="url(#s_aro)"/>
+  <rect x="0" y="60" width="120" height="3" fill="#8f9498" opacity=".55"/>
+
+  <!-- las dos patas curvas -->
+  <path d="M20 66c2 40 16 58 22 84 4 18 4 42 3 66h-12c1-26 0-48-5-66C22 128 12 104 8 66z"
+        fill="url(#s_pata)"/>
+  <path d="M100 66c-2 40-16 58-22 84-4 18-4 42-3 66h12c-1-26 0-48 5-66 6-22 16-46 20-84z"
+        fill="url(#s_pata)"/>
+
+  <!-- la pelota que queda en el medio -->
+  <circle cx="59" cy="146" r="27" fill="url(#s_pelota)"/>
+
+  <!-- la base escalonada -->
+  <rect x="10" y="216" width="100" height="46" fill="url(#s_base)"/>
+  <g stroke="#6f7478" stroke-width="1.6" opacity=".8">
+    <line x1="10" y1="232" x2="110" y2="232"/>
+    <line x1="10" y1="248" x2="110" y2="248"/>
+    <line x1="35" y1="216" x2="35" y2="262"/>
+    <line x1="60" y1="216" x2="60" y2="262"/>
+    <line x1="85" y1="216" x2="85" y2="262"/>
+  </g>
+  <rect x="10" y="262" width="100" height="14" fill="#8d9296"/>
+  <rect x="2" y="276" width="116" height="12" rx="2" fill="#6f7478"/>
+</svg>

@@ -240,8 +240,12 @@ export function rivalDeFaseFinal(
  * a Olimpia le tocaba jugar contra un cartel, el partido directamente no
  * existía y el grupo se quedaba a mitad de camino.
  */
-export function simularPrevias(c: CuadroCopa, semilla: string): CuadroCopa {
-  const rng = new Rng(`previas-${semilla}-${c.torneo}`);
+export function simularPrevias(
+  c: CuadroCopa, semilla: string,
+  /** Solo esta fase, para poder resolverla el día que se juega. */
+  soloFase?: string,
+): CuadroCopa {
+  const rng = new Rng(`previas-${semilla}-${c.torneo}-${soloFase ?? "todas"}`);
   let cuadro = c;
 
   /*
@@ -252,6 +256,7 @@ export function simularPrevias(c: CuadroCopa, semilla: string): CuadroCopa {
   for (let vuelta = 0; vuelta < 5; vuelta++) {
     let cambio = false;
     for (const l of cuadro.llaves) {
+      if (soloFase && l.fase !== soloFase) continue;
       if (esPlaceholder(l.local) || esPlaceholder(l.visita)) continue;
       /* La de Olimpia la juega él, no se resuelve por decreto. */
       if (l.local.id === "olimpia" || l.visita.id === "olimpia") continue;
@@ -292,6 +297,64 @@ export function bajarDeLaLibertadores(suda: CuadroCopa, lib: CuadroCopa): Cuadro
     cuadro = resolverLlave(cuadro, `perdedor-${l.id}`, perdedor);
   }
   return cuadro;
+}
+
+/**
+ * Cómo quedó cada llave de una fase: quién ganó y quién se fue.
+ *
+ * Es lo que la animación necesita para poder mostrar el cuadro moviéndose y no
+ * solo el casillero de Olimpia. Se saca comparando el cuadro antes y después:
+ * el que ganó es el que quedó puesto donde estaba el cartel.
+ */
+export interface ResueltaLlave {
+  id: string;
+  local: string;
+  visita: string;
+  ganador: string;
+  /** Si Olimpia jugó esta llave. */
+  mia: boolean;
+}
+
+export function comoQuedoLaFase(
+  antes: CuadroCopa, despues: CuadroCopa, fase: string,
+): ResueltaLlave[] {
+  /*
+   * El ganador es el que ocupó el casillero que tenía el cartel de esta llave.
+   *
+   * La primera versión buscaba a los que aparecían en el cuadro resuelto, y
+   * daba mal siempre: la llave jugada SIGUE en el cuadro con sus dos equipos,
+   * así que los dos figuraban y ganaba el que estuviera primero. En la pantalla
+   * se veía a Olimpia tachada en la llave que acababa de ganar.
+   *
+   * Mirar el casillero de destino no se puede equivocar: ahí entra uno solo.
+   */
+  const enElDestino = (llave: string): string | null => {
+    for (let g = 0; g < antes.grupos.length; g++) {
+      for (let i = 0; i < antes.grupos[g].equipos.length; i++) {
+        const x = antes.grupos[g].equipos[i];
+        if (esPlaceholder(x) && x.llave === llave) {
+          return nombreDe(despues.grupos[g].equipos[i]);
+        }
+      }
+    }
+    for (let k = 0; k < antes.llaves.length; k++) {
+      for (const lado of ["local", "visita"] as const) {
+        const x = antes.llaves[k][lado];
+        if (esPlaceholder(x) && x.llave === llave) {
+          return nombreDe(despues.llaves[k][lado]);
+        }
+      }
+    }
+    return null;
+  };
+
+  return antes.llaves.filter((l) => l.fase === fase).map((l) => ({
+    id: l.id,
+    local: nombreDe(l.local),
+    visita: nombreDe(l.visita),
+    ganador: enElDestino(l.id) ?? "",
+    mia: [l.local, l.visita].some((x) => !esPlaceholder(x) && x.id === "olimpia"),
+  }));
 }
 
 /** Si al cuadro le quedan lugares sin dueño que no dependan de Olimpia. */

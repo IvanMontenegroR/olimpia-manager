@@ -202,15 +202,52 @@ console.log(`\n  === desde la partida: ganar la llave revela el grupo del cartel
     const esperaba = grupoQueEspera(cuadro, donde.llave.id);
     const p1 = ganarLlaveDeCopa(p0, torneo, donde.llave.id);
 
-    probar(`${torneo}: al ganar la llave queda marcado el grupo`, !!p1.caeElGrupo);
-    probar(`${torneo}: el grupo marcado es el del cartel`,
-      p1.caeElGrupo?.letra === esperaba?.letra);
+    const dest = p1.caeElGrupo?.destino;
+    probar(`${torneo}: al ganar la llave queda marcado adónde va`, !!dest);
+    probar(`${torneo}: el destino es el grupo del cartel`,
+      dest?.tipo === "grupo" && dest.letra === esperaba?.letra);
     const enElCuadro = p1.copas![torneo].grupos.find((g) =>
       g.equipos.some((x) => !esPlaceholder(x) && (x as { id: string }).id === "olimpia"));
     probar(`${torneo}: y en el cuadro Olimpia quedó en ese mismo grupo`,
       enElCuadro?.letra === esperaba?.letra);
-    console.log(`  ${torneo}: ganó ${donde.llave.id} y entra al Grupo ${p1.caeElGrupo?.letra}`);
+    /* Y la animación tiene con qué: las otras llaves de la fase, resueltas. */
+    probar(`${torneo}: la fase entera quedó resuelta para poder mostrarla`,
+      (p1.caeElGrupo?.llaves.length ?? 0) > 1 &&
+      p1.caeElGrupo!.llaves.every((l) => !!l.ganador));
+    probar(`${torneo}: la llave de Olimpia está marcada como suya`,
+      p1.caeElGrupo!.llaves.filter((l) => l.mia).length === 1);
+    console.log(`  ${torneo}: ganó ${donde.llave.id} · se resolvieron ` +
+      `${p1.caeElGrupo!.llaves.length} llaves · entra al Grupo ` +
+      `${dest?.tipo === "grupo" ? dest.letra : "?"}`);
   }
+}
+
+
+// ---------------- que la animación marque bien quién ganó cada llave
+console.log(`\n  === quién ganó cada llave, para la animación ===\n`);
+/*
+ * Se ve en pantalla y no en los números: la llave jugada sigue estando en el
+ * cuadro con sus dos equipos, así que buscar "quién sigue apareciendo" daba
+ * los dos y ganaba el que estuviera primero en la lista. Olimpia aparecía
+ * tachada en la llave que acababa de ganar.
+ */
+{
+  const p0 = temporadaSiguiente({ ...partidaNueva("revela"), fechaActual: 23, torneo: "clausura" as const });
+  let revisadas = 0, correctas = 0;
+  for (const torneo of ["libertadores", "sudamericana"] as const) {
+    const donde = dondeEsta(p0.copas![torneo], "olimpia");
+    if (!donde.llave) continue;
+    const p1 = ganarLlaveDeCopa(p0, torneo, donde.llave.id);
+    for (const l of p1.caeElGrupo!.llaves) {
+      revisadas++;
+      if (l.ganador === l.local || l.ganador === l.visita) correctas++;
+    }
+    const mia = p1.caeElGrupo!.llaves.find((l) => l.mia)!;
+    probar(`${torneo}: en su propia llave el ganador es Olimpia`, mia.ganador === "Olimpia");
+    console.log(`  ${torneo}: ${mia.id} · ${mia.local} vs ${mia.visita} → ganó ${mia.ganador}`);
+  }
+  probar(`en las ${revisadas} llaves el ganador es uno de los dos que jugaron`,
+    revisadas > 0 && correctas === revisadas);
 }
 
 console.log();

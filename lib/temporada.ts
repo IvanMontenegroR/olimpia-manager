@@ -15,15 +15,16 @@ import {
 } from "./anual.ts";
 import { participantesDelAno } from "./copas.ts";
 import {
-  grupoQueEspera, resolverLlave, sortearLibertadores, sortearSudamericana,
-  type CuadroCopa,
+  esPlaceholder as esPlaceholderCasillero, grupoQueEspera,
+  nombreDe as nombreDeCasillero, resolverLlave,
+  sortearLibertadores, sortearSudamericana, type CuadroCopa,
 } from "./sorteo.ts";
 import type { Participante } from "./copas.ts";
 import { esCopaInternacional } from "@/engine/tipos.ts";
 import {
   NOMBRE_ETAPA, diaDe, etapaInicial, etapaSiguiente, faltanPrevias, grupoDeOlimpia,
-  bajarDeLaLibertadores, llaveDeOlimpia, rivalDeCopa, rivalDeFaseFinal,
-  rivalDeLaEtapa, simularPrevias,
+  bajarDeLaLibertadores, comoQuedoLaFase, llaveDeOlimpia, rivalDeCopa,
+  rivalDeFaseFinal, rivalDeLaEtapa, simularPrevias, type ResueltaLlave,
   tablaDelGrupo, type EtapaCopa,
 } from "./copaEnJuego.ts";
 import equiposJson from "@/data/equipos_2026.json";
@@ -352,7 +353,15 @@ export interface Partida {
    * de enero. Se guarda acá para poder mostrarlo a pantalla completa antes de
    * seguir, igual que un hito.
    */
-  caeElGrupo?: { torneo: "libertadores" | "sudamericana"; letra: string; desdeLlave: string } | null;
+  caeElGrupo?: {
+    torneo: "libertadores" | "sudamericana";
+    /** Cómo quedó cada llave de la fase que se acaba de jugar. */
+    fase: string;
+    llaves: ResueltaLlave[];
+    /** Adónde va Olimpia: un grupo, o la llave siguiente. */
+    destino: { tipo: "grupo"; letra: string; equipos: string[] }
+           | { tipo: "llave"; id: string; contra: string };
+  } | null;
 
   /**
    * La oportunidad de fichaje que está sobre la mesa, si hay alguna. Tiene
@@ -2165,20 +2174,46 @@ export function ganarLlaveDeCopa(
   p: Partida, torneo: "libertadores" | "sudamericana", llave: string,
 ): Partida {
   if (!p.copas) return p;
-  const cuadro = p.copas[torneo];
+  const antes = p.copas[torneo];
   const yo: Participante = {
     id: "olimpia", nombre: "Olimpia", pais: "PAR",
     fuerza: ovrDe(p).hoy, fase: "grupos",
   };
-  const nuevo = resolverLlave(cuadro, llave, yo);
-  const grupo = grupoQueEspera(cuadro, llave);
+  /*
+   * Se resuelve la llave de Olimpia Y todas las de su misma fase.
+   *
+   * Las de los otros hacían falta igual para que el cuadro siga, pero antes se
+   * resolvían todas juntas en marzo. Ahora se resuelven el día que se juegan,
+   * que es cuando pasan y, sobre todo, cuando se pueden mostrar: la animación
+   * enseña el cuadro entero moviéndose, no solo el casillero tuyo.
+   */
+  const fase = antes.llaves.find((l) => l.id === llave)?.fase ?? "";
+  const conLaMia = resolverLlave(antes, llave, yo);
+  const nuevo = simularPrevias(conLaMia, `${p.semilla}-${p.ano}`, fase);
+  const grupo = grupoQueEspera(antes, llave);
+
+  /* Adónde va Olimpia: un grupo, o la llave que sigue. */
+  const siguiente = nuevo.llaves.find((l) =>
+    [l.local, l.visita].some((x) => !esPlaceholderCasillero(x) && x.id === "olimpia") &&
+    l.id !== llave);
+  const destino = grupo
+    ? { tipo: "grupo" as const, letra: grupo.letra,
+        equipos: (nuevo.grupos.find((g) => g.letra === grupo.letra)?.equipos ?? [])
+          .map(nombreDeCasillero) }
+    : siguiente
+    ? { tipo: "llave" as const, id: siguiente.id,
+        contra: nombreDeCasillero([siguiente.local, siguiente.visita]
+          .find((x) => esPlaceholderCasillero(x) || x.id !== "olimpia")!) }
+    : { tipo: "llave" as const, id: "", contra: "" };
 
   return {
     ...p,
     copas: { ...p.copas, [torneo]: nuevo } as Partida["copas"],
-    caeElGrupo: grupo
-      ? { torneo, letra: grupo.letra, desdeLlave: llave }
-      : p.caeElGrupo ?? null,
+    caeElGrupo: {
+      torneo, fase,
+      llaves: comoQuedoLaFase(antes, nuevo, fase),
+      destino,
+    },
     bitacora: [...p.bitacora, { dia: p.dia, marca: "victoria" as const,
       texto: grupo
         ? `Olimpia ganó la ${llave} y entra al Grupo ${grupo.letra}.`

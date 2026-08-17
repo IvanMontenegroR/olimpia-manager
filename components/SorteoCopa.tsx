@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Escudo from "./Escudo.tsx";
+import Trofeo from "./Trofeo.tsx";
 import {
   dondeEsta, esPlaceholder, grupoQueEspera, nombreDe,
   type Casillero, type CuadroCopa,
@@ -80,10 +81,15 @@ export default function SorteoCopa({ cuadro, ano, onSeguir }: {
     <div className="app scroll-y px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-5"
          style={{ background: e.fondo }}>
 
-      <span className="text-[10px] uppercase tracking-[0.24em]" style={{ color: e.acento }}>
-        Sorteo · {ano}
-      </span>
-      <h1 className="apellido mt-1 text-[26px] leading-tight">{e.nombre}</h1>
+      <div className="flex items-end gap-3">
+        <Trofeo copa={cuadro.torneo} alto={64} />
+        <div className="min-w-0 flex-1">
+          <span className="text-[10px] uppercase tracking-[0.24em]" style={{ color: e.acento }}>
+            Sorteo · {ano}
+          </span>
+          <h1 className="apellido mt-1 text-[24px] leading-tight">{e.nombre}</h1>
+        </div>
+      </div>
 
       {/* Dónde quedó Olimpia, que es lo único que de verdad se está mirando. */}
       {listo && (yo.llave || yo.grupo) && (

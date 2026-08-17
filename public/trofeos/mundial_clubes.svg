@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 360" width="360" height="360">
+  <defs>
+    <linearGradient id="m_oro" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f6dd8c"/><stop offset=".3" stop-color="#dcb244"/>
+      <stop offset=".62" stop-color="#c9992a"/><stop offset="1" stop-color="#7f5e10"/>
+    </linearGradient>
+    <!--
+      El texto va sobre un arco más abierto que el escudo, y arranca abajo a la
+      izquierda para dar toda la vuelta. Con un arco corto las letras se salían
+      del viewBox y quedaba "LUB WORLD CUP 2".
+    -->
+    <path id="m_arco" d="M28 208a152 152 0 0 1 304 0" fill="none"/>
+  </defs>
+
+  <!--
+    El escudo: un anillo abierto arriba, con dos ganchos hacia adentro, que baja
+    en V. Es la copa vista de frente.
+  -->
+  <g fill="none" stroke="url(#m_oro)" stroke-width="21" stroke-linecap="butt">
+    <path d="M126 128a80 80 0 0 0-30 62c0 25 11 47 29 61l55 41 55-41c18-14 29-36 29-61a80 80 0 0 0-30-62"/>
+  </g>
+  <g fill="url(#m_oro)">
+    <path d="M126 119h36v21h-15v23h-21z"/>
+    <path d="M234 119h-36v21h15v23h21z"/>
+  </g>
+
+  <text font-family="Arial Black, Arial Bold, Arial, sans-serif" font-size="27"
+        font-weight="900" fill="url(#m_oro)" letter-spacing="4.5">
+    <textPath href="#m_arco" startOffset="50%" text-anchor="middle">CLUB WORLD CUP 25</textPath>
+  </text>
+  <text x="180" y="342" font-family="Arial Black, Arial Bold, Arial, sans-serif"
+        font-size="34" font-weight="900" fill="url(#m_oro)" text-anchor="middle"
+        letter-spacing="2">FIFA</text>
+</svg>
