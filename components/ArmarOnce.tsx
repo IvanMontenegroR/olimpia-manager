@@ -5,6 +5,7 @@ import {
   autoOnce, bancoSugerido, cupoDe, esSub18, mejorMolde, MOLDE_DE,
   nivelEf, nombreCorto, type PartidoUI, repartirEnMolde,
 } from "@/lib/juego.ts";
+import { fuerzaRival, fuerzas } from "@/engine/motor.ts";
 import type { Actitud, Jugador, Posicion } from "@/engine/tipos.ts";
 import { comoLoDejaste, type EquipoGuardado } from "@/lib/temporada.ts";
 import { useAtras } from "@/lib/atras.ts";
@@ -101,9 +102,26 @@ export default function ArmarOnce({
   const cupo = cupoDe(ctx.competencia);
   const sub18 = once.filter(esSub18).length;
   const arqueros = once.filter((j) => j.posicion === "ARQ").length;
-  const nivelOnce = once.length === 11
-    ? Math.round(once.reduce((s, j) => s + nivelEf(j, puestos.get(j.id)!, ctx), 0) / 11)
-    : 0;
+  /*
+   * Los dos números que de verdad deciden el partido.
+   *
+   * El motor nunca lee un OVR: calcula ataque y defensa por separado, con
+   * pesos distintos por línea. Un defensor pone el 63% de la defensa y el 12%
+   * del ataque; un delantero al revés. Por eso una muralla de 90 con nada
+   * arriba recibe 0.63 goles y mete 1.10, y el mismo plantel al revés recibe
+   * 1.89 y mete 2.02: el triple de goles en contra con la misma gente.
+   *
+   * Eran invisibles. Se veía un solo número promediado que no dice nada de
+   * cómo vas a jugar: la muralla marca 77 y el ofensivo 70, o sea que la
+   * muralla "parece" mejor equipo cuando de local saca menos puntos. Acá, que
+   * es donde se decide el once, van los dos que mandan.
+   */
+  const listo = once.length === 11;
+  const fz = listo
+    ? fuerzas({ once, suplentes: [], actitud, puestos }, ctx)
+    : { ataque: 0, defensa: 0 };
+  /** Contra cuánto se comparan: la misma cuenta que usa el motor al jugar. */
+  const rival = fuerzaRival(ctx);
 
   const problema =
     once.length !== 11
@@ -196,7 +214,10 @@ export default function ArmarOnce({
                 alerta={extranjeros > cupo} />
         )}
         {sub18 === 0 && <Dato etiqueta="Sub-18" valor="0" alerta />}
-        <Dato etiqueta="Nivel" valor={nivelOnce ? String(nivelOnce) : "—"} fuerte />
+        <Dato etiqueta="Ataque" valor={listo ? String(Math.round(fz.ataque)) : "—"} fuerte
+              bueno={listo ? fz.ataque >= rival : undefined} />
+        <Dato etiqueta="Defensa" valor={listo ? String(Math.round(fz.defensa)) : "—"} fuerte
+              bueno={listo ? fz.defensa >= rival : undefined} />
       </div>
 
       <Alineador aptos={aptos} ctx={ctx} estado={estado} onCambio={setEstado}
@@ -315,8 +336,10 @@ export default function ArmarOnce({
  * Lo que hay que saber antes de elegir: si el rival llega gastado conviene
  * apretarlo, y si el viaje o la altura pesan hay que ver con qué se llega.
  */
-function Dato({ etiqueta, valor, alerta, fuerte, onClick }: {
+function Dato({ etiqueta, valor, alerta, fuerte, bueno, onClick }: {
   etiqueta: string; valor: string; alerta?: boolean; fuerte?: boolean;
+  /** Verde si le ganás al rival en eso, rojo si no. */
+  bueno?: boolean;
   /** Cuando se puede tocar, el valor lleva la flechita. */
   onClick?: () => void;
 }) {
@@ -329,7 +352,11 @@ function Dato({ etiqueta, valor, alerta, fuerte, onClick }: {
         {etiqueta}
       </div>
       <div className={fuerte ? "num text-[16px] leading-tight" : "text-[12px] font-bold leading-tight"}
-           style={{ color: alerta ? "var(--medio)" : "var(--blanco)" }}>
+           style={{
+             color: alerta ? "var(--medio)"
+               : bueno === undefined ? "var(--blanco)"
+               : bueno ? "var(--cesped)" : "var(--ladrillo)",
+           }}>
         {valor}{onClick && <span className="ml-0.5 text-[9px] opacity-60">▾</span>}
       </div>
     </Marco>

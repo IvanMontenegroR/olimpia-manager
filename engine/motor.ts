@@ -566,11 +566,27 @@ function marcador(lambda: number, mu: number, rng: Rng): [number, number] {
   return [0, 0];
 }
 
+/**
+ * Contra cuánto jugás: la fuerza del rival tal como llega.
+ *
+ * Vive acá y no adentro de `simularPartido` porque la pantalla de armar el
+ * once la necesita para decir si tu ataque y tu defensa le ganan o no. Si cada
+ * una hiciera su propia cuenta, el color de la pantalla podría no coincidir
+ * con lo que después pasa en la cancha.
+ */
+export function fuerzaRival(ctx: ContextoPartido): number {
+  const localiaRival = ctx.competencia === "sudamericana" ? P.localiaCopaRival : P.localiaLiga;
+  return (
+    ctx.rivalFuerza * factorCondicion(ctx.rivalCondicion ?? 100) +
+    (ctx.esLocal || ctx.neutral ? 0 : localiaRival) +
+    (ctx.competencia === "sudamericana" ? 0 : P.ajusteRival)
+  );
+}
+
 export function simularPartido(
   a: Alineacion, ctx: ContextoPartido, rng: Rng,
 ): ResultadoPartido {
   const f = fuerzas(a, ctx);
-  const localiaRival = ctx.competencia === "sudamericana" ? P.localiaCopaRival : P.localiaLiga;
   // El rival también viene de jugar: si tuvo copa entre semana o encadenó
   // partidos, llega gastado igual que vos. Su fuerza ya está en la escala de
   // nivel efectivo, así que se le aplica la misma curva de condición.
@@ -580,10 +596,7 @@ export function simularPartido(
    * traen su nivel real, así que ahí no se toca: si se les aplicara, subir el
    * tope de ventaja para que el rival importe hundía la copa al 3%.
    */
-  const rival =
-    ctx.rivalFuerza * factorCondicion(ctx.rivalCondicion ?? 100) +
-    (ctx.esLocal || ctx.neutral ? 0 : localiaRival) +
-    (ctx.competencia === "sudamericana" ? 0 : P.ajusteRival);
+  const rival = fuerzaRival(ctx);
 
   /*
    * La diferencia no se corta: se dobla.
