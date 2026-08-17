@@ -13,6 +13,8 @@ import {
   repartirCupos, simularApertura, sorteoSudamericana, tablaAcumulativa,
   type PrimerSemestre,
 } from "./anual.ts";
+import { participantesDelAno } from "./copas.ts";
+import { sortearLibertadores, sortearSudamericana, type CuadroCopa } from "./sorteo.ts";
 import equiposJson from "@/data/equipos_2026.json";
 import fixtureJson from "@/data/fixture_clausura2026_final.json";
 import rivalesJson from "@/data/rivales_internacionales.json";
@@ -310,6 +312,15 @@ export interface Partida {
   pretemporada?: boolean;
   /** Los que colgaron los botines, para poder contarlo. */
   retirados?: { id: string; apellido: string; edad: number }[];
+  /**
+   * Los dos cuadros del año, sorteados en enero.
+   *
+   * Se guardan porque el sorteo es una sola vez: el lugar que dice "Ganador
+   * F3-2" en el Grupo B tiene que seguir siendo el Grupo B cuando esa llave se
+   * juegue en marzo. Si se volviera a sortear cada vez que se abre la
+   * pantalla, el cartel no significaría nada.
+   */
+  copas?: { libertadores: CuadroCopa; sudamericana: CuadroCopa; vistos: string[] };
 
   /**
    * La oportunidad de fichaje que está sobre la mesa, si hay alguna. Tiene
@@ -1785,6 +1796,21 @@ export function temporadaSiguiente(p: Partida): Partida {
   /* Lo que Olimpia se ganó para el año que viene, si se ganó algo. */
   const copa = b.miCupo;
 
+  /*
+   * El cuadro de las dos copas se sortea acá, una sola vez, con los cupos que
+   * repartió la tabla anual. De acá salen los grupos y las llaves de todo el
+   * año, incluidos los carteles que todavía no tienen dueño.
+   */
+  const paraguayos = b.cupos.map((c) => ({
+    id: c.id, nombre: c.nombre, torneo: c.torneo, fase: c.fase,
+  }));
+  const campos = participantesDelAno(
+    p.semilla, ano, paraguayos, p.copa.ronda === "campeon" ? "olimpia" : undefined);
+  const libertadores = sortearLibertadores(campos.libertadores, `${p.semilla}-${ano}`);
+  const sudamericana = sortearSudamericana(
+    campos.sudamericana, `${p.semilla}-${ano}`,
+    libertadores.llaves.filter((l) => l.fase === "F3"));
+
   const retirados: { id: string; apellido: string; edad: number }[] = [];
   const plantel: Record<string, EstadoPlantel> = {};
   const vendidos = [...(p.vendidos ?? [])];
@@ -1845,6 +1871,7 @@ export function temporadaSiguiente(p: Partida): Partida {
     copa: { ronda: "octavos", rivalId: p.copa.rivalId, globalO: 0, globalR: 0, jugadosEnRonda: 0 },
     /* El Apertura ya no es de otro: lo dirigís vos. */
     semestre: undefined,
+    copas: { libertadores, sudamericana, vistos: [] },
     bitacora: [
       ...p.bitacora,
       { dia: `${ano}-01-10`, marca: "aviso" as const,

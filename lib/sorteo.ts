@@ -203,3 +203,44 @@ export function sortearSudamericana(
 /** El nombre que se muestra de un casillero, tenga dueño o no. */
 export const nombreDe = (c: Casillero) =>
   esPlaceholder(c) ? c.rotulo : c.nombre;
+
+/**
+ * Se jugó una llave: el que ganó ocupa el lugar que tenía su cartel.
+ *
+ * Esto es lo que hace que el sorteo no sea un dibujo. Cuando en enero se
+ * sortearon los grupos, el lugar del Grupo B decía "Ganador F3-2"; si ganás la
+ * F3-2 caés en el Grupo B, no en uno nuevo. El cartel no es una promesa vaga,
+ * es una silla con tu nombre esperando.
+ *
+ * También reemplaza el cartel en las llaves siguientes: el que gana la fase 1
+ * pasa a estar puesto en su llave de la fase 2.
+ */
+export function resolverLlave(c: CuadroCopa, llave: string, ganador: Participante): CuadroCopa {
+  const poner = (x: Casillero): Casillero =>
+    (esPlaceholder(x) && x.llave === llave ? ganador : x);
+  return {
+    ...c,
+    llaves: c.llaves.map((l) => ({ ...l, local: poner(l.local), visita: poner(l.visita) })),
+    grupos: c.grupos.map((g) => ({ ...g, equipos: g.equipos.map(poner) })),
+  };
+}
+
+/**
+ * En qué grupo va a caer el que gane una llave.
+ *
+ * Se puede saber desde el sorteo, y esa es toda la gracia: el que juega la
+ * fase previa ya sabe a qué grupo entra si pasa.
+ */
+export function grupoQueEspera(c: CuadroCopa, llave: string): Grupo | null {
+  return c.grupos.find((g) =>
+    g.equipos.some((e) => esPlaceholder(e) && e.llave === llave)) ?? null;
+}
+
+/** Dónde está un club en el cuadro: en una llave, en un grupo, o afuera. */
+export function dondeEsta(c: CuadroCopa, id: string) {
+  const llave = c.llaves.find((l) =>
+    [l.local, l.visita].some((x) => !esPlaceholder(x) && x.id === id));
+  const grupo = c.grupos.find((g) =>
+    g.equipos.some((x) => !esPlaceholder(x) && x.id === id));
+  return { llave: llave ?? null, grupo: grupo ?? null };
+}

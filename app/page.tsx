@@ -7,6 +7,7 @@ import { useAtras, useAtrasTrabado } from "@/lib/atras.ts";
 import PantallaHito from "@/components/PantallaHito.tsx";
 import FinDeTemporada from "@/components/FinDeTemporada.tsx";
 import Pretemporada from "@/components/Pretemporada.tsx";
+import SorteoCopa from "@/components/SorteoCopa.tsx";
 import Penales from "@/components/Penales.tsx";
 import PartidoEnVivo from "@/components/PartidoEnVivo.tsx";
 import Escritorio from "@/components/Escritorio.tsx";
@@ -96,6 +97,25 @@ export default function Page() {
         onCerrar={() => setPartida((p) => (p ? { ...p, cerrada: true } : p))}
         onSiguiente={() => setPartida((p) => (p ? temporadaSiguiente(p) : p))} />
     );
+  }
+
+  /*
+   * El sorteo de las copas, antes que todo lo demás de enero.
+   *
+   * Van los dos, uno atrás del otro, y se muestran una sola vez: `vistos`
+   * guarda cuál ya pasó. El cuadro ya está sorteado y guardado, así que esto
+   * es mirarlo caer, no decidirlo acá.
+   */
+  if (partida.copas && !partida.despedido) {
+    const pendiente = (["libertadores", "sudamericana"] as const)
+      .find((t) => !partida.copas!.vistos.includes(t));
+    if (pendiente) {
+      return (
+        <SorteoCopa cuadro={partida.copas[pendiente]} ano={partida.ano}
+          onSeguir={() => setPartida((p) => (p?.copas
+            ? { ...p, copas: { ...p.copas, vistos: [...p.copas.vistos, pendiente] } } : p))} />
+      );
+    }
   }
 
   /*

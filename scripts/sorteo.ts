@@ -11,8 +11,8 @@
 
 import { CUPOS, participantesDelAno, type CupoParaguayo } from "../lib/copas.ts";
 import {
-  esPlaceholder, nombreDe, sortearLibertadores, sortearSudamericana,
-  type CuadroCopa,
+  esPlaceholder, grupoQueEspera, nombreDe, resolverLlave,
+  sortearLibertadores, sortearSudamericana, type CuadroCopa,
 } from "../lib/sorteo.ts";
 
 const fallas: string[] = [];
@@ -148,6 +148,41 @@ const deMas = Object.entries(CUPOS)
 probar(`cada país pone los cupos que le tocan, más los 2 campeones (sobran ${deMas})`,
   deMas === 2 && Object.entries(CUPOS).every(([pais, c]) =>
     (porPais[pais] ?? 0) >= c.grupos + c.fase2 + c.fase1));
+
+
+// -------------------------- el grupo revelado es el del cartel, no otro
+console.log(`\n  === ganar la previa te mete en el grupo que ya te esperaba ===\n`);
+/*
+ * Es la razón de ser del cartel. En enero el Grupo B dice "Ganador F3-2"; si
+ * ganás la F3-2 tenés que caer en el Grupo B y en ninguno otro. Si el juego
+ * sorteara el grupo recién al ganar, el sorteo de enero sería un dibujo.
+ */
+let todasBien = true;
+for (const [cuadro, rotulo] of [[lib, "libertadores"], [suda, "sudamericana"]] as const) {
+  for (const l of cuadro.llaves) {
+    const esperaba = grupoQueEspera(cuadro, l.id);
+    if (!esperaba) continue;
+    const gana = [l.local, l.visita].find((x) => !esPlaceholder(x));
+    if (!gana) continue;
+    const despues = resolverLlave(cuadro, l.id, gana as never);
+    const cayo = despues.grupos.find((g) =>
+      g.equipos.some((x) => !esPlaceholder(x) && (x as { id: string }).id === (gana as { id: string }).id));
+    if (cayo?.letra !== esperaba.letra) {
+      console.log(`  MAL  ${rotulo} ${l.id}: esperaba el ${esperaba.letra} y cayó en el ${cayo?.letra}`);
+      todasBien = false;
+    }
+  }
+}
+probar("el que gana una llave cae exactamente en el grupo que decía su cartel", todasBien);
+
+/* Y que al resolverla no queden dos carteles de la misma llave dando vueltas. */
+const tras = resolverLlave(lib, "F3-1",
+  { id: "olimpia", nombre: "Olimpia", pais: "PAR", fuerza: 67, fase: "grupos" });
+probar("resolver una llave borra su cartel del cuadro",
+  !tras.grupos.some((g) => g.equipos.some((x) => esPlaceholder(x) && x.llave === "F3-1")));
+probar("y no toca los otros carteles",
+  tras.grupos.flatMap((g) => g.equipos).filter(esPlaceholder).length ===
+  lib.grupos.flatMap((g) => g.equipos).filter(esPlaceholder).length - 1);
 
 console.log();
 if (fallas.length) {
