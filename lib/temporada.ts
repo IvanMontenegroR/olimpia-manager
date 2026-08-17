@@ -16,7 +16,8 @@ import {
 import equiposJson from "@/data/equipos_2026.json";
 import fixtureJson from "@/data/fixture_clausura2026_final.json";
 import rivalesJson from "@/data/rivales_internacionales.json";
-import { condicionRival, fuerzaBaseAjustada } from "./rivales.ts";
+import { condicionRival, fuerzaBaseAjustada, usarCalendario } from "./rivales.ts";
+import { FECHAS_POR_TORNEO, partidosDelTorneo } from "./calendario.ts";
 import {
   TOTAL_SITUACIONES, sortearSituacion, type Efecto, type Situacion,
 } from "@/engine/situaciones.ts";
@@ -35,7 +36,13 @@ const CLAVE = "olimpia-manager-clausura-2026";
 const VERSION = 14;
 
 export const DIA_INICIAL = "2026-07-20";
-export const TOTAL_FECHAS = 22;
+/**
+ * Las fechas de UN torneo. El año tiene dos, así que son 44 de liga.
+ *
+ * Sigue exportándose con este nombre porque media interfaz lo usa para decir
+ * "fecha 7 de 22", que es lo que el jugador ve.
+ */
+export const TOTAL_FECHAS = FECHAS_POR_TORNEO;
 /** Capacidad del Defensores del Chaco. */
 export const AFORO = 36_000;
 export const OBJETIVO = "Salir campeón del Clausura";
@@ -69,6 +76,15 @@ export interface ResultadoFecha {
   esLocal: boolean;
   golesOlimpia: number;
   golesRival: number;
+  /**
+   * De qué torneo del año es.
+   *
+   * Mientras el juego duraba un Clausura no hacía falta. Ahora el año son dos
+   * torneos con dos tablas, y los cupos se reparten por la suma: si los
+   * resultados no dijeran a cuál pertenecen, las dos tablas serían la misma.
+   * Los guardados viejos no lo traen y son todos del Clausura.
+   */
+  torneo?: "apertura" | "clausura";
 }
 
 export interface EstadoPlantel {
@@ -222,6 +238,13 @@ export interface Partida {
   /** Refuerzos comprados. Se suman al plantel del JSON. */
   incorporados: Jugador[];
   dia: string;
+  /**
+   * El año que se está dirigiendo. Arranca en 2026 y sube al pasar de
+   * temporada; el calendario y las copas cuelgan de acá.
+   */
+  ano: number;
+  /** Cuál de los dos torneos del año se está jugando. */
+  torneo: "apertura" | "clausura";
   fechaActual: number;
   resultados: ResultadoFecha[];
   plantel: Record<string, EstadoPlantel>;
@@ -271,6 +294,8 @@ export interface Partida {
    * Libertadores, o salir tercero y quedarte afuera.
    */
   semestre?: PrimerSemestre;
+  /** Si el Apertura de este año lo jugaste vos y no viene simulado. */
+  aperturaJugado?: boolean;
 
   /**
    * La oportunidad de fichaje que está sobre la mesa, si hay alguna. Tiene
@@ -478,6 +503,13 @@ export function partidaNueva(semilla: string = semillaNueva()): Partida {
     arrancada: false,
     incorporados: [],
     dia: DIA_INICIAL,
+    ano: 2026,
+    /*
+     * El juego arranca en el Clausura 2026 porque ese es el fixture real que
+     * hay. El Apertura de ese año lo dirigió otro y viene simulado; a partir
+     * de 2027 se juegan los dos.
+     */
+    torneo: "clausura",
     fechaActual: 1,
     resultados: [],
     plantel: Object.fromEntries(PLANTEL.map((j) => [j.id, {
@@ -650,8 +682,13 @@ export function plantelDe(p: Partida): Jugador[] {
   });
 }
 
+/** Los partidos de Olimpia en el torneo que se está jugando. */
+export function fixtureDeOlimpia(p: Partida): PartidoUI[] {
+  return partidosDeOlimpia(p.ano, p.torneo, p.semilla);
+}
+
 export function partidoLigaDe(p: Partida): PartidoUI | null {
-  return partidosDeOlimpia().find((x) => x.etiqueta.endsWith(`Fecha ${p.fechaActual}`)) ?? null;
+  return fixtureDeOlimpia(p).find((x) => x.etiqueta.endsWith(`Fecha ${p.fechaActual}`)) ?? null;
 }
 
 export function partidoCopaDe(p: Partida): PartidoUI | null {
@@ -777,27 +814,41 @@ export interface FilaTabla {
  * versiones. Acá el año tiene una.
  */
 export function balanceDelAno(p: Partida) {
-  const clausura = tablaDe(p);
+  const clausura = tablaDe(p, "clausura");
+  /*
+   * El Apertura de 2026 lo dirigió otro y viene simulado. Del 2027 en adelante
+   * lo jugaste vos, así que la tabla sale de tus propios resultados y no de una
+   * simulación: sería raro que el torneo que jugaste apareciera inventado en la
+   * pantalla que reparte los cupos.
+   */
   const semestre = p.semestre ?? simularApertura(p.semilla);
-  const acumulada = tablaAcumulativa(semestre.apertura, clausura);
+  const tablaApertura = p.ano === 2026 && !p.aperturaJugado
+    ? semestre.apertura
+    : tablaDe(p, "apertura").map((f) => ({ id: f.id, nombre: f.nombre, pts: f.pts, dg: f.dg, gf: f.gf }));
+  const campeonApertura = tablaApertura[0].id;
+
+  const acumulada = tablaAcumulativa(tablaApertura, clausura);
 
   const puestoClausura = clausura.findIndex((f) => f.id === "olimpia") + 1;
-  const puestoApertura = semestre.apertura.findIndex((f) => f.id === "olimpia") + 1;
+  const puestoApertura = tablaApertura.findIndex((f) => f.id === "olimpia") + 1;
   const puestoAnual = acumulada.findIndex((f) => f.id === "olimpia") + 1;
 
   const cupos = repartirCupos(
-    acumulada, semestre.campeonApertura, clausura[0].id, semestre.campeonCopaParaguay,
+    acumulada, campeonApertura, clausura[0].id, semestre.campeonCopaParaguay,
     p.copa.ronda === "campeon" ? "olimpia" : undefined);
   const cruces = sorteoSudamericana(cupos, p.semilla);
 
   /* Lo que Olimpia ganó de verdad este año, para poder decirlo sin vueltas. */
   const titulos: string[] = [];
   if (puestoClausura === 1) titulos.push("Clausura");
-  if (semestre.campeonApertura === "olimpia") titulos.push("Apertura");
+  if (campeonApertura === "olimpia") titulos.push("Apertura");
   if (p.copa.ronda === "campeon") titulos.push("Copa Sudamericana");
 
   return {
     clausura, acumulada, semestre, cupos, cruces, titulos,
+    /** La tabla del Apertura que vale: la tuya si lo jugaste, la simulada si no. */
+    apertura: tablaApertura,
+    campeonApertura,
     puestoClausura, puestoApertura, puestoAnual,
     /** El cupo de Olimpia para el año que viene, si le tocó alguno. */
     miCupo: cupos.find((c) => c.id === "olimpia") ?? null,
@@ -806,7 +857,20 @@ export function balanceDelAno(p: Partida) {
   };
 }
 
-export function tablaDe(p: Partida): FilaTabla[] {
+/**
+ * La tabla de un torneo del año.
+ *
+ * Por defecto la del que se está jugando. Al cerrar el año se piden las dos,
+ * porque los cupos a las copas salen de sumarlas.
+ */
+export function tablaDe(
+  p: Partida, torneo: "apertura" | "clausura" = p.torneo,
+): FilaTabla[] {
+  usarCalendario(p.ano, p.semilla, torneo);
+  const FIXTURE = partidosDelTorneo(p.ano, torneo, p.semilla);
+  /* Cuántas fechas del torneo pedido ya se jugaron. */
+  const jugadas = torneo === p.torneo ? p.fechaActual
+    : torneo === "apertura" ? FECHAS_POR_TORNEO + 1 : 1;
   const fuerzas: Record<string, number> = Object.fromEntries(EQUIPOS.map((e) => [e.id, e.fuerza]));
   const filas: Record<string, FilaTabla> = Object.fromEntries(EQUIPOS.map((e) => [e.id, {
     id: e.id, nombre: e.nombre, pj: 0, g: 0, e: 0, p: 0, gf: 0, gc: 0, dg: 0, pts: 0,
@@ -818,24 +882,26 @@ export function tablaDe(p: Partida): FilaTabla[] {
     else if (favor === contra) { f.e++; f.pts += 1; }
     else f.p++;
   };
-  if (p.puntosDescontados) filas["olimpia"].pts -= p.puntosDescontados;
+  if (p.puntosDescontados && torneo === "clausura") filas["olimpia"].pts -= p.puntosDescontados;
   for (const r of p.resultados) {
+    /* Los guardados viejos no traen torneo y son todos del Clausura. */
+    if ((r.torneo ?? "clausura") !== torneo) continue;
     const local = r.esLocal ? "olimpia" : r.rivalId;
     const visita = r.esLocal ? r.rivalId : "olimpia";
     const gl = r.esLocal ? r.golesOlimpia : r.golesRival;
     const gv = r.esLocal ? r.golesRival : r.golesOlimpia;
     anotar(local, gl, gv); anotar(visita, gv, gl);
   }
-  const rng = new Rng(`liga-${p.semilla}`);
+  const rng = new Rng(`liga-${p.semilla}-${p.ano}-${torneo}`);
   for (const m of FIXTURE) {
-    if (m.fecha_numero >= p.fechaActual) continue;
+    if (m.fechaNumero >= jugadas) continue;
     if (m.local === "olimpia" || m.visitante === "olimpia") continue;
     // Todos arrastran su calendario, no solo los rivales de Olimpia: si el
     // desgaste valiera únicamente contra vos, el torneo se ganaría solo.
     const fl = fuerzaBaseAjustada(m.local, fuerzas[m.local]) *
-      factorCondicion(condicionRival(m.local, m.fecha));
+      factorCondicion(condicionRival(m.local, m.dia));
     const fv = fuerzaBaseAjustada(m.visitante, fuerzas[m.visitante]) *
-      factorCondicion(condicionRival(m.visitante, m.fecha));
+      factorCondicion(condicionRival(m.visitante, m.dia));
     const xl = P.xgBase * Math.exp(P.xgK * (fl + P.localiaLiga - fv));
     const xv = P.xgBase * Math.exp(P.xgK * (fv - fl - P.localiaLiga));
     const gl = rng.poisson(clamp(xl, 0.05, 6));
@@ -1053,6 +1119,7 @@ export function cerrarPartido(p: Partida, partido: PartidoUI, c: CierrePartido):
 
   if (!esCopa) n.resultados.push({
     fechaNumero: p.fechaActual,
+    torneo: p.torneo,
     rivalId: partido.rivalId,
     esLocal: partido.ctx.esLocal,
     golesOlimpia: c.golesOlimpia,
@@ -1218,18 +1285,21 @@ export function cerrarPartido(p: Partida, partido: PartidoUI, c: CierrePartido):
   } else {
     n.fechaActual = p.fechaActual + 1;
 
-    // La APF descuenta puntos al que no cumple los 900 minutos de Sub-18.
-    if (n.fechaActual > TOTAL_FECHAS && n.minutosSub18 < 900) {
+    /*
+     * La APF descuenta puntos al que no cumple los 900 minutos de Sub-18, y la
+     * cuenta es del AÑO, no de cada torneo: se cobra al cerrar el Clausura.
+     */
+    if (n.fechaActual > TOTAL_FECHAS && n.torneo === "clausura" && n.minutosSub18 < 900) {
       n.puntosDescontados = 3;
       n.bitacora.push({ dia: p.dia, marca: "golpe", texto:
         `Sanción: Olimpia no llegó a los 900 minutos Sub-18 (${n.minutosSub18}). ` +
         `La APF descuenta 3 puntos.` });
     }
 
-
-    // se terminó el torneo: campeón o no, la temporada merece su pantalla
+    // se terminó el torneo: campeón o no, merece su pantalla
     if (n.fechaActual > TOTAL_FECHAS) {
-      const tabla = tablaDe(n);
+      const nombre = n.torneo === "apertura" ? "Apertura" : "Clausura";
+      const tabla = tablaDe(n, n.torneo);
       const yo = tabla.findIndex((f) => f.id === "olimpia") + 1;
       const mios = tabla.find((f) => f.id === "olimpia");
       /*
@@ -1237,22 +1307,36 @@ export function cerrarPartido(p: Partida, partido: PartidoUI, c: CierrePartido):
        * y no por salir campeón, que es lo que dice el contrato. Ahora paga por
        * el título, que es lo que estabas firmando.
        */
-      if (n.sponsorConBonus && yo === 1) pagarBonus(n, "el Clausura");
+      if (n.sponsorConBonus && yo === 1) pagarBonus(n, `el ${nombre}`);
       n.hito = yo === 1
         ? {
             tipo: "campeon_liga",
-            titulo: "Campeón del Clausura",
+            titulo: `Campeón del ${nombre}`,
             detalle: "Olimpia dio la vuelta.",
             cifra: `${mios?.pts ?? 0}`,
             pie: "puntos en 22 fechas",
           }
         : {
             tipo: "fin_temporada",
-            titulo: "Se terminó el Clausura",
+            titulo: `Se terminó el ${nombre}`,
             detalle: `Olimpia cerró ${yo}° con ${mios?.pts ?? 0} puntos.`,
             cifra: `${yo}°`,
             pie: `a ${(tabla[0]?.pts ?? 0) - (mios?.pts ?? 0)} del campeón`,
           };
+
+      /*
+       * Y si el que terminó fue el Apertura, arranca el Clausura: mismo año,
+       * mismo plantel, la tabla vuelve a cero y el día salta a julio. El año
+       * recién se cierra cuando terminan los dos.
+       */
+      if (n.torneo === "apertura") {
+        n.torneo = "clausura";
+        n.fechaActual = 1;
+        const primera = fixtureDeOlimpia(n)[0];
+        if (primera) n.dia = sumarDias(primera.ctx.fecha, -14);
+        n.bitacora.push({ dia: n.dia, marca: "aviso",
+          texto: `Arranca el Clausura ${n.ano}. La tabla vuelve a cero, la del año no.` });
+      }
     }
   }
   return avanzarUnDia(n).partida;

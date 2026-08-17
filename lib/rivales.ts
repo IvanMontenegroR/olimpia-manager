@@ -1,6 +1,6 @@
-import fixtureJson from "@/data/fixture_clausura2026_final.json";
 import equiposJson from "@/data/equipos_2026.json";
 import { factorCondicion, P } from "@/engine/motor.ts";
+import { calendarioDelAno } from "./calendario.ts";
 
 /**
  * Los rivales también se cansan.
@@ -13,13 +13,48 @@ import { factorCondicion, P } from "@/engine/motor.ts";
  * Es determinista y se calcula sobre el fixture real, no es un número al azar.
  */
 
-const FIXTURE = fixtureJson as any[];
 const EQUIPOS = equiposJson as any[];
 
+/**
+ * El calendario contra el que se mide el cansancio.
+ *
+ * Antes era el archivo del Clausura 2026 y punto. Ahora el juego dura varios
+ * años, así que hay que decirle cuál: se fija con `usarCalendario` cuando
+ * arranca la temporada y todo lo de acá cuelga de eso.
+ *
+ * Es estado de módulo, que no es lindo, pero la alternativa era pasarle el año
+ * y la semilla a `fuerzaBaseAjustada` y a todos sus llamadores, que son el
+ * motor de la tabla y el simulador de balance.
+ */
+let ANO = 2026;
+let SEMILLA = "";
+let TORNEO: "apertura" | "clausura" = "clausura";
+/** Todo el año: es contra esto que se mide cuánto descansó cada uno. */
+let FIXTURE = calendarioDelAno(ANO, SEMILLA);
+/**
+ * Y solo el torneo que se está jugando, que es otra cosa.
+ *
+ * `factorMedio` normaliza la fuerza de cada club sobre SUS partidos, y tiene
+ * que ser sobre los del torneo que se está simulando. Cuando lo hice sobre el
+ * año entero el Clausura se movió dos puntos para arriba de los dos lados
+ * (campeón de 49.4 a 51.7, Olimpia de 43.2 a 45.1): la normalización quedaba
+ * calculada sobre cuarenta y cuatro fechas y aplicada sobre veintidós.
+ */
+let FIXTURE_TORNEO = FIXTURE.filter((x) => x.torneo === TORNEO);
+
+export function usarCalendario(
+  ano: number, semilla: string, torneo: "apertura" | "clausura" = "clausura",
+): void {
+  if (ano === ANO && semilla === SEMILLA && torneo === TORNEO) return;
+  ANO = ano; SEMILLA = semilla; TORNEO = torneo;
+  FIXTURE = calendarioDelAno(ano, semilla);
+  FIXTURE_TORNEO = FIXTURE.filter((x) => x.torneo === torneo);
+  MEDIA_FACTOR.clear();
+}
+
 /** Ventanas Conmebol: los que juegan copa tienen partido esas semanas. */
-const FECHAS_COPA = [
-  "2026-08-13", "2026-08-20", "2026-09-17", "2026-09-24",
-  "2026-10-22", "2026-10-29", "2026-11-21",
+const FECHAS_COPA_2026 = [
+  "-08-13", "-08-20", "-09-17", "-09-24", "-10-22", "-10-29", "-11-21",
 ];
 
 const diasEntre = (a: string, b: string) =>
@@ -29,16 +64,29 @@ const diasEntre = (a: string, b: string) =>
 function partidosPrevios(clubId: string, hasta: string): { dia: string; km: number }[] {
   const equipo = EQUIPOS.find((e) => e.id === clubId);
   const liga = FIXTURE
-    .filter((p) => (p.local === clubId || p.visitante === clubId) && p.fecha < hasta)
+    .filter((p) => (p.local === clubId || p.visitante === clubId) && p.dia < hasta)
     .map((p) => ({
-      dia: p.fecha as string,
-      // el visitante viaja, el local no
-      km: p.visitante === clubId ? (p.km_desde_asuncion ?? 0) : 0,
+      dia: p.dia,
+      /*
+       * Los partidos de liga no suman viaje, y eso es a propósito.
+       *
+       * El código viejo leía `km_desde_asuncion` de la FILA del fixture, que no
+       * tiene ese campo: daba undefined y quedaba en cero siempre. O sea que la
+       * calibración del torneo (campeón 49.4 puntos, Olimpia 43.2) está hecha
+       * sobre un desgaste que solo cuenta los viajes de copa. Al pasar el
+       * calendario a generarse lo "arreglé" tomando el km del club, y el torneo
+       * se movió dos puntos para arriba de los dos lados.
+       *
+       * Se queda en cero. Paraguay entra en trescientos kilómetros: el viaje
+       * más largo de la liga es Pedro Juan Caballero y no se parece a cruzar a
+       * Brasil un jueves, que es lo que el modelo quiere castigar.
+       */
+      km: 0,
     }));
 
   // los que juegan copa suman partido entre semana, con viaje al exterior
   const copa = equipo?.copa_internacional
-    ? FECHAS_COPA.filter((d) => d < hasta).map((dia, i) => ({
+    ? FECHAS_COPA_2026.map((d) => `${ANO}${d}`).filter((d) => d < hasta).map((dia, i) => ({
         dia,
         km: i % 2 === 0 ? 1800 : 0, // de visitante la ida, de local la vuelta
       }))
@@ -96,9 +144,9 @@ function factorMedio(clubId: string): number {
   const guardado = MEDIA_FACTOR.get(clubId);
   if (guardado !== undefined) return guardado;
 
-  const suyos = FIXTURE.filter((p) => p.local === clubId || p.visitante === clubId);
+  const suyos = FIXTURE_TORNEO.filter((p) => p.local === clubId || p.visitante === clubId);
   const media = suyos.length
-    ? suyos.reduce((acc, p) => acc + factorCondicion(condicionRival(clubId, p.fecha)), 0) / suyos.length
+    ? suyos.reduce((acc, p) => acc + factorCondicion(condicionRival(clubId, p.dia)), 0) / suyos.length
     : 1;
   MEDIA_FACTOR.set(clubId, media);
   return media;
@@ -123,7 +171,8 @@ export function estadoRival(clubId: string, dia: string): EstadoRival {
     condicion: condicionRival(clubId, dia),
     diasDescanso: ultimo ? diasEntre(ultimo.dia, dia) : null,
     vieneDeCopa: !!equipo?.copa_internacional && !!ultimo &&
-      FECHAS_COPA.includes(ultimo.dia) && diasEntre(ultimo.dia, dia) <= 5,
+      FECHAS_COPA_2026.some((d) => ultimo.dia.endsWith(d)) &&
+      diasEntre(ultimo.dia, dia) <= 5,
   };
 }
 

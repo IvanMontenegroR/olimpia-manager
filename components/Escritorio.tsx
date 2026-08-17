@@ -19,7 +19,7 @@ import {
   CALENDARIO_COPA, OBJETIVO, TOTAL_FECHAS, borrar, diasAlPartido, esPartidoDeCopa,
   diasEntre, estadoSub18, formatoDia, hayPartidoHoy, miles, ocupacionDe, ovrDe, partidoDe, plantelDe,
   posicionDe, sumarDias,
-  tablaDe, type EntradaDiario, type EquipoGuardado, type Partida,
+  tablaDe, fixtureDeOlimpia, type EntradaDiario, type EquipoGuardado, type Partida,
   comoLoDejaste, guardarEquipo,
 } from "@/lib/temporada.ts";
 import { useAtras } from "@/lib/atras.ts";
@@ -390,7 +390,7 @@ export default function Escritorio({
       <div key={partida.dia} className="correr-tira scroll-x flex gap-1 px-3 pb-2">
         {Array.from({ length: 14 }, (_, i) => {
           const dia = sumarDias(partida.dia, i);
-          const m = partidosDeOlimpia().find((x) => x.ctx.fecha === dia);
+          const m = fixtureDeOlimpia(partida).find((x) => x.ctx.fecha === dia);
           const copaHoy = Object.values(CALENDARIO_COPA).some(
             (r) => (r.ida === dia || r.vuelta === dia)
               && partida.copa.ronda !== "eliminado" && partida.copa.ronda !== "campeon");
@@ -1267,7 +1267,7 @@ function VistaFixture({ partida, tabla }: {
      mira el fixture es el que quiere saber cómo va el torneo. */
   const [comp, setComp] = useState<"todo" | "clausura" | "copa" | "tabla">("todo");
 
-  const liga = partidosDeOlimpia().map((p, i) => ({
+  const liga = fixtureDeOlimpia(partida).map((p, i) => ({
     clave: `liga-${i}`,
     orden: p.ctx.fecha,
     competencia: "clausura" as const,

@@ -146,7 +146,14 @@ export interface ContextoPartido {
    */
   semilla?: string;
   fecha: string;
-  competencia: "clausura" | "sudamericana";
+  /**
+   * El torneo del partido.
+   *
+   * "apertura" y "clausura" son los dos del año paraguayo y pesan igual en el
+   * motor; lo que cambia de verdad es la copa, que no tiene cupo de extranjeros
+   * y tiene otra localía.
+   */
+  competencia: "apertura" | "clausura" | "sudamericana" | "libertadores";
   esLocal: boolean;
   neutral?: boolean;
   rivalFuerza: number;

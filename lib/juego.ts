@@ -1,12 +1,11 @@
 import plantelJson from "@/data/plantel_olimpia_2026.json";
-import fixtureJson from "@/data/fixture_clausura2026_final.json";
 import equiposJson from "@/data/equipos_2026.json";
+import { partidosDelTorneo } from "./calendario.ts";
 import { nivelEfectivo } from "@/engine/motor.ts";
 import type { Actitud, ContextoPartido, Jugador, Posicion } from "@/engine/tipos.ts";
 
 export const PLANTEL = plantelJson as unknown as Jugador[];
 const EQUIPOS = equiposJson as any[];
-const FIXTURE = fixtureJson as any[];
 
 /**
  * El cupo de extranjeros es del torneo local. La Conmebol no lo tiene, así que
@@ -201,12 +200,22 @@ export interface PartidoUI {
   };
 }
 
-/** Partidos de Olimpia en el Clausura, en orden. */
-export function partidosDeOlimpia(): PartidoUI[] {
+const NOMBRE_TORNEO = { apertura: "Apertura", clausura: "Clausura" } as const;
+
+/**
+ * Los partidos de Olimpia en un torneo, en orden.
+ *
+ * Antes leía un archivo fijo, que era el Clausura 2026 y nada más. Ahora se le
+ * pide el año y el torneo, porque el año paraguayo son dos y porque a partir de
+ * 2027 el calendario se genera.
+ */
+export function partidosDeOlimpia(
+  ano: number, torneo: "apertura" | "clausura", semilla: string,
+): PartidoUI[] {
   const porId = Object.fromEntries(EQUIPOS.map((e) => [e.id, e]));
-  return FIXTURE
+  return partidosDelTorneo(ano, torneo, semilla)
     .filter((p) => p.local === "olimpia" || p.visitante === "olimpia")
-    .sort((a, b) => a.fecha_numero - b.fecha_numero)
+    .sort((a, b) => a.fechaNumero - b.fechaNumero)
     .map((p) => {
       const esLocal = p.local === "olimpia";
       const rivalId = esLocal ? p.visitante : p.local;
@@ -216,14 +225,14 @@ export function partidosDeOlimpia(): PartidoUI[] {
         rivalNombre: rival.nombre,
         estadio: p.estadio,
         ciudad: p.ciudad,
-        etiqueta: `Clausura · Fecha ${p.fecha_numero}`,
+        etiqueta: `${NOMBRE_TORNEO[torneo]} · Fecha ${p.fechaNumero}`,
         ctx: {
-          fecha: p.fecha,
-          competencia: "clausura",
+          fecha: p.dia,
+          competencia: torneo,
           esLocal,
           rivalFuerza: rival.fuerza,
           rivalNombre: rival.nombre,
-          viajeKm: p.viaje_km_olimpia ?? 0,
+          viajeKm: p.viajeKm,
           alturaM: 43,
           diasDescanso: 6,
           esClasico: rivalId === "cerro_porteno",

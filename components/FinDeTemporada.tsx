@@ -45,15 +45,15 @@ export default function FinDeTemporada({ partida, onCerrar }: {
   onCerrar: () => void;
 }) {
   const b = balanceDelAno(partida);
-  const campeonClausura = b.clausura[0];
-  const campeonApertura = b.semestre.apertura[0];
-  const copaParaguay = b.acumulada.find((f) => f.id === b.semestre.campeonCopaParaguay);
+  const ano = partida.ano;
+  /* El Apertura 2026 lo dirigió otro; del 2027 en adelante lo jugaste vos. */
+  const aperturaAjena = ano === 2026 && !partida.aperturaJugado;
 
   return (
     <div className="app scroll-y px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-5">
 
       <span className="text-[10px] uppercase tracking-[0.24em]" style={{ color: "var(--tenue)" }}>
-        Temporada 2026 · Olimpia
+        Temporada {ano} · Olimpia
       </span>
       <h1 className="apellido mt-1 text-[26px] leading-tight">Cómo terminó el año</h1>
 
@@ -79,7 +79,10 @@ export default function FinDeTemporada({ partida, onCerrar }: {
 
       {/* Dónde salió en cada cosa, que es el resumen del resumen. */}
       <div className="mt-2 grid grid-cols-3 gap-1.5">
-        <Caja etiqueta="Apertura" valor={`${b.puestoApertura}°`} pie="lo jugó el anterior" />
+        <Caja etiqueta="Apertura" valor={`${b.puestoApertura}°`}
+              pie={aperturaAjena ? "lo jugó el anterior"
+                : `${b.apertura.find((f) => f.id === "olimpia")?.pts ?? 0} pts`}
+              fuerte={b.campeonApertura === "olimpia"} />
         <Caja etiqueta="Clausura" valor={`${b.puestoClausura}°`}
               pie={`${b.clausura.find((f) => f.id === "olimpia")?.pts ?? 0} pts`}
               fuerte={b.puestoClausura === 1} />
@@ -100,7 +103,7 @@ export default function FinDeTemporada({ partida, onCerrar }: {
           const cupo = b.cupos.find((c) => c.id === f.id);
           const c = cupo ? COLOR_TORNEO[cupo.torneo] : null;
           const yo = f.id === "olimpia";
-          const ap = b.semestre.apertura.find((x) => x.id === f.id)?.pts ?? 0;
+          const ap = b.apertura.find((x) => x.id === f.id)?.pts ?? 0;
           return (
             <div key={f.id} className="mb-1 flex items-center gap-2 rounded-md px-2 py-1.5"
                  style={{
@@ -126,7 +129,7 @@ export default function FinDeTemporada({ partida, onCerrar }: {
         const t = COLOR_TORNEO[torneo];
         return (
           <div key={torneo}>
-            <Titulo color={t.acento}>{t.nombre} 2027</Titulo>
+            <Titulo color={t.acento}>{t.nombre} {ano + 1}</Titulo>
             {b.cupos.filter((c) => c.torneo === torneo).map((c) => (
               <div key={c.id} className="mb-1 flex items-center gap-2.5 rounded-lg px-2.5 py-2"
                    style={{ background: t.fondo, boxShadow: `inset 0 0 0 1px ${t.halo}`,

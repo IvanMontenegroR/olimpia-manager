@@ -1,7 +1,7 @@
 import EQUIPOS from "@/data/equipos_2026.json";
 import { Rng } from "@/engine/rng.ts";
 import { factorCondicion, P } from "@/engine/motor.ts";
-import { fuerzaBaseAjustada } from "./rivales.ts";
+import { fuerzaBaseAjustada, usarCalendario } from "./rivales.ts";
 
 /**
  * El año entero, que en Paraguay son dos torneos y no uno.
@@ -58,6 +58,8 @@ const NOMBRE: Record<string, string> =
 export function simularApertura(semilla: string): PrimerSemestre {
   const equipos = (EQUIPOS as { id: string; fuerza: number }[]);
   const rng = new Rng(`apertura-${semilla}`);
+  /* La fuerza de cada club se normaliza sobre SU Apertura, no sobre el año. */
+  usarCalendario(2026, semilla, "apertura");
   const filas: Record<string, FilaAnual> = Object.fromEntries(
     equipos.map((e) => [e.id, { id: e.id, nombre: NOMBRE[e.id], pts: 0, dg: 0, gf: 0 }]));
 
