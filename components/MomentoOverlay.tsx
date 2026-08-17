@@ -101,18 +101,29 @@ export default function MomentoOverlay({
 
   return (
     <div className="absolute inset-0 z-20 flex flex-col justify-end"
-         style={{ background: "linear-gradient(to bottom, rgba(11,11,12,0.25) 0%, rgba(11,11,12,0.82) 45%, rgba(11,11,12,0.96) 100%)", backdropFilter: "blur(2px)" }}>
-      <div className="entrar px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+         style={{ background: "linear-gradient(to bottom, rgba(11,11,12,0.35) 0%, rgba(11,11,12,0.78) 40%, rgba(11,11,12,0.94) 100%)", backdropFilter: "blur(3px)" }}>
+      {/*
+        * El bloque se apoya en piso propio y no en el degradado.
+        *
+        * El degradado va de arriba abajo de toda la pantalla, así que dónde
+        * cae el título depende de cuántas opciones tenga el momento: con tres
+        * quedaba a media altura, con el degradado a medio camino, y detrás se
+        * leían la lista de jugadores y el relato. Dos textos encimados. Ahora
+        * el fondo arranca donde arranca el contenido, opaco, con un pelo de
+        * transición arriba para que no se vea el corte.
+        */}
+      <div className="entrar px-4 pt-3 pb-[max(1.25rem,env(safe-area-inset-bottom))]"
+           style={{ background: "linear-gradient(to bottom, rgba(10,18,13,0) 0, rgba(10,18,13,0.97) 22px, #0a120d 64px)" }}>
 
         <div className="mb-1 flex items-baseline gap-2">
-          <span className="num text-[13px]" style={{ color: "var(--apagado)" }}>
+          <span className="num text-[13px]" style={{ color: "var(--tenue)" }}>
             {momento.minuto}'
           </span>
           <span className="apellido text-[24px] leading-none" style={{ color }}>
             {momento.titulo}
           </span>
         </div>
-        <p className="mb-3 text-[14px] leading-snug" style={{ color: "var(--tenue)" }}>
+        <p className="mb-3 text-[14px] leading-snug" style={{ color: "#c9d4cc" }}>
           {momento.contexto}
         </p>
 

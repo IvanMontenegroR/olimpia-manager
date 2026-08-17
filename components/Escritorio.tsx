@@ -515,7 +515,7 @@ export default function Escritorio({
             * salvo entrando a la ficha de a uno. El diario sigue completo en
             * su propio botón.
             */}
-          <div className="mt-1.5 flex min-h-0 flex-1 flex-col">
+          <div className="mt-1 flex min-h-0 flex-1 flex-col">
             <CanchaHome
               once={ovr.once}
               puestos={ovr.puestos}
@@ -538,7 +538,9 @@ export default function Escritorio({
             const u = partida.bitacora[partida.bitacora.length - 1];
             if (!u) return null;
             return (
-              <div className="mt-1.5 shrink-0">
+              /* Sin margen propio: el mb de la línea (que existe para
+                 apilarlas adentro del diario) acá sería aire de más. */
+              <div className="mt-1 shrink-0 [&>*]:mb-0">
                 <LineaBitacora b={u} unaLinea onClick={() => setVista("bitacora")} />
               </div>
             );
@@ -548,7 +550,7 @@ export default function Escritorio({
 
       {/* ---------- la acción del día ---------- */}
       {!pendiente && (
-        <div className="px-3 pt-2">
+        <div className="px-3 pt-1">
           {esHoy && partido ? (
             /*
              * Un solo botón, y siempre pasa por armar el once.
