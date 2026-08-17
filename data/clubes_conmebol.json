@@ -1,0 +1,902 @@
+[
+ {
+  "id": "flamengo",
+  "nombre": "Flamengo",
+  "pais": "BRA",
+  "ciudad": "Río de Janeiro",
+  "km_desde_asuncion": 2100,
+  "altura_m": 10,
+  "fuerza": 78,
+  "ambiente_hostil": "alto"
+ },
+ {
+  "id": "palmeiras",
+  "nombre": "Palmeiras",
+  "pais": "BRA",
+  "ciudad": "São Paulo",
+  "km_desde_asuncion": 1000,
+  "altura_m": 760,
+  "fuerza": 78,
+  "ambiente_hostil": "alto"
+ },
+ {
+  "id": "atletico_mineiro",
+  "nombre": "Atlético Mineiro",
+  "pais": "BRA",
+  "ciudad": "Belo Horizonte",
+  "km_desde_asuncion": 1900,
+  "altura_m": 850,
+  "fuerza": 73,
+  "ambiente_hostil": "alto"
+ },
+ {
+  "id": "botafogo",
+  "nombre": "Botafogo",
+  "pais": "BRA",
+  "ciudad": "Río de Janeiro",
+  "km_desde_asuncion": 2100,
+  "altura_m": 10,
+  "fuerza": 72,
+  "ambiente_hostil": "alto"
+ },
+ {
+  "id": "sao_paulo",
+  "nombre": "São Paulo",
+  "pais": "BRA",
+  "ciudad": "São Paulo",
+  "km_desde_asuncion": 1000,
+  "altura_m": 760,
+  "fuerza": 72,
+  "ambiente_hostil": "alto"
+ },
+ {
+  "id": "corinthians",
+  "nombre": "Corinthians",
+  "pais": "BRA",
+  "ciudad": "São Paulo",
+  "km_desde_asuncion": 1000,
+  "altura_m": 760,
+  "fuerza": 70,
+  "ambiente_hostil": "alto"
+ },
+ {
+  "id": "fluminense",
+  "nombre": "Fluminense",
+  "pais": "BRA",
+  "ciudad": "Río de Janeiro",
+  "km_desde_asuncion": 2100,
+  "altura_m": 10,
+  "fuerza": 70,
+  "ambiente_hostil": "alto"
+ },
+ {
+  "id": "cruzeiro",
+  "nombre": "Cruzeiro",
+  "pais": "BRA",
+  "ciudad": "Belo Horizonte",
+  "km_desde_asuncion": 1900,
+  "altura_m": 850,
+  "fuerza": 70,
+  "ambiente_hostil": "alto"
+ },
+ {
+  "id": "internacional",
+  "nombre": "Internacional",
+  "pais": "BRA",
+  "ciudad": "Porto Alegre",
+  "km_desde_asuncion": 1100,
+  "altura_m": 10,
+  "fuerza": 69,
+  "ambiente_hostil": "alto"
+ },
+ {
+  "id": "gremio",
+  "nombre": "Grêmio",
+  "pais": "BRA",
+  "ciudad": "Porto Alegre",
+  "km_desde_asuncion": 1100,
+  "altura_m": 10,
+  "fuerza": 69,
+  "ambiente_hostil": "alto"
+ },
+ {
+  "id": "vasco_da_gama",
+  "nombre": "Vasco da Gama",
+  "pais": "BRA",
+  "ciudad": "Río de Janeiro",
+  "km_desde_asuncion": 2100,
+  "altura_m": 10,
+  "fuerza": 68,
+  "ambiente_hostil": "alto"
+ },
+ {
+  "id": "santos",
+  "nombre": "Santos",
+  "pais": "BRA",
+  "ciudad": "Santos",
+  "km_desde_asuncion": 1300,
+  "altura_m": 5,
+  "fuerza": 68,
+  "ambiente_hostil": "alto"
+ },
+ {
+  "id": "fortaleza",
+  "nombre": "Fortaleza",
+  "pais": "BRA",
+  "ciudad": "Fortaleza",
+  "km_desde_asuncion": 3300,
+  "altura_m": 20,
+  "fuerza": 67,
+  "ambiente_hostil": "alto"
+ },
+ {
+  "id": "bragantino",
+  "nombre": "Red Bull Bragantino",
+  "pais": "BRA",
+  "ciudad": "Bragança Paulista",
+  "km_desde_asuncion": 1200,
+  "altura_m": 800,
+  "fuerza": 66,
+  "ambiente_hostil": "alto"
+ },
+ {
+  "id": "river_plate",
+  "nombre": "River Plate",
+  "pais": "ARG",
+  "ciudad": "Buenos Aires",
+  "km_desde_asuncion": 1030,
+  "altura_m": 25,
+  "fuerza": 74,
+  "ambiente_hostil": "alto"
+ },
+ {
+  "id": "boca_juniors",
+  "nombre": "Boca Juniors",
+  "pais": "ARG",
+  "ciudad": "Buenos Aires",
+  "km_desde_asuncion": 1030,
+  "altura_m": 25,
+  "fuerza": 72,
+  "ambiente_hostil": "alto"
+ },
+ {
+  "id": "racing",
+  "nombre": "Racing Club",
+  "pais": "ARG",
+  "ciudad": "Avellaneda",
+  "km_desde_asuncion": 1030,
+  "altura_m": 10,
+  "fuerza": 70,
+  "ambiente_hostil": "alto"
+ },
+ {
+  "id": "velez",
+  "nombre": "Vélez Sarsfield",
+  "pais": "ARG",
+  "ciudad": "Buenos Aires",
+  "km_desde_asuncion": 1030,
+  "altura_m": 25,
+  "fuerza": 68,
+  "ambiente_hostil": "alto"
+ },
+ {
+  "id": "estudiantes",
+  "nombre": "Estudiantes",
+  "pais": "ARG",
+  "ciudad": "La Plata",
+  "km_desde_asuncion": 1080,
+  "altura_m": 15,
+  "fuerza": 68,
+  "ambiente_hostil": "alto"
+ },
+ {
+  "id": "independiente",
+  "nombre": "Independiente",
+  "pais": "ARG",
+  "ciudad": "Avellaneda",
+  "km_desde_asuncion": 1030,
+  "altura_m": 10,
+  "fuerza": 68,
+  "ambiente_hostil": "alto"
+ },
+ {
+  "id": "san_lorenzo_arg",
+  "nombre": "San Lorenzo",
+  "pais": "ARG",
+  "ciudad": "Buenos Aires",
+  "km_desde_asuncion": 1030,
+  "altura_m": 25,
+  "fuerza": 67,
+  "ambiente_hostil": "alto"
+ },
+ {
+  "id": "lanus",
+  "nombre": "Lanús",
+  "pais": "ARG",
+  "ciudad": "Lanús",
+  "km_desde_asuncion": 1030,
+  "altura_m": 15,
+  "fuerza": 66,
+  "ambiente_hostil": "alto"
+ },
+ {
+  "id": "talleres",
+  "nombre": "Talleres",
+  "pais": "ARG",
+  "ciudad": "Córdoba",
+  "km_desde_asuncion": 1000,
+  "altura_m": 400,
+  "fuerza": 66,
+  "ambiente_hostil": "alto"
+ },
+ {
+  "id": "argentinos",
+  "nombre": "Argentinos Juniors",
+  "pais": "ARG",
+  "ciudad": "Buenos Aires",
+  "km_desde_asuncion": 1030,
+  "altura_m": 25,
+  "fuerza": 65,
+  "ambiente_hostil": "medio"
+ },
+ {
+  "id": "rosario_central",
+  "nombre": "Rosario Central",
+  "pais": "ARG",
+  "ciudad": "Rosario",
+  "km_desde_asuncion": 900,
+  "altura_m": 25,
+  "fuerza": 65,
+  "ambiente_hostil": "medio"
+ },
+ {
+  "id": "newells",
+  "nombre": "Newell's Old Boys",
+  "pais": "ARG",
+  "ciudad": "Rosario",
+  "km_desde_asuncion": 900,
+  "altura_m": 25,
+  "fuerza": 64,
+  "ambiente_hostil": "medio"
+ },
+ {
+  "id": "tigre",
+  "nombre": "Tigre",
+  "pais": "ARG",
+  "ciudad": "Victoria",
+  "km_desde_asuncion": 1030,
+  "altura_m": 10,
+  "fuerza": 60,
+  "ambiente_hostil": "medio"
+ },
+ {
+  "id": "penarol",
+  "nombre": "Peñarol",
+  "pais": "URU",
+  "ciudad": "Montevideo",
+  "km_desde_asuncion": 1300,
+  "altura_m": 40,
+  "fuerza": 68,
+  "ambiente_hostil": "alto"
+ },
+ {
+  "id": "nacional_uru",
+  "nombre": "Nacional",
+  "pais": "URU",
+  "ciudad": "Montevideo",
+  "km_desde_asuncion": 1300,
+  "altura_m": 40,
+  "fuerza": 67,
+  "ambiente_hostil": "alto"
+ },
+ {
+  "id": "liverpool_uru",
+  "nombre": "Liverpool",
+  "pais": "URU",
+  "ciudad": "Montevideo",
+  "km_desde_asuncion": 1300,
+  "altura_m": 40,
+  "fuerza": 61,
+  "ambiente_hostil": "medio"
+ },
+ {
+  "id": "defensor",
+  "nombre": "Defensor Sporting",
+  "pais": "URU",
+  "ciudad": "Montevideo",
+  "km_desde_asuncion": 1300,
+  "altura_m": 40,
+  "fuerza": 60,
+  "ambiente_hostil": "medio"
+ },
+ {
+  "id": "danubio",
+  "nombre": "Danubio",
+  "pais": "URU",
+  "ciudad": "Montevideo",
+  "km_desde_asuncion": 1300,
+  "altura_m": 40,
+  "fuerza": 58,
+  "ambiente_hostil": "medio"
+ },
+ {
+  "id": "city_torque",
+  "nombre": "Montevideo City Torque",
+  "pais": "URU",
+  "ciudad": "Montevideo",
+  "km_desde_asuncion": 1300,
+  "altura_m": 40,
+  "fuerza": 58,
+  "ambiente_hostil": "medio"
+ },
+ {
+  "id": "cerro_largo",
+  "nombre": "Cerro Largo",
+  "pais": "URU",
+  "ciudad": "Melo",
+  "km_desde_asuncion": 900,
+  "altura_m": 100,
+  "fuerza": 57,
+  "ambiente_hostil": "medio"
+ },
+ {
+  "id": "boston_river",
+  "nombre": "Boston River",
+  "pais": "URU",
+  "ciudad": "Montevideo",
+  "km_desde_asuncion": 1300,
+  "altura_m": 40,
+  "fuerza": 56,
+  "ambiente_hostil": "medio"
+ },
+ {
+  "id": "racing_uru",
+  "nombre": "Racing de Montevideo",
+  "pais": "URU",
+  "ciudad": "Montevideo",
+  "km_desde_asuncion": 1300,
+  "altura_m": 40,
+  "fuerza": 55,
+  "ambiente_hostil": "medio"
+ },
+ {
+  "id": "colo_colo",
+  "nombre": "Colo-Colo",
+  "pais": "CHI",
+  "ciudad": "Santiago",
+  "km_desde_asuncion": 1600,
+  "altura_m": 570,
+  "fuerza": 67,
+  "ambiente_hostil": "alto"
+ },
+ {
+  "id": "u_de_chile",
+  "nombre": "Universidad de Chile",
+  "pais": "CHI",
+  "ciudad": "Santiago",
+  "km_desde_asuncion": 1600,
+  "altura_m": 570,
+  "fuerza": 66,
+  "ambiente_hostil": "alto"
+ },
+ {
+  "id": "u_catolica",
+  "nombre": "Universidad Católica",
+  "pais": "CHI",
+  "ciudad": "Santiago",
+  "km_desde_asuncion": 1600,
+  "altura_m": 570,
+  "fuerza": 65,
+  "ambiente_hostil": "medio"
+ },
+ {
+  "id": "palestino",
+  "nombre": "Palestino",
+  "pais": "CHI",
+  "ciudad": "Santiago",
+  "km_desde_asuncion": 1600,
+  "altura_m": 570,
+  "fuerza": 60,
+  "ambiente_hostil": "medio"
+ },
+ {
+  "id": "huachipato",
+  "nombre": "Huachipato",
+  "pais": "CHI",
+  "ciudad": "Talcahuano",
+  "km_desde_asuncion": 1900,
+  "altura_m": 10,
+  "fuerza": 59,
+  "ambiente_hostil": "medio"
+ },
+ {
+  "id": "cobresal",
+  "nombre": "Cobresal",
+  "pais": "CHI",
+  "ciudad": "El Salvador",
+  "km_desde_asuncion": 1900,
+  "altura_m": 2300,
+  "fuerza": 58,
+  "ambiente_hostil": "medio"
+ },
+ {
+  "id": "audax",
+  "nombre": "Audax Italiano",
+  "pais": "CHI",
+  "ciudad": "Santiago",
+  "km_desde_asuncion": 1600,
+  "altura_m": 570,
+  "fuerza": 58,
+  "ambiente_hostil": "medio"
+ },
+ {
+  "id": "nublense",
+  "nombre": "Ñublense",
+  "pais": "CHI",
+  "ciudad": "Chillán",
+  "km_desde_asuncion": 1700,
+  "altura_m": 120,
+  "fuerza": 57,
+  "ambiente_hostil": "medio"
+ },
+ {
+  "id": "ohiggins",
+  "nombre": "O'Higgins",
+  "pais": "CHI",
+  "ciudad": "Rancagua",
+  "km_desde_asuncion": 1650,
+  "altura_m": 500,
+  "fuerza": 56,
+  "ambiente_hostil": "medio"
+ },
+ {
+  "id": "atletico_nacional",
+  "nombre": "Atlético Nacional",
+  "pais": "COL",
+  "ciudad": "Medellín",
+  "km_desde_asuncion": 3600,
+  "altura_m": 1495,
+  "fuerza": 68,
+  "ambiente_hostil": "alto"
+ },
+ {
+  "id": "millonarios",
+  "nombre": "Millonarios",
+  "pais": "COL",
+  "ciudad": "Bogotá",
+  "km_desde_asuncion": 3400,
+  "altura_m": 2640,
+  "fuerza": 65,
+  "ambiente_hostil": "medio"
+ },
+ {
+  "id": "junior",
+  "nombre": "Junior",
+  "pais": "COL",
+  "ciudad": "Barranquilla",
+  "km_desde_asuncion": 3900,
+  "altura_m": 18,
+  "fuerza": 64,
+  "ambiente_hostil": "medio"
+ },
+ {
+  "id": "america_cali",
+  "nombre": "América de Cali",
+  "pais": "COL",
+  "ciudad": "Cali",
+  "km_desde_asuncion": 3600,
+  "altura_m": 1000,
+  "fuerza": 64,
+  "ambiente_hostil": "medio"
+ },
+ {
+  "id": "santa_fe",
+  "nombre": "Independiente Santa Fe",
+  "pais": "COL",
+  "ciudad": "Bogotá",
+  "km_desde_asuncion": 3400,
+  "altura_m": 2640,
+  "fuerza": 63,
+  "ambiente_hostil": "medio"
+ },
+ {
+  "id": "deportivo_cali",
+  "nombre": "Deportivo Cali",
+  "pais": "COL",
+  "ciudad": "Cali",
+  "km_desde_asuncion": 3600,
+  "altura_m": 1000,
+  "fuerza": 62,
+  "ambiente_hostil": "medio"
+ },
+ {
+  "id": "tolima",
+  "nombre": "Deportes Tolima",
+  "pais": "COL",
+  "ciudad": "Ibagué",
+  "km_desde_asuncion": 3500,
+  "altura_m": 1285,
+  "fuerza": 61,
+  "ambiente_hostil": "medio"
+ },
+ {
+  "id": "once_caldas",
+  "nombre": "Once Caldas",
+  "pais": "COL",
+  "ciudad": "Manizales",
+  "km_desde_asuncion": 3500,
+  "altura_m": 2150,
+  "fuerza": 60,
+  "ambiente_hostil": "medio"
+ },
+ {
+  "id": "aguilas",
+  "nombre": "Águilas Doradas",
+  "pais": "COL",
+  "ciudad": "Rionegro",
+  "km_desde_asuncion": 3600,
+  "altura_m": 2125,
+  "fuerza": 59,
+  "ambiente_hostil": "medio"
+ },
+ {
+  "id": "idv",
+  "nombre": "Independiente del Valle",
+  "pais": "ECU",
+  "ciudad": "Sangolquí",
+  "km_desde_asuncion": 3400,
+  "altura_m": 2500,
+  "fuerza": 70,
+  "ambiente_hostil": "alto"
+ },
+ {
+  "id": "ldu",
+  "nombre": "LDU Quito",
+  "pais": "ECU",
+  "ciudad": "Quito",
+  "km_desde_asuncion": 3400,
+  "altura_m": 2850,
+  "fuerza": 68,
+  "ambiente_hostil": "alto"
+ },
+ {
+  "id": "barcelona_sc",
+  "nombre": "Barcelona SC",
+  "pais": "ECU",
+  "ciudad": "Guayaquil",
+  "km_desde_asuncion": 3200,
+  "altura_m": 4,
+  "fuerza": 65,
+  "ambiente_hostil": "medio"
+ },
+ {
+  "id": "emelec",
+  "nombre": "Emelec",
+  "pais": "ECU",
+  "ciudad": "Guayaquil",
+  "km_desde_asuncion": 3200,
+  "altura_m": 4,
+  "fuerza": 62,
+  "ambiente_hostil": "medio"
+ },
+ {
+  "id": "aucas",
+  "nombre": "Aucas",
+  "pais": "ECU",
+  "ciudad": "Quito",
+  "km_desde_asuncion": 3400,
+  "altura_m": 2850,
+  "fuerza": 59,
+  "ambiente_hostil": "medio"
+ },
+ {
+  "id": "u_catolica_ecu",
+  "nombre": "Universidad Católica",
+  "pais": "ECU",
+  "ciudad": "Quito",
+  "km_desde_asuncion": 3400,
+  "altura_m": 2850,
+  "fuerza": 59,
+  "ambiente_hostil": "medio"
+ },
+ {
+  "id": "delfin",
+  "nombre": "Delfín",
+  "pais": "ECU",
+  "ciudad": "Manta",
+  "km_desde_asuncion": 3300,
+  "altura_m": 6,
+  "fuerza": 58,
+  "ambiente_hostil": "medio"
+ },
+ {
+  "id": "orense",
+  "nombre": "Orense",
+  "pais": "ECU",
+  "ciudad": "Machala",
+  "km_desde_asuncion": 3250,
+  "altura_m": 6,
+  "fuerza": 56,
+  "ambiente_hostil": "medio"
+ },
+ {
+  "id": "libertad_ecu",
+  "nombre": "Libertad FC",
+  "pais": "ECU",
+  "ciudad": "Loja",
+  "km_desde_asuncion": 3300,
+  "altura_m": 2060,
+  "fuerza": 55,
+  "ambiente_hostil": "medio"
+ },
+ {
+  "id": "universitario",
+  "nombre": "Universitario",
+  "pais": "PER",
+  "ciudad": "Lima",
+  "km_desde_asuncion": 2500,
+  "altura_m": 150,
+  "fuerza": 62,
+  "ambiente_hostil": "medio"
+ },
+ {
+  "id": "alianza_lima",
+  "nombre": "Alianza Lima",
+  "pais": "PER",
+  "ciudad": "Lima",
+  "km_desde_asuncion": 2500,
+  "altura_m": 150,
+  "fuerza": 62,
+  "ambiente_hostil": "medio"
+ },
+ {
+  "id": "sporting_cristal",
+  "nombre": "Sporting Cristal",
+  "pais": "PER",
+  "ciudad": "Lima",
+  "km_desde_asuncion": 2500,
+  "altura_m": 150,
+  "fuerza": 62,
+  "ambiente_hostil": "medio"
+ },
+ {
+  "id": "melgar",
+  "nombre": "Melgar",
+  "pais": "PER",
+  "ciudad": "Arequipa",
+  "km_desde_asuncion": 2700,
+  "altura_m": 2335,
+  "fuerza": 59,
+  "ambiente_hostil": "medio"
+ },
+ {
+  "id": "cienciano",
+  "nombre": "Cienciano",
+  "pais": "PER",
+  "ciudad": "Cusco",
+  "km_desde_asuncion": 2900,
+  "altura_m": 3400,
+  "fuerza": 57,
+  "ambiente_hostil": "medio"
+ },
+ {
+  "id": "cesar_vallejo",
+  "nombre": "César Vallejo",
+  "pais": "PER",
+  "ciudad": "Trujillo",
+  "km_desde_asuncion": 2700,
+  "altura_m": 34,
+  "fuerza": 57,
+  "ambiente_hostil": "medio"
+ },
+ {
+  "id": "cusco_fc",
+  "nombre": "Cusco FC",
+  "pais": "PER",
+  "ciudad": "Cusco",
+  "km_desde_asuncion": 2900,
+  "altura_m": 3400,
+  "fuerza": 57,
+  "ambiente_hostil": "medio"
+ },
+ {
+  "id": "sport_huancayo",
+  "nombre": "Sport Huancayo",
+  "pais": "PER",
+  "ciudad": "Huancayo",
+  "km_desde_asuncion": 2600,
+  "altura_m": 3250,
+  "fuerza": 56,
+  "ambiente_hostil": "medio"
+ },
+ {
+  "id": "adt",
+  "nombre": "ADT",
+  "pais": "PER",
+  "ciudad": "Tarma",
+  "km_desde_asuncion": 2600,
+  "altura_m": 3050,
+  "fuerza": 54,
+  "ambiente_hostil": "medio"
+ },
+ {
+  "id": "bolivar",
+  "nombre": "Bolívar",
+  "pais": "BOL",
+  "ciudad": "La Paz",
+  "km_desde_asuncion": 1900,
+  "altura_m": 3640,
+  "fuerza": 60,
+  "ambiente_hostil": "medio"
+ },
+ {
+  "id": "the_strongest",
+  "nombre": "The Strongest",
+  "pais": "BOL",
+  "ciudad": "La Paz",
+  "km_desde_asuncion": 1900,
+  "altura_m": 3640,
+  "fuerza": 60,
+  "ambiente_hostil": "medio"
+ },
+ {
+  "id": "always_ready",
+  "nombre": "Always Ready",
+  "pais": "BOL",
+  "ciudad": "El Alto",
+  "km_desde_asuncion": 1900,
+  "altura_m": 4150,
+  "fuerza": 58,
+  "ambiente_hostil": "medio"
+ },
+ {
+  "id": "nacional_potosi",
+  "nombre": "Nacional Potosí",
+  "pais": "BOL",
+  "ciudad": "Potosí",
+  "km_desde_asuncion": 1800,
+  "altura_m": 4090,
+  "fuerza": 56,
+  "ambiente_hostil": "medio"
+ },
+ {
+  "id": "blooming",
+  "nombre": "Blooming",
+  "pais": "BOL",
+  "ciudad": "Santa Cruz",
+  "km_desde_asuncion": 1200,
+  "altura_m": 416,
+  "fuerza": 55,
+  "ambiente_hostil": "medio"
+ },
+ {
+  "id": "aurora",
+  "nombre": "Aurora",
+  "pais": "BOL",
+  "ciudad": "Cochabamba",
+  "km_desde_asuncion": 1600,
+  "altura_m": 2558,
+  "fuerza": 54,
+  "ambiente_hostil": "medio"
+ },
+ {
+  "id": "wilstermann",
+  "nombre": "Wilstermann",
+  "pais": "BOL",
+  "ciudad": "Cochabamba",
+  "km_desde_asuncion": 1600,
+  "altura_m": 2558,
+  "fuerza": 54,
+  "ambiente_hostil": "medio"
+ },
+ {
+  "id": "real_tomayapo",
+  "nombre": "Real Tomayapo",
+  "pais": "BOL",
+  "ciudad": "Tarija",
+  "km_desde_asuncion": 1300,
+  "altura_m": 1854,
+  "fuerza": 53,
+  "ambiente_hostil": "medio"
+ },
+ {
+  "id": "guabira",
+  "nombre": "Guabirá",
+  "pais": "BOL",
+  "ciudad": "Montero",
+  "km_desde_asuncion": 1250,
+  "altura_m": 370,
+  "fuerza": 53,
+  "ambiente_hostil": "medio"
+ },
+ {
+  "id": "caracas",
+  "nombre": "Caracas",
+  "pais": "VEN",
+  "ciudad": "Caracas",
+  "km_desde_asuncion": 3700,
+  "altura_m": 900,
+  "fuerza": 58,
+  "ambiente_hostil": "medio"
+ },
+ {
+  "id": "tachira",
+  "nombre": "Deportivo Táchira",
+  "pais": "VEN",
+  "ciudad": "San Cristóbal",
+  "km_desde_asuncion": 3300,
+  "altura_m": 825,
+  "fuerza": 57,
+  "ambiente_hostil": "medio"
+ },
+ {
+  "id": "carabobo",
+  "nombre": "Carabobo",
+  "pais": "VEN",
+  "ciudad": "Valencia",
+  "km_desde_asuncion": 3600,
+  "altura_m": 480,
+  "fuerza": 56,
+  "ambiente_hostil": "medio"
+ },
+ {
+  "id": "la_guaira",
+  "nombre": "Deportivo La Guaira",
+  "pais": "VEN",
+  "ciudad": "Caracas",
+  "km_desde_asuncion": 3700,
+  "altura_m": 900,
+  "fuerza": 56,
+  "ambiente_hostil": "medio"
+ },
+ {
+  "id": "metropolitanos",
+  "nombre": "Metropolitanos",
+  "pais": "VEN",
+  "ciudad": "Caracas",
+  "km_desde_asuncion": 3700,
+  "altura_m": 900,
+  "fuerza": 55,
+  "ambiente_hostil": "medio"
+ },
+ {
+  "id": "monagas",
+  "nombre": "Monagas",
+  "pais": "VEN",
+  "ciudad": "Maturín",
+  "km_desde_asuncion": 4000,
+  "altura_m": 65,
+  "fuerza": 55,
+  "ambiente_hostil": "medio"
+ },
+ {
+  "id": "puerto_cabello",
+  "nombre": "Puerto Cabello",
+  "pais": "VEN",
+  "ciudad": "Puerto Cabello",
+  "km_desde_asuncion": 3650,
+  "altura_m": 10,
+  "fuerza": 54,
+  "ambiente_hostil": "medio"
+ },
+ {
+  "id": "estudiantes_merida",
+  "nombre": "Estudiantes de Mérida",
+  "pais": "VEN",
+  "ciudad": "Mérida",
+  "km_desde_asuncion": 3400,
+  "altura_m": 1600,
+  "fuerza": 53,
+  "ambiente_hostil": "medio"
+ },
+ {
+  "id": "rayo_zuliano",
+  "nombre": "Rayo Zuliano",
+  "pais": "VEN",
+  "ciudad": "Maracaibo",
+  "km_desde_asuncion": 4000,
+  "altura_m": 6,
+  "fuerza": 52,
+  "ambiente_hostil": "medio"
+ }
+]
