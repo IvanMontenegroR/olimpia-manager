@@ -40,9 +40,11 @@ const EXPLICA_FASE: Record<Cupo["fase"], string> = {
   "fase previa": "un partido, y el que gana entra",
 };
 
-export default function FinDeTemporada({ partida, onCerrar }: {
+export default function FinDeTemporada({ partida, onCerrar, onSiguiente }: {
   partida: Partida;
   onCerrar: () => void;
+  /** Seguir dirigiendo: arranca el año que viene. */
+  onSiguiente?: () => void;
 }) {
   const b = balanceDelAno(partida);
   const ano = partida.ano;
@@ -198,10 +200,18 @@ export default function FinDeTemporada({ partida, onCerrar }: {
         </span>
       </div>
 
+      {/* Seguir es lo normal: un técnico no se va porque terminó el año. */}
+      {onSiguiente && (
+        <button onClick={onSiguiente}
+          className="mt-4 w-full shrink-0 rounded-lg py-3.5 text-[13px] font-extrabold uppercase tracking-[0.14em]"
+          style={{ background: "var(--cesped)", color: "#0a120d" }}>
+          Dirigir la temporada {ano + 1}
+        </button>
+      )}
       <button onClick={onCerrar}
-        className="mt-4 w-full shrink-0 rounded-lg py-3.5 text-[13px] font-extrabold uppercase tracking-[0.14em]"
-        style={{ background: "var(--blanco)", color: "var(--negro)" }}>
-        Cerrar la temporada
+        className="mt-1.5 w-full shrink-0 rounded-lg py-3 text-[12px] font-bold uppercase tracking-[0.14em]"
+        style={{ background: "var(--carbon)", color: "var(--tenue)" }}>
+        Quedarme mirando el resumen
       </button>
     </div>
   );

@@ -98,6 +98,14 @@ export interface EstadoPlantel {
   animo: number;
   /** Cuánto subió de Nivel con minutos y trabajo individual. */
   crecimiento: number;
+  /**
+   * Lo que le puso o le sacó el paso de los años, acumulado.
+   *
+   * Va aparte de `crecimiento` porque son dos cosas distintas: crecer es lo que
+   * el pibe gana jugando dentro de una temporada y tiene techo, y esto es la
+   * curva de la edad, que sube hasta los veintitrés y baja de los treinta.
+   */
+  porEdad?: number;
 }
 
 export interface Oferta {
@@ -296,6 +304,12 @@ export interface Partida {
   semestre?: PrimerSemestre;
   /** Si el Apertura de este año lo jugaste vos y no viene simulado. */
   aperturaJugado?: boolean;
+  /** Cuántos años pasaron desde que agarraste. Es lo que envejece al plantel. */
+  temporadasJugadas?: number;
+  /** Mientras esté en true se está en la ventana de pretemporada. */
+  pretemporada?: boolean;
+  /** Los que colgaron los botines, para poder contarlo. */
+  retirados?: { id: string; apellido: string; edad: number }[];
 
   /**
    * La oportunidad de fichaje que está sobre la mesa, si hay alguna. Tiene
@@ -668,10 +682,13 @@ export function plantelDe(p: Partida): Jugador[] {
   return [...PLANTEL, ...(p.incorporados ?? [])].filter((j) => !fuera.has(j.id)).map((j) => {
     const e = p.plantel[j.id];
     if (!e) return { ...j, reserva: reserva.has(j.id) };
+    const anos = p.temporadasJugadas ?? 0;
     return {
       ...j,
       reserva: reserva.has(j.id),
-      nivel: j.nivel + Math.floor(e.crecimiento ?? 0),
+      edad: j.edad + anos,
+      nivel: clamp(
+        j.nivel + Math.floor(e.crecimiento ?? 0) + Math.round(e.porEdad ?? 0), 40, 99),
       nivel_incertidumbre: Math.max(0, j.nivel_incertidumbre - Math.floor(e.crecimiento ?? 0)),
       condicion: Math.round(e.condicion),
       suspendido: e.suspendidoFechas > 0,
@@ -1715,6 +1732,136 @@ function avanzarLlave(n: Partida, c: CierrePartido, partido: PartidoUI) {
  * que se sorteaban los penales. Ahora vuelve por acá cuando el DT terminó de
  * patear, y de ahí para abajo es exactamente el mismo camino.
  */
+/**
+ * Lo que le hace un año más a un jugador.
+ *
+ * La curva del fútbol: hasta los veintitrés se crece, entre los veinticuatro y
+ * los veintinueve se está, y de los treinta para arriba se baja cada vez más
+ * rápido. Va aparte del crecimiento por minutos, que es lo que el pibe gana
+ * jugando y tiene techo: esto le pasa igual al que jugó todo y al que no jugó
+ * nunca, que es lo que hace que un plantel se envejezca solo si no lo tocás.
+ */
+export function porUnAnoMas(edad: number, posicion?: string): number {
+  const arquero = posicion === "ARQ";
+  let d: number;
+  if (edad <= 21) d = 2;
+  else if (edad <= 23) d = 1;
+  else if (edad <= 29) d = 0;
+  else if (edad <= 32) d = -0.5;
+  else if (edad <= 35) d = -1.5;
+  else d = -2.5;
+  /*
+   * El arquero baja a la mitad, y se retira dos años más tarde.
+   *
+   * No es un mimo: es que el puesto se sostiene con la cabeza y con la
+   * ubicación mucho más que con las piernas, y por eso los arqueros juegan
+   * hasta los cuarenta. Con la curva pareja Olveira perdía once puntos en
+   * cuatro años y a los treinta y siete era un arquero de reserva.
+   */
+  return arquero && d < 0 ? d / 2 : d;
+}
+
+/** A partir de acá se cuelgan los botines. Los arqueros aguantan dos años más. */
+export const EDAD_DE_RETIRO = 38;
+export const edadDeRetiro = (posicion: string) => (posicion === "ARQ" ? 40 : EDAD_DE_RETIRO);
+
+/**
+ * Arranca el año siguiente.
+ *
+ * Se conserva lo que es del club (el plantel, la plata, el crédito de la
+ * dirigencia, la gente) y se limpia lo que es del torneo (la tabla, las
+ * tarjetas, las lesiones, los equipos guardados siguen). El plantel suma un
+ * año: los pibes dan un salto, los de treinta y pico empiezan a bajar y los de
+ * treinta y ocho se retiran.
+ *
+ * Y arranca en pretemporada, que es la ventana donde se arma el equipo para el
+ * año: hasta que no la cierres no se juega la primera fecha.
+ */
+export function temporadaSiguiente(p: Partida): Partida {
+  const ano = p.ano + 1;
+  const anos = (p.temporadasJugadas ?? 0) + 1;
+  const b = balanceDelAno(p);
+
+  /* Lo que Olimpia se ganó para el año que viene, si se ganó algo. */
+  const copa = b.miCupo;
+
+  const retirados: { id: string; apellido: string; edad: number }[] = [];
+  const plantel: Record<string, EstadoPlantel> = {};
+  const vendidos = [...(p.vendidos ?? [])];
+
+  for (const j of plantelDe(p)) {
+    const e = p.plantel[j.id];
+    if (!e) continue;
+    const edadNueva = j.edad + 1;
+    if (edadNueva >= edadDeRetiro(j.posicion)) {
+      retirados.push({ id: j.id, apellido: j.apellido, edad: edadNueva });
+      vendidos.push(j.id);
+      continue;
+    }
+    plantel[j.id] = {
+      ...e,
+      /* El torneo empieza de cero para todos. */
+      condicion: 100,
+      amarillas: 0,
+      suspendidoFechas: 0,
+      lesionadoHasta: null,
+      golesTorneo: 0,
+      minutos: 0,
+      /* El ánimo tira al medio: lo que pasó el año pasado ya pasó. */
+      animo: clamp(70 + (e.animo - 70) * 0.4, 45, 90),
+      porEdad: (e.porEdad ?? 0) + porUnAnoMas(edadNueva, j.posicion),
+    };
+  }
+
+  const n: Partida = {
+    ...p,
+    ano,
+    torneo: "apertura",
+    fechaActual: 1,
+    /* Enero: hay tiempo de armar el equipo antes de la primera fecha. */
+    dia: `${ano}-01-10`,
+    pretemporada: true,
+    temporadasJugadas: anos,
+    aperturaJugado: true,
+    plantel,
+    vendidos,
+    retirados,
+    resultados: [],
+    puntosDescontados: 0,
+    minutosSub18: 0,
+    cerrada: false,
+    hito: null,
+    tanda: null,
+    pendientes: [],
+    ofertas: [],
+    ultimaOfertaEl: undefined,
+    estrella: null,
+    transferibles: [],
+    /*
+     * La copa del año que viene sale de cómo terminó este. Por ahora entra por
+     * la ronda que le tocó y el resto de la llave se arma como siempre; el
+     * cuadro completo con las fases previas de verdad viene con el sorteo.
+     */
+    copa: { ronda: "octavos", rivalId: p.copa.rivalId, globalO: 0, globalR: 0, jugadosEnRonda: 0 },
+    /* El Apertura ya no es de otro: lo dirigís vos. */
+    semestre: undefined,
+    bitacora: [
+      ...p.bitacora,
+      { dia: `${ano}-01-10`, marca: "aviso" as const,
+        texto: `Arranca la temporada ${ano}. ` + (copa
+          ? `Olimpia juega la ${copa.torneo === "libertadores" ? "Libertadores" : "Sudamericana"}` +
+            ` desde ${copa.fase}.`
+          : "Olimpia se quedó sin copa internacional.") },
+    ],
+  };
+
+  for (const r of retirados) {
+    n.bitacora.push({ dia: n.dia, marca: "aviso",
+      texto: `${r.apellido} se retiró a los ${r.edad}.` });
+  }
+  return n;
+}
+
 export function terminarTanda(p: Partida): Partida {
   if (!p.tanda) return p;
   const est = estadoTanda(p.tanda);

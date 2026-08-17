@@ -6,13 +6,14 @@ import Arranque from "@/components/Arranque.tsx";
 import { useAtras, useAtrasTrabado } from "@/lib/atras.ts";
 import PantallaHito from "@/components/PantallaHito.tsx";
 import FinDeTemporada from "@/components/FinDeTemporada.tsx";
+import Pretemporada from "@/components/Pretemporada.tsx";
 import Penales from "@/components/Penales.tsx";
 import PartidoEnVivo from "@/components/PartidoEnVivo.tsx";
 import Escritorio from "@/components/Escritorio.tsx";
 import {
   avanzarUnDia, cargar, cerrarPartido, fichar, ficharEstrella, guardar, guardarEquipo,
   hayPartidoHoy,
-  atajarPenal, ofrecerJugador, patearPenal, terminarTanda,
+  atajarPenal, ofrecerJugador, patearPenal, temporadaSiguiente, terminarTanda,
   partidaNueva, partidoDe, plantelDe, rechazarEstrella, resolverAsunto, TOTAL_FECHAS,
   type CierrePartido, type Partida,
 } from "@/lib/temporada.ts";
@@ -88,11 +89,25 @@ export default function Page() {
    * saliste campeón, con su pantalla, y recién ahí a qué copa vas. Al revés se
    * te adelantaría el final del año antes de contarte el final del torneo.
    */
-  if (partida.fechaActual > TOTAL_FECHAS && !partida.hito && !partida.cerrada
-      && !partida.despedido) {
+  if (partida.torneo === "clausura" && partida.fechaActual > TOTAL_FECHAS
+      && !partida.hito && !partida.cerrada && !partida.despedido) {
     return (
       <FinDeTemporada partida={partida}
-        onCerrar={() => setPartida((p) => (p ? { ...p, cerrada: true } : p))} />
+        onCerrar={() => setPartida((p) => (p ? { ...p, cerrada: true } : p))}
+        onSiguiente={() => setPartida((p) => (p ? temporadaSiguiente(p) : p))} />
+    );
+  }
+
+  /*
+   * Enero. El año arranca en pretemporada y no en la primera fecha: es la
+   * única ventana para armar el equipo sin un partido encima.
+   */
+  if (partida.pretemporada && !partida.despedido) {
+    return (
+      <Pretemporada partida={partida}
+        onFichar={(id) => setPartida((p) => (p ? fichar(p, id) ?? p : p))}
+        onCambio={(np) => setPartida(np)}
+        onEmpezar={() => setPartida((p) => (p ? { ...p, pretemporada: false } : p))} />
     );
   }
 
