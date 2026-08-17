@@ -34,8 +34,8 @@ export interface EfectoVisible {
   suspendeA?: string;
   /** Cuántas fechas se pierde. */
   fechasFuera?: number;
-  /** Roto o echado. */
-  porLesion?: boolean;
+  /** Roto, echado o guardado. */
+  motivo?: "lesion" | "suspension" | "descanso";
   /** Apellido del que se pierde el partido, para poder nombrarlo. */
   suspendeTexto?: string;
   /**
@@ -90,10 +90,9 @@ export function chipsDe(e: EfectoVisible): { texto: string; bueno: boolean }[] {
    */
   if (e.suspendeA) {
     const n = e.fechasFuera ?? 1;
-    chips.push({
-      texto: `${e.porLesion ? "Lesionado" : "Suspendido"} ${n} partido${n > 1 ? "s" : ""}`,
-      bueno: false,
-    });
+    const como = e.motivo === "lesion" ? "Lesionado"
+      : e.motivo === "descanso" ? "Descansa" : "Suspendido";
+    chips.push({ texto: `${como} ${n} partido${n > 1 ? "s" : ""}`, bueno: false });
   }
   return chips;
 }

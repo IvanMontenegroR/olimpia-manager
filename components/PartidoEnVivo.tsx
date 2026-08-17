@@ -3,7 +3,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useAtras } from "@/lib/atras.ts";
 import { Rng } from "@/engine/rng.ts";
-import { desgastePorPartido, factorCondicion, fuerzas, ovrDelOnce, P } from "@/engine/motor.ts";
+import {
+  desgastePorPartido, factorCondicion, factorPosicion, fuerzas, ovrDelOnce, P,
+} from "@/engine/motor.ts";
 import { ambienteDe, relatarTramo, type EventoRelato, type TipoEvento } from "@/engine/relato.ts";
 import {
   colorCondicion, MOLDE_DE, MOLDES, nivelEf, nombreCorto, repartirEnMolde,
@@ -362,6 +364,55 @@ export default function PartidoEnVivo({
   };
 
   /**
+   * Qué equipo te queda si te pasás a esta formación.
+   *
+   * Acá estaba el problema que hacía que cambiar de dibujo fuera siempre una
+   * pérdida. Se repartían los MISMOS once en el molde nuevo, y al 5-3-2 le
+   * falta un central: el reparto metía al extremo derecho de central con un
+   * ×0.62, o sea veinticuatro puntos de nivel efectivo tirados. El beneficio
+   * estructural de poner un hombre más atrás son tres puntos y medio. La
+   * cuenta no cerraba nunca, y el panel te ofrecía tres opciones de las cuales
+   * dos no convenían jamás.
+   *
+   * Ningún técnico hace eso: mete un defensor. Así que ahora el cambio de
+   * formación puede traer del banco al que hace falta, y cuesta cambios como
+   * cualquier otra sustitución. Solo se toca el casillero donde alguien
+   * quedaría muy fuera de puesto, y solo si el del banco de verdad rinde más
+   * ahí: el resto del equipo no se mueve.
+   */
+  const planDeFormacion = (f: string) => {
+    const slots = MOLDE_DE(f);
+    const ids = repartirEnMolde(once, slots, ctx).filter(Boolean) as string[];
+    if (ids.length < slots.length) return null;
+    const puestosNuevos = new Map<string, Posicion>();
+    const alineado = ids.map((id, i) => {
+      puestosNuevos.set(id, slots[i]);
+      return { j: once.find((x) => x.id === id)!, slot: slots[i], i };
+    });
+
+    const entran: { sale: Jugador; entra: Jugador; slot: Posicion }[] = [];
+    const tomados = new Set<string>();
+    const torcidos = alineado
+      .map((a) => ({ ...a, fp: factorPosicion(a.j, a.slot) }))
+      .filter((a) => a.fp < 0.9)
+      .sort((a, b) => a.fp - b.fp);
+
+    for (const t of torcidos) {
+      if (entran.length >= cambios || ventanas === 0) break;
+      const mejor = banco
+        .filter((b) => !tomados.has(b.id))
+        .sort((a, b) => nivelEf(b, t.slot, ctx) - nivelEf(a, t.slot, ctx))[0];
+      if (!mejor || nivelEf(mejor, t.slot, ctx) <= nivelEf(t.j, t.slot, ctx)) continue;
+      tomados.add(mejor.id);
+      entran.push({ sale: t.j, entra: mejor, slot: t.slot });
+      alineado[t.i] = { j: mejor, slot: t.slot, i: t.i };
+      puestosNuevos.delete(t.j.id);
+      puestosNuevos.set(mejor.id, t.slot);
+    }
+    return { once: alineado.map((a) => a.j), puestos: puestosNuevos, entran };
+  };
+
+  /**
    * Cambiar el dibujo en pleno partido.
    *
    * Los once que están en la cancha se reparten en el molde nuevo y listo: no
@@ -375,18 +426,32 @@ export default function PartidoEnVivo({
    */
   const cambiarFormacion = (f: string) => {
     if (f === formacion) { setPanel(null); setCorriendo(true); return; }
-    const slots = MOLDE_DE(f);
-    const ids = repartirEnMolde(once, slots, ctx).filter(Boolean) as string[];
-    if (ids.length < slots.length) return;
-    const nuevos = new Map<string, Posicion>();
-    ids.forEach((id, i) => nuevos.set(id, slots[i]));
+    const plan = planDeFormacion(f);
+    if (!plan) return;
+
+    const entrantes = new Set(plan.entran.map((x) => x.entra.id));
+    for (const { sale, entra } of plan.entran) {
+      salidas.current.set(sale.id, minuto);
+      entradas.current.set(entra.id, minuto);
+    }
+    const nuevoBanco = banco.filter((j) => !entrantes.has(j.id));
+
     setFormacion(f);
-    setPuestos(nuevos);
+    setOnce(plan.once);
+    setPuestos(plan.puestos);
+    setBanco(nuevoBanco);
+    if (plan.entran.length) {
+      setCambios((c) => c - plan.entran.length);
+      setVentanas((v) => v - 1);
+    }
     setVisibles((v) => [...v, {
-      minuto, tipo: "cambio", texto: `Olimpia se para en ${f}.`,
+      minuto, tipo: "cambio",
+      texto: `Olimpia se para en ${f}.` + (plan.entran.length
+        ? " " + plan.entran.map((x) => `Sale ${x.sale.apellido}, entra ${x.entra.apellido}`).join("; ") + "."
+        : ""),
       golesOlimpia: gO, golesRival: gR,
     }]);
-    resimular(minuto, { ...alineacion, puestos: nuevos });
+    resimular(minuto, { ...alineacion, once: plan.once, suplentes: nuevoBanco, puestos: plan.puestos });
     setPanel(null); setCorriendo(true);
   };
 
@@ -399,13 +464,10 @@ export default function PartidoEnVivo({
    */
   const deFormacion = (f: string): { texto: string; bueno: boolean }[] | null => {
     if (f === formacion) return null;
-    const slots = MOLDE_DE(f);
-    const ids = repartirEnMolde(once, slots, ctx).filter(Boolean) as string[];
-    if (ids.length < slots.length) return null;
-    const nuevos = new Map<string, Posicion>();
-    ids.forEach((id, i) => nuevos.set(id, slots[i]));
+    const plan = planDeFormacion(f);
+    if (!plan) return null;
     const hoy = fuerzas({ once, suplentes: banco, actitud, puestos }, ctx);
-    const con = fuerzas({ once, suplentes: banco, actitud, puestos: nuevos }, ctx);
+    const con = fuerzas({ once: plan.once, suplentes: banco, actitud, puestos: plan.puestos }, ctx);
     // el mismo pasaje de puntos a porcentaje que usa el motor para las xG
     const pct = (d: number) => Math.round((1 - Math.exp(-P.xgK * Math.abs(d))) * 100);
     const chips: { texto: string; bueno: boolean }[] = [];
@@ -415,6 +477,13 @@ export default function PartidoEnVivo({
     }
     if (Math.abs(dDf) >= 0.4) {
       chips.push({ texto: `Te llegan ${pct(dDf)}% ${dDf > 0 ? "menos" : "más"}`, bueno: dDf > 0 });
+    }
+    // lo que cuesta, que es parte de la decisión y no un detalle
+    if (plan.entran.length) {
+      chips.push({
+        texto: `${plan.entran.length} cambio${plan.entran.length > 1 ? "s" : ""}`,
+        bueno: false,
+      });
     }
     return chips.length ? chips : [{ texto: "Igual", bueno: true }];
   };
@@ -702,8 +771,9 @@ export default function PartidoEnVivo({
               </span>
             </button>
             {/* muestra la actitud puesta, con su color */}
-            {/* El plan: el dibujo y cómo te parás. La actitud se usa una vez,
-                el dibujo se puede mover todas las que quieras. */}
+            {/* El plan: el dibujo y cómo te parás. La actitud se usa una vez;
+                el dibujo se puede mover, y si le falta un hombre para el
+                casillero nuevo lo trae del banco gastando cambios. */}
             <button onClick={() => { setCorriendo(false); setPanel("actitud"); }}
               className="flex-1 rounded py-2.5 text-[11px] font-bold uppercase tracking-wider"
               style={{ background: act.color, color: act.sobre }}>
@@ -814,7 +884,7 @@ export default function PartidoEnVivo({
         <Panel titulo="Plan de partido" onCerrar={() => { setPanel(null); setCorriendo(true); }}>
           <span className="mb-1.5 block text-[9px] uppercase tracking-[0.18em]"
                 style={{ color: "var(--apagado)" }}>
-            Formación · no cuesta cambio
+            Formación · trae del banco lo que haga falta
           </span>
           <div className="mb-3 grid grid-cols-2 gap-1.5">
             {MOLDES.map((m) => m.nombre).map((f) => {

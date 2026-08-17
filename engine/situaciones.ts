@@ -23,8 +23,8 @@ export interface Efecto {
   suspendeA?: string;
   /** Cuántas fechas se pierde. Por ahora siempre una. */
   fechasFuera?: number;
-  /** Si se rompió (lesión) o si lo echaron (suspensión): no es lo mismo. */
-  porLesion?: boolean;
+  /** Por qué no está: romperse, que lo echen y guardarlo no son lo mismo. */
+  motivo?: "lesion" | "suspension" | "descanso";
   /** Suma al plantel un juvenil del pueblo que diga, con el nivel ya sorteado. */
   traerPibe?: { pueblo: string; nivel: number };
   /** Le abre la puerta del mercado a un brasileño del catálogo. */
@@ -883,24 +883,37 @@ const PLANTILLAS: Plantilla[] = [
             "es para dos meses. Él quiere estar.",
           opciones: [
             { id: "jugar", etiqueta: "Que juegue infiltrado",
-              detalle: "Tenés a tu jugador, con riesgo de que se rompa en serio",
+              detalle: "Aprieta los dientes y sale",
               apuesta: { exito: 0.75, bien: "Aguanta el partido", mal: "Se rompe y son dos meses" } },
             { id: "cuidar", etiqueta: "Que se cuide",
-              detalle: "Se pierde este partido y vuelve entero" },
+              detalle: "Se lo guarda y vuelve entero" },
           ],
         },
         efectos: {
+          /*
+           * Antes esto era una apuesta sin premio: si salía bien no pasaba
+           * nada, y guardarlo tampoco hacía nada, así que no había motivo para
+           * arriesgar. Y encima "se pierde este partido" era mentira: cuidarlo
+           * no lo sacaba de ningún lado.
+           *
+           * Ahora las dos hacen lo suyo. Que juegue: se juega la cabeza del
+           * plantel entero, porque el que sale tocado por la camiseta levanta
+           * al grupo. Que se cuide: lo perdés para la próxima, que es lo que
+           * decía el texto y nunca pasaba.
+           */
           jugar: {
-            moralDe: { id: j.id, delta: 8 },
+            moralDe: { id: j.id, delta: 8 }, ambiente: 5,
             texto: `${j.apellido} aguantó los noventa.`,
             siSaleMal: {
               ambiente: -8, moralDe: { id: j.id, delta: -14 },
-              suspendeA: j.id, porLesion: true,
+              suspendeA: j.id, motivo: "lesion",
               texto: `${j.apellido} se rompió. Se pierde lo que viene.`,
             },
           },
-          cuidar: { moralDe: { id: j.id, delta: -4 }, condicionTodos: 0,
-            texto: `Se cuidó a ${j.apellido} para lo que viene.` },
+          cuidar: {
+            moralDe: { id: j.id, delta: -4 }, ambiente: -3,
+            suspendeA: j.id, motivo: "descanso",
+            texto: `Se guardó a ${j.apellido} para lo que viene.` },
         },
       };
     },
