@@ -629,46 +629,38 @@ export default function Escritorio({
             </div>
           ) : partido ? (
             /*
-             * El mismo blanco que el día de partido.
+             * El mismo botón que el día de partido, sin el aro.
              *
-             * Antes era oscuro con un borde verde, y en una pantalla que ya es
-             * verde y oscura se perdía: parecía una tarjeta de información y no
-             * el botón principal. Lo que separa a los dos ahora es el aura: el
-             * del domingo late con un halo verde, este no. Misma jerarquía
-             * visual de "esto es lo que hay que tocar", distinta urgencia.
+             * Tenían el mismo blanco pero distinta anatomía: este arrancaba
+             * con un "+1" en una cajita y terminaba con la flecha adentro de
+             * un círculo, así que aunque compartieran color se leían como dos
+             * cosas distintas. Ahora los dos son escudo, rótulo, rival y la
+             * acción a la derecha. Lo único que cambia entre un domingo y un
+             * martes es el aro verde, que es exactamente lo que tiene que
+             * cambiar.
              */
             <button onClick={onAvanzar}
               className="relieve-alto flex w-full items-center gap-3 rounded-lg px-3 py-2.5"
               style={{ background: "var(--blanco)", color: "var(--negro)" }}>
-              <span className="num flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[13px]"
-                    style={{ background: "var(--negro)", color: "var(--blanco)" }}>
-                +1
-              </span>
+              <Escudo id={partido.rivalId} nombre={partido.rivalNombre} tam={30} />
               <span className="min-w-0 flex-1 text-left">
-                <span className="block text-[9px] uppercase tracking-[0.14em] opacity-55">
-                  Avanzar el día
+                <span className="block text-[9px] uppercase tracking-[0.14em] opacity-60">
+                  En {faltan} día{faltan === 1 ? "" : "s"}
                 </span>
-                <span className="block truncate text-[12px] opacity-80">
-                  {nombreCorto(partido.rivalId, partido.rivalNombre)} en {faltan} día{faltan === 1 ? "" : "s"}
+                <span className="apellido block truncate text-[14px] leading-tight">
+                  {nombreCorto(partido.rivalId, partido.rivalNombre)}
                 </span>
-              </span>
-              {/* Contra cuánto vas: es lo único del rival que hace falta saber
-                  antes de que llegue el día. */}
-              {ovr.rival !== null && (
-                <span className="shrink-0 text-right">
-                  <span className="block text-[8px] uppercase tracking-[0.14em] opacity-55">nivel</span>
-                  {/* sobre blanco los colores de siempre no se leen: van los
-                      mismos verdes y rojos pero hundidos */}
-                  <span className="num block text-[17px] leading-none"
+                {/* Contra cuánto vas: lo único del rival que hace falta saber
+                    antes de que llegue el día. */}
+                {ovr.rival !== null && (
+                  <span className="block text-[9px] font-bold"
                         style={{ color: ovr.hoy >= ovr.rival ? "#1a7a44" : "#a3271b" }}>
-                    {Math.round(ovr.rival)}
+                    nivel {Math.round(ovr.rival)} contra tus {Math.round(ovr.hoy)}
                   </span>
-                </span>
-              )}
-              <Escudo id={partido.rivalId} nombre={partido.rivalNombre} tam={24} />
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[16px] font-bold leading-none"
-                    style={{ background: "var(--negro)", color: "var(--blanco)" }}>
-                ›
+                )}
+              </span>
+              <span className="shrink-0 text-[11px] font-extrabold uppercase tracking-wider">
+                Avanzar →
               </span>
             </button>
           ) : (
